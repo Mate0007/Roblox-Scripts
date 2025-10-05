@@ -1,0 +1,49 @@
+local Achievements = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Achievements/Source.lua"))()
+
+-- Creates and displays your custom achievement
+Achievements.Get({
+    Title = "What Happened To The Crucifix?",
+    Desc = "You Have Aquired The Devil Crucifix",
+    Reason = "Use It To Protect Yourself... Or Not",
+    Image = "https://tr.rbxcdn.com/7d9e2c5f9582f8a7b26c98f8092c8501/420/420/Model/Png",
+})firesignal(game.ReplicatedStorage.Bricks.Caption.OnClientEvent, "Thanks To Chrono")
+wait(2)
+ firesignal(game.ReplicatedStorage.Bricks.Caption.OnClientEvent, "And Yes I Made The Achievement")
+ wait(2)
+ firesignal(game.ReplicatedStorage.Bricks.Caption.OnClientEvent, "Enjoy")
+ 
+ 
+ 
+local shadow=game:GetObjects("rbxassetid://11799662307")[1]
+shadow.Parent = game.Players.LocalPlayer.Backpack
+local Players = game:GetService("Players")
+local Plr = Players.LocalPlayer
+local Char = Plr.Character or Plr.CharacterAdded:Wait()
+local Hum = Char:WaitForChild("Humanoid")
+local RightArm = Char:WaitForChild("RightUpperArm")
+local LeftArm = Char:WaitForChild("LeftUpperArm")
+local RightC1 = RightArm.RightShoulder.C1
+local LeftC1 = LeftArm.LeftShoulder.C1
+        local function setupCrucifix(tool)
+        RightArm.Name = "R_Arm"
+        LeftArm.Name = "L_Arm"
+ 
+        RightArm.RightShoulder.C1 = RightC1 * CFrame.Angles(math.rad(-90), math.rad(-15), 0)
+        LeftArm.LeftShoulder.C1 = LeftC1 * CFrame.new(-0.2, -0.3, -0.5) * CFrame.Angles(math.rad(-125), math.rad(25), math.rad(25))
+        for _, v in next, Hum:GetPlayingAnimationTracks() do
+            v:Stop()
+        end
+        end
+shadow.Equipped:Connect(function()
+setupCrucifix(shadow)
+game.Players.LocalPlayer:SetAttribute("Hidden", true)
+end)
+ 
+shadow.Unequipped:Connect(function()
+    game.Players.LocalPlayer:SetAttribute("Hidden", false)
+        RightArm.Name = "RightUpperArm"
+        LeftArm.Name = "LeftUpperArm"
+ 
+        RightArm.RightShoulder.C1 = RightC1
+        LeftArm.LeftShoulder.C1 = LeftC1
+end)
