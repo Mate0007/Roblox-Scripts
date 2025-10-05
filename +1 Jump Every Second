@@ -1,0 +1,50 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("Lightning hub +1 Jump Every Second", "Synapse")
+ 
+-- Main tab and section
+local main = Window:NewTab("Autofarm")
+
+local mainSection = main:NewSection("Autofarm")
+ 
+
+mainSection:NewButton("Autofarm ON", "Bruh read the name", function()
+local x = 0
+while x < 100000 do
+getgenv().game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1210, 123465, 8272)
+wait(5)
+end
+end)
+ 
+
+mainSection:NewButton("Autofarm OFF", "Bruh read the name", function()
+-- rejoin		
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+ 
+local Rejoin = coroutine.create(function()
+    local Success, ErrorMessage = pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+ 
+    if ErrorMessage and not Success then
+        warn(ErrorMessage)
+    end
+end)
+ 
+coroutine.resume(Rejoin)
+    end)
+     
+
+    local main = Window:NewTab("Misc")
+
+    local mainSection = main:NewSection("Misc")
+
+    mainSection:NewButton("Infinite Yield", "Injects Infinite Yield", function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+    end)
+
+    mainSection:NewButton("Horror Tower ", "tps you to last lvl", function()
+        getgenv().game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(1187, 6129, 7775)
+
+    end)

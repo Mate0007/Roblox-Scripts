@@ -1,0 +1,62 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("Lightning hub", "Synapse")
+ 
+-- Main tab and section
+local main = Window:NewTab("Tools")
+local mainSection = main:NewSection("Tools")
+ 
+-- Function to copy text to clipboard
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+        print("Copied to clipboard: " .. text)
+    else
+        print("Clipboard access not supported in this environment.")
+    end
+end
+
+-- Button to copy teleport script to clipboard
+mainSection:NewButton("Teleport To Script [Copy To Clipboard]", "Copys teleport script that you can use to teleport to stuff using humanoid position.", function()
+    local teleportScript = "player.Character.HumanoidRootPart.CFrame = CFrame.new()"
+    copyToClipboard(teleportScript)
+end)
+
+-- Button to copy humanoid position to clipboard when "C" is pressed
+mainSection:NewButton("Copy Humanoid Position [Press C]", "Press C to copy your character's humanoid position", function()
+    local UserInputService = game:GetService("UserInputService")
+    local player = game.Players.LocalPlayer
+    local humanoidRootPart = nil
+
+    -- Function to get the player's HumanoidRootPart position
+    local function getHumanoidRootPartPosition()
+        local character = player.Character or player.CharacterAdded:Wait()
+        humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        local position = humanoidRootPart.Position
+        return position
+    end
+
+    -- Function to handle input
+    local function onInputBegan(input, gameProcessed)
+        if gameProcessed then return end
+
+        -- Check if the input is the desired key (e.g., "C" key)
+        if input.KeyCode == Enum.KeyCode.C then
+            local position = getHumanoidRootPartPosition()
+            local positionString = tostring(position)
+            copyToClipboard(positionString)
+        end
+    end
+
+    -- Connect the input event
+    UserInputService.InputBegan:Connect(onInputBegan)
+end)
+
+-- Button to load SkyHub script
+mainSection:NewButton("AC Bypasses, Debuggers, Admins", "SkyHub is a really good tool to help you create scripts", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/yofriendfromschool1/Sky-Hub/main/SkyHub.txt"))()
+end)
+
+mainSection:NewButton("Infinite Yield", "Good Shit", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+
+end)

@@ -1,0 +1,157 @@
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+local Window = Library.CreateLib("Lightning Hub: Build a Boat for Treasure", "Synapse")
+
+local Autofarm = Window:NewTab("Autofarm")
+local AutofarmSection = Autofarm:NewSection("Autofarm")
+
+-- Define the toggle state variable
+local autofarmEnabled = false
+local autofarmRunning = false
+
+AutofarmSection:NewToggle("Autofarm gold [On/Off]", "Teleports you so you get a lot of gold", function(state)
+    autofarmEnabled = state
+    if autofarmEnabled then
+        print("Toggle On")
+        if not autofarmRunning then
+            startAutofarm()
+        end
+    else
+        print("Toggle Off")
+    end
+end)
+
+function startAutofarm()
+    autofarmRunning = true
+    while autofarmEnabled do
+        local player = game:GetService("Players").LocalPlayer
+
+        -- Ensure the player character is valid
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            -- Remove BodyVelocity to remove float
+            if player.Character.HumanoidRootPart:FindFirstChild("WRDBodyVelocity") then
+                player.Character.HumanoidRootPart.WRDBodyVelocity:Destroy()
+            end
+
+            -- Insert BodyVelocity to add float
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Name = "WRDBodyVelocity"
+            bodyVelocity.Parent = player.Character.HumanoidRootPart
+
+            local waypoints = {
+                Vector3.new(-41.1574821472168, 21.803485870361328, 1375.2276611328125),
+                Vector3.new(-34.928794860839844, 16.920000076293945, 2147.088134765625),
+                Vector3.new(-46.065582275390625, 9.941905975341797, 2914.512939453125),
+                Vector3.new(-60.59861373901367, 13.029801368713379, 3686.905029296875),
+                Vector3.new(-57.4296989440918, 16.871246337890625, 4456.498046875),
+                Vector3.new(-60.37264633178711, 16.87099266052246, 5228.25439453125),
+                Vector3.new(-60.739776611328125, 6.594567775726318, 5995.98388671875),
+                Vector3.new(-62.55643844604492, 8.977803230285645, 6766.40087890625),
+                Vector3.new(-27.354198455810547, 15.035831451416016, 7537.03515625),
+                Vector3.new(-53.869075775146484, 18.07593536376953, 8306.279296875),
+                Vector3.new(-57.59322738647461, -356.0037536621094, 9495.6162109375)
+            }
+
+            for _, position in ipairs(waypoints) do
+                player.Character.HumanoidRootPart.CFrame = CFrame.new(position)
+                wait(2)
+                if not autofarmEnabled then
+                    autofarmRunning = false
+                    return
+                end
+            end
+
+            wait(16)
+        end
+
+        -- Check if the toggle was turned off during the loop
+        if not autofarmEnabled then
+            autofarmRunning = false
+            break
+        end
+    end
+    autofarmRunning = false
+end
+
+-- Handle player respawn
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function(character)
+    if autofarmEnabled then
+        -- Wait for character to fully load
+        character:WaitForChild("HumanoidRootPart")
+        startAutofarm()
+    end
+end)
+
+AutofarmSection:NewButton("Get a gold block", "Makes you get a gold block", function()
+    local player = game:GetService("Players").LocalPlayer
+
+    -- Ensure the player character is valid
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        -- Remove BodyVelocity to remove float
+        if player.Character.HumanoidRootPart:FindFirstChild("WRDBodyVelocity") then
+            player.Character.HumanoidRootPart.WRDBodyVelocity:Destroy()
+        end
+
+        -- Insert BodyVelocity to add float
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "WRDBodyVelocity"
+        bodyVelocity.Parent = player.Character.HumanoidRootPart
+
+        local goldBlockPositions = {
+            Vector3.new(-27.354198455810547, 15.035831451416016, 7537.03515625),
+            Vector3.new(-53.869075775146484, 18.07593536376953, 8306.279296875),
+            Vector3.new(-57.59322738647461, -356.0037536621094, 9495.6162109375)
+        }
+
+        for _, position in ipairs(goldBlockPositions) do
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(position)
+            wait(2)
+        end
+    end
+end)
+
+AutofarmSection:NewButton("Anti AFK", "Disables Roblox kicking you for AFK", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/KazeOnTop/Rice-Anti-Afk/main/Wind", true))()
+    wait(0.111111)
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/juywvm/-Roblox-Projects-/main/____Anti_Afk_Remastered_______"))()
+end)
+
+-- Local player tab and section
+local playerTab = Window:NewTab("Player")
+local playerSection = playerTab:NewSection("Player")
+
+-- Walkspeed slider
+playerSection:NewSlider("Walkspeed", "SPEED!!", 1000, 16, function(s)
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = s
+end)
+
+-- Jumppower slider
+playerSection:NewSlider("Jump Power", "JUMP HIGH!!", 1000, 50, function(s)
+    game.Players.LocalPlayer.Character.Humanoid.JumpPower = s
+end)
+
+-- Reset WS/JP button
+playerSection:NewButton("Reset WS/JP", "Resets to all defaults", function()
+    game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50
+    game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
+end)
+
+local Teleports = Window:NewTab("Teleports")
+local TeleportsSection = Teleports:NewSection("Teleports")
+
+local teleportPositions = {
+    Blue = Vector3.new(473.0922546386719, -9.701966285705566, 292.60406494140625),
+    Red = Vector3.new(473.87042236328125, -9.701966285705566, -71.96675109863281),
+    White = Vector3.new(-57.77864074707031, -9.7019624710083, -596.9694213867188),
+    Black = Vector3.new(-580.8157958984375, -9.701966285705566, -61.04825210571289),
+    Green = Vector3.new(-581.0054931640625, -9.701966285705566, 301.0352478027344),
+    Yellow = Vector3.new(-580.9918823242188, -9.701964378356934, 647.4757690429688)
+}
+
+for team, position in pairs(teleportPositions) do
+    TeleportsSection:NewButton(team .. " team", "Teleports you to that team", function()
+        getgenv().game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(position)
+    end)
+end
+
+local Credits = Window:NewTab("Credits")
+local CreditsSection = Credits:NewSection("All credits goes to Mate0007")
