@@ -606,8 +606,8 @@ function FluentUI:CreateKeybind(Section, Config)
     
     local KeybindButton = Instance.new("TextButton")
     KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 80, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -83, 0.5, -12)
+    KeybindButton.Size = UDim2.new(0, 70, 0, 24) -- Made smaller
+    KeybindButton.Position = UDim2.new(1, -75, 0.5, -12) -- Moved left
     KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
     KeybindButton.Text = GetKeyName(Keybind.Key)
     KeybindButton.TextColor3 = FluentUI.Theme.Text
@@ -671,11 +671,11 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
         else return key.Name end
     end
     
-    -- Keybind Button (LEFT of Toggle)
+    -- Keybind Button (LEFT of Toggle) - Improved positioning
     local KeybindButton = Instance.new("TextButton")
     KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 60, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -115, 0.5, -12)
+    KeybindButton.Size = UDim2.new(0, 55, 0, 24) -- Made smaller
+    KeybindButton.Position = UDim2.new(1, -125, 0.5, -12) -- Moved left
     KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
     KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
     KeybindButton.TextColor3 = FluentUI.Theme.Text
@@ -687,7 +687,7 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(0, 200, 1, 0)
+    ToggleLabel.Size = UDim2.new(0, 180, 1, 0) -- Fixed width for better alignment
     ToggleLabel.Position = UDim2.new(0, 5, 0, 0)
     ToggleLabel.BackgroundTransparency = 1
     ToggleLabel.Text = Config.Title or "Toggle"
@@ -701,7 +701,7 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
     ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
+    ToggleButton.Position = UDim2.new(1, -60, 0.5, -12) -- Adjusted position
     ToggleButton.BackgroundColor3 = ToggleKeybind.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
     ToggleButton.Text = ""
     ToggleButton.Parent = ToggleFrame
@@ -802,24 +802,6 @@ function FluentUI:CreateToggle(Section, Config)
     ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
     ToggleLabel.Parent = ToggleFrame
-    
-    -- Keybind hint
-    if Config.KeybindHint then
-        local KeybindHint = Instance.new("TextLabel")
-        KeybindHint.Name = "KeybindHint"
-        KeybindHint.Size = UDim2.new(1, -10, 0, 12)
-        KeybindHint.Position = UDim2.new(0, 5, 1, 2)
-        KeybindHint.BackgroundTransparency = 1
-        KeybindHint.Text = "Key: " .. Config.KeybindHint
-        KeybindHint.TextColor3 = FluentUI.Theme.SubText
-        KeybindHint.TextSize = 10
-        KeybindHint.Font = Enum.Font.Gotham
-        KeybindHint.TextXAlignment = Enum.TextXAlignment.Left
-        KeybindHint.TextTransparency = 0.5
-        KeybindHint.Parent = ToggleFrame
-        
-        ToggleFrame.Size = UDim2.new(1, -20, 0, 44)
-    end
     
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
