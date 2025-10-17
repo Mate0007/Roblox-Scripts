@@ -165,29 +165,27 @@ function FluentUI:CreateWindow(Config)
     
     RoundCorners(Window.MainFrame, 14)
     
-    -- Add glow effect
-    local Glow = Instance.new("ImageLabel")
+    -- Static glow effect (optimized - no animation)
+    local Glow = Instance.new("Frame")
     Glow.Name = "Glow"
-    Glow.BackgroundTransparency = 1
-    Glow.Position = UDim2.new(0, -20, 0, -20)
-    Glow.Size = UDim2.new(1, 40, 1, 40)
+    Glow.BackgroundTransparency = 0.9
+    Glow.Position = UDim2.new(0, -10, 0, -10)
+    Glow.Size = UDim2.new(1, 20, 1, 20)
     Glow.ZIndex = 0
-    Glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    Glow.ImageColor3 = FluentUI.Theme.Primary
-    Glow.ImageTransparency = 0.8
-    Glow.ScaleType = Enum.ScaleType.Slice
-    Glow.SliceCenter = Rect.new(10, 10, 10, 10)
+    Glow.BackgroundColor3 = FluentUI.Theme.Primary
     Glow.Parent = Window.MainFrame
+
+    RoundCorners(Glow, 16)
     
-    -- Animated Background
-    local AnimatedBG = Instance.new("Frame")
-    AnimatedBG.Name = "AnimatedBackground"
-    AnimatedBG.Size = UDim2.new(1, 0, 1, 0)
-    AnimatedBG.BackgroundTransparency = 0.95
-    AnimatedBG.BorderSizePixel = 0
-    AnimatedBG.ZIndex = 0
-    AnimatedBG.Parent = Window.MainFrame
-    
+    -- Static Background (optimized - removed animation)
+    local StaticBG = Instance.new("Frame")
+    StaticBG.Name = "StaticBackground"
+    StaticBG.Size = UDim2.new(1, 0, 1, 0)
+    StaticBG.BackgroundTransparency = 0.95
+    StaticBG.BorderSizePixel = 0
+    StaticBG.ZIndex = 0
+    StaticBG.Parent = Window.MainFrame
+
     local BGGradient = Instance.new("UIGradient")
     BGGradient.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0, FluentUI.Theme.Primary),
@@ -195,17 +193,7 @@ function FluentUI:CreateWindow(Config)
         ColorSequenceKeypoint.new(1, FluentUI.Theme.Primary)
     }
     BGGradient.Rotation = 45
-    BGGradient.Parent = AnimatedBG
-    
-    task.spawn(function()
-        while Window.MainFrame and Window.MainFrame.Parent do
-            for i = 0, 360, 2 do
-                if not Window.MainFrame or not Window.MainFrame.Parent then break end
-                BGGradient.Rotation = i
-                task.wait(0.05)
-            end
-        end
-    end)
+    BGGradient.Parent = StaticBG
     
     Window.Header = Instance.new("Frame")
     Window.Header.Name = "Header"
