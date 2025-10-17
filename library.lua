@@ -165,6 +165,20 @@ function FluentUI:CreateWindow(Config)
     
     RoundCorners(Window.MainFrame, 14)
     
+    -- Add glow effect
+    local Glow = Instance.new("ImageLabel")
+    Glow.Name = "Glow"
+    Glow.BackgroundTransparency = 1
+    Glow.Position = UDim2.new(0, -20, 0, -20)
+    Glow.Size = UDim2.new(1, 40, 1, 40)
+    Glow.ZIndex = 0
+    Glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    Glow.ImageColor3 = FluentUI.Theme.Primary
+    Glow.ImageTransparency = 0.8
+    Glow.ScaleType = Enum.ScaleType.Slice
+    Glow.SliceCenter = Rect.new(10, 10, 10, 10)
+    Glow.Parent = Window.MainFrame
+    
     -- Animated Background
     local AnimatedBG = Instance.new("Frame")
     AnimatedBG.Name = "AnimatedBackground"
@@ -230,7 +244,7 @@ function FluentUI:CreateWindow(Config)
     Window.MinimizeButton = Instance.new("TextButton")
     Window.MinimizeButton.Name = "MinimizeButton"
     Window.MinimizeButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.MinimizeButton.Position = UDim2.new(1, -64, 0.5, -14)
+    Window.MinimizeButton.Position = UDim2.new(1, -74, 0.5, -14)
     Window.MinimizeButton.BackgroundColor3 = FluentUI.Theme.SurfaceLight
     Window.MinimizeButton.BackgroundTransparency = 0.3
     Window.MinimizeButton.TextColor3 = FluentUI.Theme.Text
@@ -244,7 +258,7 @@ function FluentUI:CreateWindow(Config)
     Window.CloseButton = Instance.new("TextButton")
     Window.CloseButton.Name = "CloseButton"
     Window.CloseButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.CloseButton.Position = UDim2.new(1, -32, 0.5, -14)
+    Window.CloseButton.Position = UDim2.new(1, -42, 0.5, -14)
     Window.CloseButton.BackgroundColor3 = FluentUI.Theme.Error
     Window.CloseButton.BackgroundTransparency = 0.3
     Window.CloseButton.TextColor3 = Color3.new(1, 1, 1)
@@ -358,6 +372,7 @@ function FluentUI:CreateWindow(Config)
                 }, 0.4, Enum.EasingStyle.Back)
             end
             
+            -- Always unlock mouse when UI opens (for first person games)
             UserInputService.MouseBehavior = Enum.MouseBehavior.Default
             UserInputService.MouseIconEnabled = true
         else
@@ -369,8 +384,9 @@ function FluentUI:CreateWindow(Config)
                 self.MainFrame.Visible = false
             end)
             
-            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-            UserInputService.MouseIconEnabled = false
+            -- Keep mouse unlocked even when UI closes (for first person games)
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+            UserInputService.MouseIconEnabled = true
         end
     end
     
@@ -391,12 +407,12 @@ function FluentUI:CreateWindow(Config)
     return Window
 end
 
--- Tab Icons
+-- Tab Icons (removed emojis)
 local TabIcons = {
-    Combat = "⚔",
-    Visuals = "👁",
-    Misc = "⚙",
-    Settings = "🔧"
+    Combat = "",
+    Visuals = "",
+    Misc = "",
+    Settings = ""
 }
 
 function FluentUI:CreateTab(Name)
@@ -411,7 +427,7 @@ function FluentUI:CreateTab(Name)
     TabButton.BackgroundColor3 = FluentUI.Theme.Surface
     TabButton.BackgroundTransparency = 0.4
     TabButton.TextColor3 = FluentUI.Theme.SubText
-    TabButton.Text = (TabIcons[Name] or "•") .. "  " .. Name
+    TabButton.Text = Name
     TabButton.TextSize = 13
     TabButton.Font = Enum.Font.GothamSemibold
     TabButton.Parent = self.TabContainer
@@ -655,6 +671,20 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
         else return key.Name end
     end
     
+    -- Keybind Button (LEFT of Toggle)
+    local KeybindButton = Instance.new("TextButton")
+    KeybindButton.Name = "KeybindButton"
+    KeybindButton.Size = UDim2.new(0, 60, 0, 24)
+    KeybindButton.Position = UDim2.new(1, -115, 0.5, -12)
+    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
+    KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
+    KeybindButton.TextColor3 = FluentUI.Theme.Text
+    KeybindButton.TextSize = 10
+    KeybindButton.Font = Enum.Font.Gotham
+    KeybindButton.Parent = ToggleFrame
+    
+    RoundCorners(KeybindButton, 6)
+    
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Name = "Label"
     ToggleLabel.Size = UDim2.new(0, 200, 1, 0)
@@ -671,7 +701,7 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
     ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -115, 0.5, -12)
+    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
     ToggleButton.BackgroundColor3 = ToggleKeybind.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
     ToggleButton.Text = ""
     ToggleButton.Parent = ToggleFrame
@@ -686,20 +716,6 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     ToggleKnob.Parent = ToggleButton
     
     RoundCorners(ToggleKnob, 9)
-    
-    -- Keybind Button (Right of Toggle)
-    local KeybindButton = Instance.new("TextButton")
-    KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 60, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -63, 0.5, -12)
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
-    KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
-    KeybindButton.TextSize = 10
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = ToggleFrame
-    
-    RoundCorners(KeybindButton, 6)
     
     local function ToggleValue()
         ToggleKeybind.Value = not ToggleKeybind.Value
