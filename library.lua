@@ -1,4 +1,4 @@
--- Surfy TC2 Library - Fixed UI Alignment
+-- Surfy TC2 Library - Fixed Toggle Alignment
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -606,8 +606,8 @@ function FluentUI:CreateKeybind(Section, Config)
     
     local KeybindButton = Instance.new("TextButton")
     KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 70, 0, 24) -- Made smaller
-    KeybindButton.Position = UDim2.new(1, -75, 0.5, -12) -- Moved left
+    KeybindButton.Size = UDim2.new(0, 70, 0, 24)
+    KeybindButton.Position = UDim2.new(1, -75, 0.5, -12)
     KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
     KeybindButton.Text = GetKeyName(Keybind.Key)
     KeybindButton.TextColor3 = FluentUI.Theme.Text
@@ -671,23 +671,9 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
         else return key.Name end
     end
     
-    -- Keybind Button (LEFT of Toggle) - Improved positioning
-    local KeybindButton = Instance.new("TextButton")
-    KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 55, 0, 24) -- Made smaller
-    KeybindButton.Position = UDim2.new(1, -125, 0.5, -12) -- Moved left
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
-    KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
-    KeybindButton.TextSize = 10
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = ToggleFrame
-    
-    RoundCorners(KeybindButton, 6)
-    
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(0, 180, 1, 0) -- Fixed width for better alignment
+    ToggleLabel.Size = UDim2.new(1, -120, 1, 0)
     ToggleLabel.Position = UDim2.new(0, 5, 0, 0)
     ToggleLabel.BackgroundTransparency = 1
     ToggleLabel.Text = Config.Title or "Toggle"
@@ -698,10 +684,25 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
     ToggleLabel.Parent = ToggleFrame
     
+    -- Keybind Button (LEFT of Toggle)
+    local KeybindButton = Instance.new("TextButton")
+    KeybindButton.Name = "KeybindButton"
+    KeybindButton.Size = UDim2.new(0, 50, 0, 24)
+    KeybindButton.Position = UDim2.new(1, -108, 0.5, -12)
+    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
+    KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
+    KeybindButton.TextColor3 = FluentUI.Theme.Text
+    KeybindButton.TextSize = 10
+    KeybindButton.Font = Enum.Font.Gotham
+    KeybindButton.Parent = ToggleFrame
+    
+    RoundCorners(KeybindButton, 6)
+    
+    -- Toggle Button (RIGHT side, matching regular toggles)
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
     ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -60, 0.5, -12) -- Adjusted position
+    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
     ToggleButton.BackgroundColor3 = ToggleKeybind.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
     ToggleButton.Text = ""
     ToggleButton.Parent = ToggleFrame
