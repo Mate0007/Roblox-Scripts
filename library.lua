@@ -1,4 +1,4 @@
--- Surfy TC2 Library - Custom Fluent UI Library
+-- Surfy TC2 Library - Fixed UI Alignment
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
