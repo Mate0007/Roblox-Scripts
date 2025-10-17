@@ -73,56 +73,85 @@ function SurfyUI:CreateNotification(Config)
     
     local Notification = Instance.new("Frame")
     Notification.Name = "Notification"
-    Notification.Size = UDim2.new(0, 320, 0, 90)
-    Notification.Position = UDim2.new(1, 340, 1, -110 - (#self.NotificationQueue * 100))
+    Notification.Size = UDim2.new(0, 350, 0, 80)
+    Notification.Position = UDim2.new(1, 370, 1, -100 - (#self.NotificationQueue * 90))
     Notification.BackgroundColor3 = SurfyUI.Theme.Surface
-    Notification.BackgroundTransparency = 0.2
+    Notification.BackgroundTransparency = 0.15
     Notification.BorderSizePixel = 0
     Notification.Parent = NotifContainer
     
     RoundCorners(Notification, 12)
-    AddStroke(Notification, SurfyUI.Theme.Primary, 1.5, 0.5)
     
-    local NotifGlow = Instance.new("ImageLabel")
-    NotifGlow.Name = "Glow"
-    NotifGlow.BackgroundTransparency = 1
-    NotifGlow.Position = UDim2.new(0, -20, 0, -20)
-    NotifGlow.Size = UDim2.new(1, 40, 1, 40)
-    NotifGlow.ZIndex = 0
-    NotifGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    NotifGlow.ImageColor3 = SurfyUI.Theme.Primary
-    NotifGlow.ImageTransparency = 0.85
-    NotifGlow.ScaleType = Enum.ScaleType.Slice
-    NotifGlow.SliceCenter = Rect.new(10, 10, 10, 10)
-    NotifGlow.Parent = Notification
+    -- Modern gradient overlay
+    local GradientOverlay = Instance.new("Frame")
+    GradientOverlay.Name = "Gradient"
+    GradientOverlay.Size = UDim2.new(1, 0, 1, 0)
+    GradientOverlay.BackgroundTransparency = 0.5
+    GradientOverlay.BorderSizePixel = 0
+    GradientOverlay.Parent = Notification
     
-    local AccentBar = Instance.new("Frame")
-    AccentBar.Name = "Accent"
-    AccentBar.Size = UDim2.new(0, 4, 1, 0)
-    AccentBar.BackgroundColor3 = SurfyUI.Theme.Primary
-    AccentBar.BorderSizePixel = 0
-    AccentBar.Parent = Notification
+    RoundCorners(GradientOverlay, 12)
+    AddGradient(GradientOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 135)
     
-    local BarCorner = Instance.new("UICorner")
-    BarCorner.CornerRadius = UDim.new(0, 12)
-    BarCorner.Parent = AccentBar
+    -- Top accent line
+    local TopAccent = Instance.new("Frame")
+    TopAccent.Name = "TopAccent"
+    TopAccent.Size = UDim2.new(1, 0, 0, 3)
+    TopAccent.BackgroundColor3 = SurfyUI.Theme.Primary
+    TopAccent.BorderSizePixel = 0
+    TopAccent.Parent = Notification
+    
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 12)
+    TopCorner.Parent = TopAccent
+    
+    -- Cover bottom of accent
+    local AccentCover = Instance.new("Frame")
+    AccentCover.Size = UDim2.new(1, 0, 0, 3)
+    AccentCover.Position = UDim2.new(0, 0, 1, -3)
+    AccentCover.BackgroundColor3 = SurfyUI.Theme.Primary
+    AccentCover.BorderSizePixel = 0
+    AccentCover.Parent = TopAccent
+    
+    -- Icon/Status indicator
+    local StatusIcon = Instance.new("Frame")
+    StatusIcon.Name = "Icon"
+    StatusIcon.Size = UDim2.new(0, 8, 0, 8)
+    StatusIcon.Position = UDim2.new(0, 15, 0, 18)
+    StatusIcon.BackgroundColor3 = SurfyUI.Theme.Success
+    StatusIcon.BorderSizePixel = 0
+    StatusIcon.Parent = Notification
+    
+    RoundCorners(StatusIcon, 4)
+    
+    -- Pulse animation for icon
+    task.spawn(function()
+        while Notification.Parent do
+            Tween(StatusIcon, {BackgroundTransparency = 0.5}, 0.8)
+            task.wait(0.8)
+            if not Notification.Parent then break end
+            Tween(StatusIcon, {BackgroundTransparency = 0}, 0.8)
+            task.wait(0.8)
+        end
+    end)
     
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
-    Title.Size = UDim2.new(1, -30, 0, 28)
-    Title.Position = UDim2.new(0, 15, 0, 12)
+    Title.Size = UDim2.new(1, -40, 0, 22)
+    Title.Position = UDim2.new(0, 30, 0, 12)
     Title.BackgroundTransparency = 1
     Title.Text = Config.Title or "Notification"
     Title.TextColor3 = SurfyUI.Theme.Text
-    Title.TextSize = 15
+    Title.TextSize = 14
     Title.Font = Enum.Font.GothamBold
     Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.TextYAlignment = Enum.TextYAlignment.Top
     Title.Parent = Notification
     
     local Description = Instance.new("TextLabel")
     Description.Name = "Description"
-    Description.Size = UDim2.new(1, -30, 0, 40)
-    Description.Position = UDim2.new(0, 15, 0, 40)
+    Description.Size = UDim2.new(1, -40, 0, 40)
+    Description.Position = UDim2.new(0, 30, 0, 35)
     Description.BackgroundTransparency = 1
     Description.Text = Config.Description or ""
     Description.TextColor3 = SurfyUI.Theme.SubText
@@ -133,12 +162,35 @@ function SurfyUI:CreateNotification(Config)
     Description.TextWrapped = true
     Description.Parent = Notification
     
+    -- Close button
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Name = "Close"
+    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+    CloseBtn.Position = UDim2.new(1, -28, 0, 8)
+    CloseBtn.BackgroundColor3 = SurfyUI.Theme.Error
+    CloseBtn.BackgroundTransparency = 0.7
+    CloseBtn.Text = "×"
+    CloseBtn.TextColor3 = SurfyUI.Theme.Text
+    CloseBtn.TextSize = 16
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.Parent = Notification
+    
+    RoundCorners(CloseBtn, 10)
+    
+    CloseBtn.MouseEnter:Connect(function()
+        Tween(CloseBtn, {BackgroundTransparency = 0.3}, 0.2)
+    end)
+    
+    CloseBtn.MouseLeave:Connect(function()
+        Tween(CloseBtn, {BackgroundTransparency = 0.7}, 0.2)
+    end)
+    
     table.insert(self.NotificationQueue, Notification)
     
-    Tween(Notification, {Position = UDim2.new(1, -330, 1, -110 - ((#self.NotificationQueue - 1) * 100))}, 0.5, Enum.EasingStyle.Back)
+    Tween(Notification, {Position = UDim2.new(1, -360, 1, -100 - ((#self.NotificationQueue - 1) * 90))}, 0.5, Enum.EasingStyle.Back)
     
-    task.delay(Config.Duration or 3, function()
-        Tween(Notification, {Position = UDim2.new(1, 340, 1, Notification.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+    local function RemoveNotification()
+        Tween(Notification, {Position = UDim2.new(1, 370, 1, Notification.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
         task.wait(0.4)
         
         for i, notif in ipairs(self.NotificationQueue) do
@@ -151,9 +203,13 @@ function SurfyUI:CreateNotification(Config)
         Notification:Destroy()
         
         for i, notif in ipairs(self.NotificationQueue) do
-            Tween(notif, {Position = UDim2.new(1, -330, 1, -110 - ((i - 1) * 100))}, 0.3)
+            Tween(notif, {Position = UDim2.new(1, -360, 1, -100 - ((i - 1) * 90))}, 0.3)
         end
-    end)
+    end
+    
+    CloseBtn.MouseButton1Click:Connect(RemoveNotification)
+    
+    task.delay(Config.Duration or 4, RemoveNotification)
 end
 
 -- Create Window
@@ -335,6 +391,7 @@ function SurfyUI:CreateWindow(Config)
     Window.TabContainer.BackgroundColor3 = SurfyUI.Theme.Secondary
     Window.TabContainer.BackgroundTransparency = 0.3
     Window.TabContainer.BorderSizePixel = 0
+    Window.TabContainer.ClipsDescendants = true
     Window.TabContainer.Parent = Window.MainFrame
     
     Window.ContentContainer = Instance.new("Frame")
@@ -1203,27 +1260,31 @@ function SurfyUI:CreateDropdown(Section, Config)
     AddStroke(OptionsContainer, SurfyUI.Theme.Primary, 1, 0.6)
     
     local OptionsLayout = Instance.new("UIListLayout")
-    OptionsLayout.Padding = UDim.new(0, 3)
+    OptionsLayout.Padding = UDim.new(0, 2)
     OptionsLayout.Parent = OptionsContainer
     
     local OptionsPadding = Instance.new("UIPadding")
-    OptionsPadding.PaddingTop = UDim.new(0, 6)
-    OptionsPadding.PaddingBottom = UDim.new(0, 6)
+    OptionsPadding.PaddingTop = UDim.new(0, 4)
+    OptionsPadding.PaddingBottom = UDim.new(0, 4)
+    OptionsPadding.PaddingLeft = UDim.new(0, 4)
+    OptionsPadding.PaddingRight = UDim.new(0, 4)
     OptionsPadding.Parent = OptionsContainer
     
     for _, option in ipairs(Dropdown.Options) do
         local OptionButton = Instance.new("TextButton")
         OptionButton.Name = option
-        OptionButton.Size = UDim2.new(1, 0, 0, 28)
+        OptionButton.Size = UDim2.new(1, -8, 0, 24)
         OptionButton.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
         OptionButton.BackgroundTransparency = option == Dropdown.Value and 0.2 or 0.6
-        OptionButton.Text = "  " .. option
+        OptionButton.Text = " " .. option
         OptionButton.TextColor3 = SurfyUI.Theme.Text
         OptionButton.TextSize = 11
         OptionButton.Font = Enum.Font.GothamMedium
         OptionButton.TextXAlignment = Enum.TextXAlignment.Left
         OptionButton.ZIndex = 16
         OptionButton.Parent = OptionsContainer
+        
+        RoundCorners(OptionButton, 6)
         
         if option == Dropdown.Value then
             AddStroke(OptionButton, SurfyUI.Theme.Primary, 1, 0.5)
@@ -1280,7 +1341,7 @@ function SurfyUI:CreateDropdown(Section, Config)
         if Dropdown.IsOpen then
             OptionsContainer.Visible = true
             OptionsContainer.Size = UDim2.new(0, 130, 0, 0)
-            local targetHeight = #Dropdown.Options * 31 + 12
+            local targetHeight = (#Dropdown.Options * 26) + 8
             Tween(OptionsContainer, {Size = UDim2.new(0, 130, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
             Tween(Arrow, {Rotation = 180}, 0.2)
         else
