@@ -197,15 +197,16 @@ function FluentUI:CreateWindow(Config)
     BGGradient.Rotation = 45
     BGGradient.Parent = AnimatedBG
     
-    task.spawn(function()
-        while Window.MainFrame and Window.MainFrame.Parent do
-            for i = 0, 360, 2 do
-                if not Window.MainFrame or not Window.MainFrame.Parent then break end
-                BGGradient.Rotation = i
-                task.wait(0.05)
-            end
-        end
-    end)
+    -- Animated background disabled for performance
+    -- task.spawn(function()
+    --     while Window.MainFrame and Window.MainFrame.Parent do
+    --         for i = 0, 360, 2 do
+    --             if not Window.MainFrame or not Window.MainFrame.Parent then break end
+    --             BGGradient.Rotation = i
+    --             task.wait(0.05)
+    --         end
+    --     end
+    -- end)
     
     Window.Header = Instance.new("Frame")
     Window.Header.Name = "Header"
