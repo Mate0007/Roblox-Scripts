@@ -1,25 +1,27 @@
--- Surfy TC2 Library - Fixed Toggle Alignment
+-- Surfy TC2 Library - Enhanced Visual Design
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- Custom Fluent UI Library
-local FluentUI = {}
-FluentUI.__index = FluentUI
+-- Surfy UI Library
+local SurfyUI = {}
+SurfyUI.__index = SurfyUI
 
 -- Aqua Color Theme
-FluentUI.Theme = {
+SurfyUI.Theme = {
     Primary = Color3.fromRGB(0, 180, 255),
     PrimaryLight = Color3.fromRGB(100, 220, 255),
+    PrimaryDark = Color3.fromRGB(0, 140, 200),
     Secondary = Color3.fromRGB(25, 35, 45),
-    Background = Color3.fromRGB(20, 30, 40),
-    Surface = Color3.fromRGB(40, 50, 60),
-    SurfaceLight = Color3.fromRGB(50, 60, 70),
+    Background = Color3.fromRGB(15, 20, 30),
+    Surface = Color3.fromRGB(30, 40, 50),
+    SurfaceLight = Color3.fromRGB(45, 55, 70),
     Text = Color3.fromRGB(255, 255, 255),
-    SubText = Color3.fromRGB(180, 200, 220),
+    SubText = Color3.fromRGB(160, 180, 200),
     Success = Color3.fromRGB(0, 200, 100),
-    Error = Color3.fromRGB(255, 80, 80)
+    Error = Color3.fromRGB(255, 80, 80),
+    Warning = Color3.fromRGB(255, 170, 0)
 }
 
 -- Utility Functions
@@ -41,57 +43,89 @@ local function RoundCorners(Object, Radius)
     return UICorner
 end
 
--- Notification System
-FluentUI.NotificationQueue = {}
+local function AddStroke(Object, Color, Thickness, Transparency)
+    local Stroke = Instance.new("UIStroke")
+    Stroke.Color = Color or SurfyUI.Theme.Primary
+    Stroke.Thickness = Thickness or 1
+    Stroke.Transparency = Transparency or 0.7
+    Stroke.Parent = Object
+    return Stroke
+end
 
-function FluentUI:CreateNotification(Config)
+local function AddGradient(Object, ColorStart, ColorEnd, Rotation)
+    local Gradient = Instance.new("UIGradient")
+    Gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, ColorStart),
+        ColorSequenceKeypoint.new(1, ColorEnd)
+    }
+    Gradient.Rotation = Rotation or 90
+    Gradient.Parent = Object
+    return Gradient
+end
+
+-- Notification System
+SurfyUI.NotificationQueue = {}
+
+function SurfyUI:CreateNotification(Config)
     Config = Config or {}
     
     local NotifContainer = self.NotificationContainer
     
     local Notification = Instance.new("Frame")
     Notification.Name = "Notification"
-    Notification.Size = UDim2.new(0, 300, 0, 80)
-    Notification.Position = UDim2.new(1, 320, 1, -100 - (#self.NotificationQueue * 90))
-    Notification.BackgroundColor3 = FluentUI.Theme.Surface
-    Notification.BackgroundTransparency = 0.1
+    Notification.Size = UDim2.new(0, 320, 0, 90)
+    Notification.Position = UDim2.new(1, 340, 1, -110 - (#self.NotificationQueue * 100))
+    Notification.BackgroundColor3 = SurfyUI.Theme.Surface
+    Notification.BackgroundTransparency = 0.2
     Notification.BorderSizePixel = 0
     Notification.Parent = NotifContainer
     
-    RoundCorners(Notification, 8)
+    RoundCorners(Notification, 12)
+    AddStroke(Notification, SurfyUI.Theme.Primary, 1.5, 0.5)
     
-    local Shadow = Instance.new("ImageLabel")
-    Shadow.Name = "Shadow"
-    Shadow.BackgroundTransparency = 1
-    Shadow.Position = UDim2.new(0, -15, 0, -15)
-    Shadow.Size = UDim2.new(1, 30, 1, 30)
-    Shadow.ZIndex = 0
-    Shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    Shadow.ImageTransparency = 0.7
-    Shadow.ScaleType = Enum.ScaleType.Slice
-    Shadow.SliceCenter = Rect.new(10, 10, 10, 10)
-    Shadow.Parent = Notification
+    local NotifGlow = Instance.new("ImageLabel")
+    NotifGlow.Name = "Glow"
+    NotifGlow.BackgroundTransparency = 1
+    NotifGlow.Position = UDim2.new(0, -20, 0, -20)
+    NotifGlow.Size = UDim2.new(1, 40, 1, 40)
+    NotifGlow.ZIndex = 0
+    NotifGlow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    NotifGlow.ImageColor3 = SurfyUI.Theme.Primary
+    NotifGlow.ImageTransparency = 0.85
+    NotifGlow.ScaleType = Enum.ScaleType.Slice
+    NotifGlow.SliceCenter = Rect.new(10, 10, 10, 10)
+    NotifGlow.Parent = Notification
+    
+    local AccentBar = Instance.new("Frame")
+    AccentBar.Name = "Accent"
+    AccentBar.Size = UDim2.new(0, 4, 1, 0)
+    AccentBar.BackgroundColor3 = SurfyUI.Theme.Primary
+    AccentBar.BorderSizePixel = 0
+    AccentBar.Parent = Notification
+    
+    local BarCorner = Instance.new("UICorner")
+    BarCorner.CornerRadius = UDim.new(0, 12)
+    BarCorner.Parent = AccentBar
     
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
-    Title.Size = UDim2.new(1, -20, 0, 25)
-    Title.Position = UDim2.new(0, 10, 0, 10)
+    Title.Size = UDim2.new(1, -30, 0, 28)
+    Title.Position = UDim2.new(0, 15, 0, 12)
     Title.BackgroundTransparency = 1
     Title.Text = Config.Title or "Notification"
-    Title.TextColor3 = FluentUI.Theme.Text
-    Title.TextSize = 14
+    Title.TextColor3 = SurfyUI.Theme.Text
+    Title.TextSize = 15
     Title.Font = Enum.Font.GothamBold
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = Notification
     
     local Description = Instance.new("TextLabel")
     Description.Name = "Description"
-    Description.Size = UDim2.new(1, -20, 0, 35)
-    Description.Position = UDim2.new(0, 10, 0, 35)
+    Description.Size = UDim2.new(1, -30, 0, 40)
+    Description.Position = UDim2.new(0, 15, 0, 40)
     Description.BackgroundTransparency = 1
     Description.Text = Config.Description or ""
-    Description.TextColor3 = FluentUI.Theme.SubText
+    Description.TextColor3 = SurfyUI.Theme.SubText
     Description.TextSize = 12
     Description.Font = Enum.Font.Gotham
     Description.TextXAlignment = Enum.TextXAlignment.Left
@@ -101,10 +135,10 @@ function FluentUI:CreateNotification(Config)
     
     table.insert(self.NotificationQueue, Notification)
     
-    Tween(Notification, {Position = UDim2.new(1, -310, 1, -100 - ((#self.NotificationQueue - 1) * 90))}, 0.5, Enum.EasingStyle.Back)
+    Tween(Notification, {Position = UDim2.new(1, -330, 1, -110 - ((#self.NotificationQueue - 1) * 100))}, 0.5, Enum.EasingStyle.Back)
     
     task.delay(Config.Duration or 3, function()
-        Tween(Notification, {Position = UDim2.new(1, 320, 1, Notification.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+        Tween(Notification, {Position = UDim2.new(1, 340, 1, Notification.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
         task.wait(0.4)
         
         for i, notif in ipairs(self.NotificationQueue) do
@@ -117,13 +151,13 @@ function FluentUI:CreateNotification(Config)
         Notification:Destroy()
         
         for i, notif in ipairs(self.NotificationQueue) do
-            Tween(notif, {Position = UDim2.new(1, -310, 1, -100 - ((i - 1) * 90))}, 0.3)
+            Tween(notif, {Position = UDim2.new(1, -330, 1, -110 - ((i - 1) * 100))}, 0.3)
         end
     end)
 end
 
 -- Create Window
-function FluentUI:CreateWindow(Config)
+function SurfyUI:CreateWindow(Config)
     Config = Config or {}
     
     local Window = {
@@ -133,12 +167,12 @@ function FluentUI:CreateWindow(Config)
         IsVisible = false,
         SavedPosition = nil
     }
-    setmetatable(Window, FluentUI)
+    setmetatable(Window, SurfyUI)
     
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
     
     Window.ScreenGui = Instance.new("ScreenGui")
-    Window.ScreenGui.Name = "FluentUI"
+    Window.ScreenGui.Name = "SurfyUI"
     Window.ScreenGui.ResetOnSpawn = false
     Window.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     Window.ScreenGui.DisplayOrder = 999
@@ -154,27 +188,28 @@ function FluentUI:CreateWindow(Config)
     
     Window.MainFrame = Instance.new("Frame")
     Window.MainFrame.Name = "MainFrame"
-    Window.MainFrame.Size = UDim2.new(0, 650, 0, 420)
-    Window.MainFrame.Position = UDim2.new(0.5, -325, 0.5, -210)
-    Window.MainFrame.BackgroundColor3 = FluentUI.Theme.Background
-    Window.MainFrame.BackgroundTransparency = 0.15
+    Window.MainFrame.Size = UDim2.new(0, 700, 0, 450)
+    Window.MainFrame.Position = UDim2.new(0.5, -350, 0.5, -225)
+    Window.MainFrame.BackgroundColor3 = SurfyUI.Theme.Background
+    Window.MainFrame.BackgroundTransparency = 0.1
     Window.MainFrame.BorderSizePixel = 0
     Window.MainFrame.Visible = false
     Window.MainFrame.ClipsDescendants = true
     Window.MainFrame.Parent = Window.ScreenGui
     
-    RoundCorners(Window.MainFrame, 14)
+    RoundCorners(Window.MainFrame, 16)
+    AddStroke(Window.MainFrame, SurfyUI.Theme.Primary, 2, 0.6)
     
-    -- Add glow effect
+    -- Enhanced glow effect
     local Glow = Instance.new("ImageLabel")
     Glow.Name = "Glow"
     Glow.BackgroundTransparency = 1
-    Glow.Position = UDim2.new(0, -20, 0, -20)
-    Glow.Size = UDim2.new(1, 40, 1, 40)
+    Glow.Position = UDim2.new(0, -30, 0, -30)
+    Glow.Size = UDim2.new(1, 60, 1, 60)
     Glow.ZIndex = 0
     Glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    Glow.ImageColor3 = FluentUI.Theme.Primary
-    Glow.ImageTransparency = 0.8
+    Glow.ImageColor3 = SurfyUI.Theme.Primary
+    Glow.ImageTransparency = 0.7
     Glow.ScaleType = Enum.ScaleType.Slice
     Glow.SliceCenter = Rect.new(10, 10, 10, 10)
     Glow.Parent = Window.MainFrame
@@ -183,16 +218,16 @@ function FluentUI:CreateWindow(Config)
     local AnimatedBG = Instance.new("Frame")
     AnimatedBG.Name = "AnimatedBackground"
     AnimatedBG.Size = UDim2.new(1, 0, 1, 0)
-    AnimatedBG.BackgroundTransparency = 0.95
+    AnimatedBG.BackgroundTransparency = 0.97
     AnimatedBG.BorderSizePixel = 0
     AnimatedBG.ZIndex = 0
     AnimatedBG.Parent = Window.MainFrame
     
     local BGGradient = Instance.new("UIGradient")
     BGGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, FluentUI.Theme.Primary),
-        ColorSequenceKeypoint.new(0.5, FluentUI.Theme.PrimaryLight),
-        ColorSequenceKeypoint.new(1, FluentUI.Theme.Primary)
+        ColorSequenceKeypoint.new(0, SurfyUI.Theme.Primary),
+        ColorSequenceKeypoint.new(0.5, SurfyUI.Theme.PrimaryLight),
+        ColorSequenceKeypoint.new(1, SurfyUI.Theme.Primary)
     }
     BGGradient.Rotation = 45
     BGGradient.Parent = AnimatedBG
@@ -209,107 +244,118 @@ function FluentUI:CreateWindow(Config)
     
     Window.Header = Instance.new("Frame")
     Window.Header.Name = "Header"
-    Window.Header.Size = UDim2.new(1, 0, 0, 40)
-    Window.Header.BackgroundColor3 = FluentUI.Theme.Surface
-    Window.Header.BackgroundTransparency = 0.2
+    Window.Header.Size = UDim2.new(1, 0, 0, 50)
+    Window.Header.BackgroundColor3 = SurfyUI.Theme.Surface
+    Window.Header.BackgroundTransparency = 0.3
     Window.Header.BorderSizePixel = 0
     Window.Header.Parent = Window.MainFrame
     
-    -- Only round top corners of header
     local HeaderCorner = Instance.new("UICorner")
-    HeaderCorner.CornerRadius = UDim.new(0, 14)
+    HeaderCorner.CornerRadius = UDim.new(0, 16)
     HeaderCorner.Parent = Window.Header
     
-    -- Cover bottom rounded corners
     local HeaderBottom = Instance.new("Frame")
-    HeaderBottom.Size = UDim2.new(1, 0, 0, 14)
-    HeaderBottom.Position = UDim2.new(0, 0, 1, -14)
-    HeaderBottom.BackgroundColor3 = FluentUI.Theme.Surface
-    HeaderBottom.BackgroundTransparency = 0.2
+    HeaderBottom.Size = UDim2.new(1, 0, 0, 16)
+    HeaderBottom.Position = UDim2.new(0, 0, 1, -16)
+    HeaderBottom.BackgroundColor3 = SurfyUI.Theme.Surface
+    HeaderBottom.BackgroundTransparency = 0.3
     HeaderBottom.BorderSizePixel = 0
     HeaderBottom.Parent = Window.Header
     
     Window.Title = Instance.new("TextLabel")
     Window.Title.Name = "Title"
     Window.Title.Size = UDim2.new(0, 200, 1, 0)
-    Window.Title.Position = UDim2.new(0, 15, 0, 0)
+    Window.Title.Position = UDim2.new(0, 20, 0, 0)
     Window.Title.BackgroundTransparency = 1
     Window.Title.Text = Config.Title or "Surfy TC2"
-    Window.Title.TextColor3 = FluentUI.Theme.Text
-    Window.Title.TextSize = 15
+    Window.Title.TextColor3 = SurfyUI.Theme.Text
+    Window.Title.TextSize = 16
     Window.Title.Font = Enum.Font.GothamBold
     Window.Title.TextXAlignment = Enum.TextXAlignment.Left
     Window.Title.Parent = Window.Header
     
+    local Subtitle = Instance.new("TextLabel")
+    Subtitle.Name = "Subtitle"
+    Subtitle.Size = UDim2.new(0, 200, 0, 15)
+    Subtitle.Position = UDim2.new(0, 20, 0, 28)
+    Subtitle.BackgroundTransparency = 1
+    Subtitle.Text = "Premium UI Library"
+    Subtitle.TextColor3 = SurfyUI.Theme.SubText
+    Subtitle.TextSize = 11
+    Subtitle.Font = Enum.Font.Gotham
+    Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+    Subtitle.Parent = Window.Header
+    
     Window.MinimizeButton = Instance.new("TextButton")
     Window.MinimizeButton.Name = "MinimizeButton"
-    Window.MinimizeButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.MinimizeButton.Position = UDim2.new(1, -74, 0.5, -14)
-    Window.MinimizeButton.BackgroundColor3 = FluentUI.Theme.SurfaceLight
-    Window.MinimizeButton.BackgroundTransparency = 0.3
-    Window.MinimizeButton.TextColor3 = FluentUI.Theme.Text
+    Window.MinimizeButton.Size = UDim2.new(0, 32, 0, 32)
+    Window.MinimizeButton.Position = UDim2.new(1, -80, 0.5, -16)
+    Window.MinimizeButton.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    Window.MinimizeButton.BackgroundTransparency = 0.4
+    Window.MinimizeButton.TextColor3 = SurfyUI.Theme.Text
     Window.MinimizeButton.Text = "━"
-    Window.MinimizeButton.TextSize = 14
+    Window.MinimizeButton.TextSize = 16
     Window.MinimizeButton.Font = Enum.Font.GothamBold
     Window.MinimizeButton.Parent = Window.Header
     
-    RoundCorners(Window.MinimizeButton, 6)
+    RoundCorners(Window.MinimizeButton, 8)
     
     Window.CloseButton = Instance.new("TextButton")
     Window.CloseButton.Name = "CloseButton"
-    Window.CloseButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.CloseButton.Position = UDim2.new(1, -42, 0.5, -14)
-    Window.CloseButton.BackgroundColor3 = FluentUI.Theme.Error
-    Window.CloseButton.BackgroundTransparency = 0.3
+    Window.CloseButton.Size = UDim2.new(0, 32, 0, 32)
+    Window.CloseButton.Position = UDim2.new(1, -44, 0.5, -16)
+    Window.CloseButton.BackgroundColor3 = SurfyUI.Theme.Error
+    Window.CloseButton.BackgroundTransparency = 0.4
     Window.CloseButton.TextColor3 = Color3.new(1, 1, 1)
     Window.CloseButton.Text = "×"
-    Window.CloseButton.TextSize = 18
+    Window.CloseButton.TextSize = 20
     Window.CloseButton.Font = Enum.Font.GothamBold
     Window.CloseButton.Parent = Window.Header
     
-    RoundCorners(Window.CloseButton, 6)
+    RoundCorners(Window.CloseButton, 8)
     
     Window.MinimizeButton.MouseEnter:Connect(function()
-        Tween(Window.MinimizeButton, {BackgroundTransparency = 0}, 0.2)
+        Tween(Window.MinimizeButton, {BackgroundTransparency = 0.1}, 0.2)
     end)
     Window.MinimizeButton.MouseLeave:Connect(function()
-        Tween(Window.MinimizeButton, {BackgroundTransparency = 0.3}, 0.2)
+        Tween(Window.MinimizeButton, {BackgroundTransparency = 0.4}, 0.2)
     end)
     
     Window.CloseButton.MouseEnter:Connect(function()
-        Tween(Window.CloseButton, {BackgroundTransparency = 0}, 0.2)
+        Tween(Window.CloseButton, {BackgroundTransparency = 0.1}, 0.2)
     end)
     Window.CloseButton.MouseLeave:Connect(function()
-        Tween(Window.CloseButton, {BackgroundTransparency = 0.3}, 0.2)
+        Tween(Window.CloseButton, {BackgroundTransparency = 0.4}, 0.2)
     end)
     
     Window.TabContainer = Instance.new("Frame")
     Window.TabContainer.Name = "TabContainer"
-    Window.TabContainer.Size = UDim2.new(0, 130, 1, -40)
-    Window.TabContainer.Position = UDim2.new(0, 0, 0, 40)
-    Window.TabContainer.BackgroundColor3 = FluentUI.Theme.Secondary
-    Window.TabContainer.BackgroundTransparency = 0.2
+    Window.TabContainer.Size = UDim2.new(0, 150, 1, -50)
+    Window.TabContainer.Position = UDim2.new(0, 0, 0, 50)
+    Window.TabContainer.BackgroundColor3 = SurfyUI.Theme.Secondary
+    Window.TabContainer.BackgroundTransparency = 0.3
     Window.TabContainer.BorderSizePixel = 0
     Window.TabContainer.Parent = Window.MainFrame
     
     Window.ContentContainer = Instance.new("Frame")
     Window.ContentContainer.Name = "ContentContainer"
-    Window.ContentContainer.Size = UDim2.new(1, -130, 1, -40)
-    Window.ContentContainer.Position = UDim2.new(0, 130, 0, 40)
-    Window.ContentContainer.BackgroundColor3 = FluentUI.Theme.Background
-    Window.ContentContainer.BackgroundTransparency = 0.2
+    Window.ContentContainer.Size = UDim2.new(1, -150, 1, -50)
+    Window.ContentContainer.Position = UDim2.new(0, 150, 0, 50)
+    Window.ContentContainer.BackgroundColor3 = SurfyUI.Theme.Background
+    Window.ContentContainer.BackgroundTransparency = 0.3
     Window.ContentContainer.BorderSizePixel = 0
     Window.ContentContainer.ClipsDescendants = true
     Window.ContentContainer.Parent = Window.MainFrame
     
     local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.Padding = UDim.new(0, 8)
+    UIListLayout.Padding = UDim.new(0, 10)
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     UIListLayout.Parent = Window.TabContainer
     
     local UIPadding = Instance.new("UIPadding")
-    UIPadding.PaddingTop = UDim.new(0, 10)
+    UIPadding.PaddingTop = UDim.new(0, 15)
+    UIPadding.PaddingBottom = UDim.new(0, 15)
     UIPadding.Parent = Window.TabContainer
     
     Window.CloseButton.MouseButton1Click:Connect(function()
@@ -361,30 +407,28 @@ function FluentUI:CreateWindow(Config)
             
             if self.SavedPosition then
                 self.MainFrame.Position = self.SavedPosition
-                self.MainFrame.Size = UDim2.new(0, 650, 0, 0)
-                Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 420)}, 0.4, Enum.EasingStyle.Back)
+                self.MainFrame.Size = UDim2.new(0, 700, 0, 0)
+                Tween(self.MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.4, Enum.EasingStyle.Back)
             else
-                self.MainFrame.Size = UDim2.new(0, 650, 0, 0)
-                self.MainFrame.Position = UDim2.new(0.5, -325, 0.5, 0)
+                self.MainFrame.Size = UDim2.new(0, 700, 0, 0)
+                self.MainFrame.Position = UDim2.new(0.5, -350, 0.5, 0)
                 Tween(self.MainFrame, {
-                    Size = UDim2.new(0, 650, 0, 420),
-                    Position = UDim2.new(0.5, -325, 0.5, -210)
+                    Size = UDim2.new(0, 700, 0, 450),
+                    Position = UDim2.new(0.5, -350, 0.5, -225)
                 }, 0.4, Enum.EasingStyle.Back)
             end
             
-            -- Always unlock mouse when UI opens (for first person games)
             UserInputService.MouseBehavior = Enum.MouseBehavior.Default
             UserInputService.MouseIconEnabled = true
         else
             self.SavedPosition = self.MainFrame.Position
             
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+            Tween(self.MainFrame, {Size = UDim2.new(0, 700, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
             
             task.delay(0.3, function()
                 self.MainFrame.Visible = false
             end)
             
-            -- Keep mouse unlocked even when UI closes (for first person games)
             UserInputService.MouseBehavior = Enum.MouseBehavior.Default
             UserInputService.MouseIconEnabled = true
         end
@@ -393,11 +437,11 @@ function FluentUI:CreateWindow(Config)
     function Window:ToggleMinimize()
         self.IsMinimized = not self.IsMinimized
         if self.IsMinimized then
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 40)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(self.MainFrame, {Size = UDim2.new(0, 700, 0, 50)}, 0.3, Enum.EasingStyle.Quint)
             self.ContentContainer.Visible = false
             self.TabContainer.Visible = false
         else
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 420)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(self.MainFrame, {Size = UDim2.new(0, 700, 0, 450)}, 0.3, Enum.EasingStyle.Quint)
             task.wait(0.15)
             self.ContentContainer.Visible = true
             self.TabContainer.Visible = true
@@ -407,15 +451,7 @@ function FluentUI:CreateWindow(Config)
     return Window
 end
 
--- Tab Icons (removed emojis)
-local TabIcons = {
-    Combat = "",
-    Visuals = "",
-    Misc = "",
-    Settings = ""
-}
-
-function FluentUI:CreateTab(Name)
+function SurfyUI:CreateTab(Name)
     local Tab = {
         Name = Name,
         Sections = {}
@@ -423,25 +459,38 @@ function FluentUI:CreateTab(Name)
     
     local TabButton = Instance.new("TextButton")
     TabButton.Name = Name .. "Tab"
-    TabButton.Size = UDim2.new(0.85, 0, 0, 45)
-    TabButton.BackgroundColor3 = FluentUI.Theme.Surface
-    TabButton.BackgroundTransparency = 0.4
-    TabButton.TextColor3 = FluentUI.Theme.SubText
+    TabButton.Size = UDim2.new(0.88, 0, 0, 48)
+    TabButton.BackgroundColor3 = SurfyUI.Theme.Surface
+    TabButton.BackgroundTransparency = 0.5
+    TabButton.TextColor3 = SurfyUI.Theme.SubText
     TabButton.Text = Name
-    TabButton.TextSize = 13
+    TabButton.TextSize = 14
     TabButton.Font = Enum.Font.GothamSemibold
     TabButton.Parent = self.TabContainer
     
-    RoundCorners(TabButton, 8)
+    RoundCorners(TabButton, 10)
+    
+    local TabAccent = Instance.new("Frame")
+    TabAccent.Name = "Accent"
+    TabAccent.Size = UDim2.new(0, 3, 0.7, 0)
+    TabAccent.Position = UDim2.new(0, 0, 0.15, 0)
+    TabAccent.BackgroundColor3 = SurfyUI.Theme.Primary
+    TabAccent.BackgroundTransparency = 1
+    TabAccent.BorderSizePixel = 0
+    TabAccent.Parent = TabButton
+    
+    local AccentCorner = Instance.new("UICorner")
+    AccentCorner.CornerRadius = UDim.new(0, 3)
+    AccentCorner.Parent = TabAccent
     
     TabButton.MouseEnter:Connect(function()
         if not Tab.IsActive then
-            Tween(TabButton, {BackgroundTransparency = 0.2}, 0.2)
+            Tween(TabButton, {BackgroundTransparency = 0.3}, 0.2)
         end
     end)
     TabButton.MouseLeave:Connect(function()
         if not Tab.IsActive then
-            Tween(TabButton, {BackgroundTransparency = 0.4}, 0.2)
+            Tween(TabButton, {BackgroundTransparency = 0.5}, 0.2)
         end
     end)
     
@@ -450,30 +499,31 @@ function FluentUI:CreateTab(Name)
     TabContent.Size = UDim2.new(1, 0, 1, 0)
     TabContent.BackgroundTransparency = 1
     TabContent.BorderSizePixel = 0
-    TabContent.ScrollBarThickness = 3
-    TabContent.ScrollBarImageColor3 = FluentUI.Theme.Primary
-    TabContent.ScrollBarImageTransparency = 0.4
+    TabContent.ScrollBarThickness = 4
+    TabContent.ScrollBarImageColor3 = SurfyUI.Theme.Primary
+    TabContent.ScrollBarImageTransparency = 0.5
     TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
     TabContent.Visible = false
     TabContent.Parent = self.ContentContainer
     
     local ContentLayout = Instance.new("UIListLayout")
-    ContentLayout.Padding = UDim.new(0, 15)
+    ContentLayout.Padding = UDim.new(0, 18)
     ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ContentLayout.Parent = TabContent
     
     local ContentPadding = Instance.new("UIPadding")
-    ContentPadding.PaddingTop = UDim.new(0, 15)
-    ContentPadding.PaddingBottom = UDim.new(0, 15)
+    ContentPadding.PaddingTop = UDim.new(0, 20)
+    ContentPadding.PaddingBottom = UDim.new(0, 20)
     ContentPadding.Parent = TabContent
     
     ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 30)
+        TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 40)
     end)
     
     Tab.Button = TabButton
     Tab.Content = TabContent
+    Tab.Accent = TabAccent
     Tab.IsActive = false
     
     TabButton.MouseButton1Click:Connect(function()
@@ -489,28 +539,30 @@ function FluentUI:CreateTab(Name)
     return Tab
 end
 
-function FluentUI:SwitchTab(Tab)
+function SurfyUI:SwitchTab(Tab)
     if self.CurrentTab then
         self.CurrentTab.Content.Visible = false
         self.CurrentTab.IsActive = false
         Tween(self.CurrentTab.Button, {
-            BackgroundColor3 = FluentUI.Theme.Surface, 
-            BackgroundTransparency = 0.4,
-            TextColor3 = FluentUI.Theme.SubText
+            BackgroundColor3 = SurfyUI.Theme.Surface, 
+            BackgroundTransparency = 0.5,
+            TextColor3 = SurfyUI.Theme.SubText
         }, 0.2)
+        Tween(self.CurrentTab.Accent, {BackgroundTransparency = 1}, 0.2)
     end
     
     self.CurrentTab = Tab
     Tab.Content.Visible = true
     Tab.IsActive = true
     Tween(Tab.Button, {
-        BackgroundColor3 = FluentUI.Theme.Primary, 
-        BackgroundTransparency = 0,
-        TextColor3 = FluentUI.Theme.Text
+        BackgroundColor3 = SurfyUI.Theme.Primary, 
+        BackgroundTransparency = 0.2,
+        TextColor3 = SurfyUI.Theme.Text
     }, 0.3, Enum.EasingStyle.Quint)
+    Tween(Tab.Accent, {BackgroundTransparency = 0}, 0.3)
 end
 
-function FluentUI:CreateSection(Tab, Name)
+function SurfyUI:CreateSection(Tab, Name)
     local Section = {
         Name = Name,
         ElementOrder = 0
@@ -518,7 +570,7 @@ function FluentUI:CreateSection(Tab, Name)
     
     local SectionContainer = Instance.new("Frame")
     SectionContainer.Name = Name .. "Container"
-    SectionContainer.Size = UDim2.new(0.94, 0, 0, 0)
+    SectionContainer.Size = UDim2.new(0.95, 0, 0, 0)
     SectionContainer.AutomaticSize = Enum.AutomaticSize.Y
     SectionContainer.BackgroundTransparency = 1
     SectionContainer.LayoutOrder = #Tab.Content:GetChildren()
@@ -526,11 +578,11 @@ function FluentUI:CreateSection(Tab, Name)
     
     local SectionTitle = Instance.new("TextLabel")
     SectionTitle.Name = "Title"
-    SectionTitle.Size = UDim2.new(1, 0, 0, 25)
+    SectionTitle.Size = UDim2.new(1, 0, 0, 28)
     SectionTitle.BackgroundTransparency = 1
     SectionTitle.Text = Name
-    SectionTitle.TextColor3 = FluentUI.Theme.Text
-    SectionTitle.TextSize = 14
+    SectionTitle.TextColor3 = SurfyUI.Theme.Text
+    SectionTitle.TextSize = 15
     SectionTitle.Font = Enum.Font.GothamBold
     SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
     SectionTitle.Parent = SectionContainer
@@ -538,25 +590,26 @@ function FluentUI:CreateSection(Tab, Name)
     local SectionCard = Instance.new("Frame")
     SectionCard.Name = "Card"
     SectionCard.Size = UDim2.new(1, 0, 0, 0)
-    SectionCard.Position = UDim2.new(0, 0, 0, 30)
+    SectionCard.Position = UDim2.new(0, 0, 0, 32)
     SectionCard.AutomaticSize = Enum.AutomaticSize.Y
-    SectionCard.BackgroundColor3 = FluentUI.Theme.Surface
-    SectionCard.BackgroundTransparency = 0.3
+    SectionCard.BackgroundColor3 = SurfyUI.Theme.Surface
+    SectionCard.BackgroundTransparency = 0.4
     SectionCard.Parent = SectionContainer
     
-    RoundCorners(SectionCard, 12)
+    RoundCorners(SectionCard, 14)
+    AddStroke(SectionCard, SurfyUI.Theme.Primary, 1, 0.8)
     
     local CardLayout = Instance.new("UIListLayout")
-    CardLayout.Padding = UDim.new(0, 8)
+    CardLayout.Padding = UDim.new(0, 10)
     CardLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     CardLayout.SortOrder = Enum.SortOrder.LayoutOrder
     CardLayout.Parent = SectionCard
     
     local CardPadding = Instance.new("UIPadding")
-    CardPadding.PaddingTop = UDim.new(0, 12)
-    CardPadding.PaddingBottom = UDim.new(0, 12)
-    CardPadding.PaddingLeft = UDim.new(0, 5)
-    CardPadding.PaddingRight = UDim.new(0, 5)
+    CardPadding.PaddingTop = UDim.new(0, 14)
+    CardPadding.PaddingBottom = UDim.new(0, 14)
+    CardPadding.PaddingLeft = UDim.new(0, 8)
+    CardPadding.PaddingRight = UDim.new(0, 8)
     CardPadding.Parent = SectionCard
     
     Section.Frame = SectionCard
@@ -565,7 +618,7 @@ function FluentUI:CreateSection(Tab, Name)
 end
 
 -- Keybind System
-function FluentUI:CreateKeybind(Section, Config)
+function SurfyUI:CreateKeybind(Section, Config)
     Config = Config or {}
     
     local Keybind = {
@@ -574,27 +627,31 @@ function FluentUI:CreateKeybind(Section, Config)
         IsBinding = false
     }
     
-    local KeybindFrame = Instance.new("Frame")
-    KeybindFrame.Name = Config.Title .. "Keybind"
-    KeybindFrame.Size = UDim2.new(1, -20, 0, 32)
-    KeybindFrame.BackgroundTransparency = 1
-    KeybindFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    KeybindFrame.Parent = Section.Frame
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
     local KeybindLabel = Instance.new("TextLabel")
     KeybindLabel.Name = "Label"
     KeybindLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    KeybindLabel.Position = UDim2.new(0, 5, 0, 0)
+    KeybindLabel.Position = UDim2.new(0, 12, 0, 0)
     KeybindLabel.BackgroundTransparency = 1
     KeybindLabel.Text = Config.Title or "Keybind"
-    KeybindLabel.TextColor3 = FluentUI.Theme.Text
+    KeybindLabel.TextColor3 = SurfyUI.Theme.Text
     KeybindLabel.TextSize = 13
-    KeybindLabel.Font = Enum.Font.Gotham
+    KeybindLabel.Font = Enum.Font.GothamMedium
     KeybindLabel.TextXAlignment = Enum.TextXAlignment.Left
     KeybindLabel.TextYAlignment = Enum.TextYAlignment.Center
-    KeybindLabel.Parent = KeybindFrame
+    KeybindLabel.Parent = ElementCard
     
     local function GetKeyName(key)
         if key == Enum.UserInputType.MouseButton1 then return "LMB"
@@ -606,22 +663,23 @@ function FluentUI:CreateKeybind(Section, Config)
     
     local KeybindButton = Instance.new("TextButton")
     KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 70, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -75, 0.5, -12)
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
+    KeybindButton.Size = UDim2.new(0, 75, 0, 28)
+    KeybindButton.Position = UDim2.new(1, -82, 0.5, -14)
+    KeybindButton.BackgroundColor3 = SurfyUI.Theme.Secondary
+    KeybindButton.BackgroundTransparency = 0.3
     KeybindButton.Text = GetKeyName(Keybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
-    KeybindButton.TextSize = 11
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = KeybindFrame
+    KeybindButton.TextColor3 = SurfyUI.Theme.Text
+    KeybindButton.TextSize = 12
+    KeybindButton.Font = Enum.Font.GothamMedium
+    KeybindButton.Parent = ElementCard
     
-    RoundCorners(KeybindButton, 6)
+    RoundCorners(KeybindButton, 8)
     
     local Connection
     KeybindButton.MouseButton1Click:Connect(function()
         Keybind.IsBinding = true
         KeybindButton.Text = "..."
-        Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Primary}, 0.2)
+        Tween(KeybindButton, {BackgroundColor3 = SurfyUI.Theme.Primary, BackgroundTransparency = 0.1}, 0.2)
         
         Connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if input.KeyCode ~= Enum.KeyCode.Unknown then
@@ -634,7 +692,7 @@ function FluentUI:CreateKeybind(Section, Config)
                 KeybindButton.Text = GetKeyName(input.UserInputType)
             end
             
-            Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.2)
+            Tween(KeybindButton, {BackgroundColor3 = SurfyUI.Theme.Secondary, BackgroundTransparency = 0.3}, 0.2)
             Keybind.IsBinding = false
             Connection:Disconnect()
         end)
@@ -643,7 +701,7 @@ function FluentUI:CreateKeybind(Section, Config)
     return Keybind
 end
 
-function FluentUI:CreateToggleWithKeybind(Section, Config)
+function SurfyUI:CreateToggleWithKeybind(Section, Config)
     Config = Config or {}
     
     local ToggleKeybind = {
@@ -654,12 +712,16 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
         IsBinding = false
     }
     
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = Config.Title .. "ToggleKeybind"
-    ToggleFrame.Size = UDim2.new(1, -20, 0, 32)
-    ToggleFrame.BackgroundTransparency = 1
-    ToggleFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    ToggleFrame.Parent = Section.Frame
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
@@ -673,60 +735,61 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(1, -120, 1, 0)
-    ToggleLabel.Position = UDim2.new(0, 5, 0, 0)
+    ToggleLabel.Size = UDim2.new(1, -130, 1, 0)
+    ToggleLabel.Position = UDim2.new(0, 12, 0, 0)
     ToggleLabel.BackgroundTransparency = 1
     ToggleLabel.Text = Config.Title or "Toggle"
-    ToggleLabel.TextColor3 = FluentUI.Theme.Text
+    ToggleLabel.TextColor3 = SurfyUI.Theme.Text
     ToggleLabel.TextSize = 13
-    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Font = Enum.Font.GothamMedium
     ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ToggleLabel.Parent = ToggleFrame
+    ToggleLabel.Parent = ElementCard
     
-    -- Keybind Button (LEFT of Toggle)
     local KeybindButton = Instance.new("TextButton")
     KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 50, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -108, 0.5, -12)
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
+    KeybindButton.Size = UDim2.new(0, 50, 0, 28)
+    KeybindButton.Position = UDim2.new(1, -116, 0.5, -14)
+    KeybindButton.BackgroundColor3 = SurfyUI.Theme.Secondary
+    KeybindButton.BackgroundTransparency = 0.3
     KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
+    KeybindButton.TextColor3 = SurfyUI.Theme.Text
     KeybindButton.TextSize = 10
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = ToggleFrame
+    KeybindButton.Font = Enum.Font.GothamMedium
+    KeybindButton.Parent = ElementCard
     
-    RoundCorners(KeybindButton, 6)
+    RoundCorners(KeybindButton, 8)
     
-    -- Toggle Button (RIGHT side, matching regular toggles)
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
-    ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
-    ToggleButton.BackgroundColor3 = ToggleKeybind.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
+    ToggleButton.Size = UDim2.new(0, 48, 0, 26)
+    ToggleButton.Position = UDim2.new(1, -56, 0.5, -13)
+    ToggleButton.BackgroundColor3 = ToggleKeybind.Value and SurfyUI.Theme.Success or SurfyUI.Theme.Secondary
+    ToggleButton.BackgroundTransparency = 0.2
     ToggleButton.Text = ""
-    ToggleButton.Parent = ToggleFrame
+    ToggleButton.Parent = ElementCard
     
-    RoundCorners(ToggleButton, 12)
+    RoundCorners(ToggleButton, 13)
     
     local ToggleKnob = Instance.new("Frame")
     ToggleKnob.Name = "Knob"
-    ToggleKnob.Size = UDim2.new(0, 18, 0, 18)
-    ToggleKnob.Position = ToggleKeybind.Value and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+    ToggleKnob.Size = UDim2.new(0, 20, 0, 20)
+    ToggleKnob.Position = ToggleKeybind.Value and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
     ToggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
     ToggleKnob.Parent = ToggleButton
     
-    RoundCorners(ToggleKnob, 9)
+    RoundCorners(ToggleKnob, 10)
+    AddStroke(ToggleKnob, SurfyUI.Theme.Primary, 1.5, 0.7)
     
     local function ToggleValue()
         ToggleKeybind.Value = not ToggleKeybind.Value
         
         if ToggleKeybind.Value then
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Success}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(1, -21, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(ToggleButton, {BackgroundColor3 = SurfyUI.Theme.Success, BackgroundTransparency = 0}, 0.3)
+            Tween(ToggleKnob, {Position = UDim2.new(1, -23, 0.5, -10)}, 0.3, Enum.EasingStyle.Quint)
         else
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(ToggleButton, {BackgroundColor3 = SurfyUI.Theme.Secondary, BackgroundTransparency = 0.2}, 0.3)
+            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -10)}, 0.3, Enum.EasingStyle.Quint)
         end
         
         if ToggleKeybind.Callback then
@@ -740,7 +803,7 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     KeybindButton.MouseButton1Click:Connect(function()
         ToggleKeybind.IsBinding = true
         KeybindButton.Text = "..."
-        Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Primary}, 0.2)
+        Tween(KeybindButton, {BackgroundColor3 = SurfyUI.Theme.Primary, BackgroundTransparency = 0.1}, 0.2)
         
         Connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if input.KeyCode ~= Enum.KeyCode.Unknown then
@@ -753,13 +816,12 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
                 KeybindButton.Text = GetKeyName(input.UserInputType)
             end
             
-            Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.2)
+            Tween(KeybindButton, {BackgroundColor3 = SurfyUI.Theme.Secondary, BackgroundTransparency = 0.3}, 0.2)
             ToggleKeybind.IsBinding = false
             Connection:Disconnect()
         end)
     end)
     
-    -- Keybind activation (does NOT toggle, calls KeybindCallback instead)
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if not ToggleKeybind.IsBinding and not gameProcessed and ToggleKeybind.Value then
             if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == ToggleKeybind.Key) or
@@ -774,7 +836,7 @@ function FluentUI:CreateToggleWithKeybind(Section, Config)
     return ToggleKeybind
 end
 
-function FluentUI:CreateToggle(Section, Config)
+function SurfyUI:CreateToggle(Section, Config)
     Config = Config or {}
     
     local Toggle = {
@@ -782,56 +844,62 @@ function FluentUI:CreateToggle(Section, Config)
         Callback = Config.Callback
     }
     
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = Config.Title .. "Toggle"
-    ToggleFrame.Size = UDim2.new(1, -20, 0, 32)
-    ToggleFrame.BackgroundTransparency = 1
-    ToggleFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    ToggleFrame.Parent = Section.Frame
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
     local ToggleLabel = Instance.new("TextLabel")
     ToggleLabel.Name = "Label"
     ToggleLabel.Size = UDim2.new(0.65, 0, 1, 0)
-    ToggleLabel.Position = UDim2.new(0, 5, 0, 0)
+    ToggleLabel.Position = UDim2.new(0, 12, 0, 0)
     ToggleLabel.BackgroundTransparency = 1
     ToggleLabel.Text = Config.Title or "Toggle"
-    ToggleLabel.TextColor3 = FluentUI.Theme.Text
+    ToggleLabel.TextColor3 = SurfyUI.Theme.Text
     ToggleLabel.TextSize = 13
-    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Font = Enum.Font.GothamMedium
     ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
     ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ToggleLabel.Parent = ToggleFrame
+    ToggleLabel.Parent = ElementCard
     
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "Toggle"
-    ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
-    ToggleButton.BackgroundColor3 = Toggle.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
+    ToggleButton.Size = UDim2.new(0, 48, 0, 26)
+    ToggleButton.Position = UDim2.new(1, -56, 0.5, -13)
+    ToggleButton.BackgroundColor3 = Toggle.Value and SurfyUI.Theme.Success or SurfyUI.Theme.Secondary
+    ToggleButton.BackgroundTransparency = 0.2
     ToggleButton.Text = ""
-    ToggleButton.Parent = ToggleFrame
+    ToggleButton.Parent = ElementCard
     
-    RoundCorners(ToggleButton, 12)
+    RoundCorners(ToggleButton, 13)
     
     local ToggleKnob = Instance.new("Frame")
     ToggleKnob.Name = "Knob"
-    ToggleKnob.Size = UDim2.new(0, 18, 0, 18)
-    ToggleKnob.Position = Toggle.Value and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+    ToggleKnob.Size = UDim2.new(0, 20, 0, 20)
+    ToggleKnob.Position = Toggle.Value and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 3, 0.5, -10)
     ToggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
     ToggleKnob.Parent = ToggleButton
     
-    RoundCorners(ToggleKnob, 9)
+    RoundCorners(ToggleKnob, 10)
+    AddStroke(ToggleKnob, SurfyUI.Theme.Primary, 1.5, 0.7)
     
     ToggleButton.MouseButton1Click:Connect(function()
         Toggle.Value = not Toggle.Value
         
         if Toggle.Value then
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Success}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(1, -21, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(ToggleButton, {BackgroundColor3 = SurfyUI.Theme.Success, BackgroundTransparency = 0}, 0.3)
+            Tween(ToggleKnob, {Position = UDim2.new(1, -23, 0.5, -10)}, 0.3, Enum.EasingStyle.Quint)
         else
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
+            Tween(ToggleButton, {BackgroundColor3 = SurfyUI.Theme.Secondary, BackgroundTransparency = 0.2}, 0.3)
+            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -10)}, 0.3, Enum.EasingStyle.Quint)
         end
         
         if Toggle.Callback then
@@ -842,7 +910,7 @@ function FluentUI:CreateToggle(Section, Config)
     return Toggle
 end
 
-function FluentUI:CreateSlider(Section, Config)
+function SurfyUI:CreateSlider(Section, Config)
     Config = Config or {}
     
     local Slider = {
@@ -854,70 +922,78 @@ function FluentUI:CreateSlider(Section, Config)
         IsDragging = false
     }
     
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Name = Config.Title .. "Slider"
-    SliderFrame.Size = UDim2.new(1, -20, 0, 50)
-    SliderFrame.BackgroundTransparency = 1
-    SliderFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    SliderFrame.Parent = Section.Frame
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 60)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
     local SliderLabel = Instance.new("TextLabel")
     SliderLabel.Name = "Label"
-    SliderLabel.Size = UDim2.new(1, 0, 0, 18)
-    SliderLabel.Position = UDim2.new(0, 5, 0, 0)
+    SliderLabel.Size = UDim2.new(1, 0, 0, 22)
+    SliderLabel.Position = UDim2.new(0, 12, 0, 8)
     SliderLabel.BackgroundTransparency = 1
     SliderLabel.Text = Config.Title or "Slider"
-    SliderLabel.TextColor3 = FluentUI.Theme.Text
+    SliderLabel.TextColor3 = SurfyUI.Theme.Text
     SliderLabel.TextSize = 13
-    SliderLabel.Font = Enum.Font.Gotham
+    SliderLabel.Font = Enum.Font.GothamMedium
     SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-    SliderLabel.Parent = SliderFrame
+    SliderLabel.Parent = ElementCard
     
     local SliderValue = Instance.new("TextLabel")
     SliderValue.Name = "Value"
-    SliderValue.Size = UDim2.new(0, 60, 0, 18)
-    SliderValue.Position = UDim2.new(1, -65, 0, 0)
+    SliderValue.Size = UDim2.new(0, 70, 0, 22)
+    SliderValue.Position = UDim2.new(1, -78, 0, 8)
     SliderValue.BackgroundTransparency = 1
     SliderValue.Text = tostring(Slider.Value)
-    SliderValue.TextColor3 = FluentUI.Theme.SubText
+    SliderValue.TextColor3 = SurfyUI.Theme.Primary
     SliderValue.TextSize = 13
-    SliderValue.Font = Enum.Font.Gotham
+    SliderValue.Font = Enum.Font.GothamBold
     SliderValue.TextXAlignment = Enum.TextXAlignment.Right
-    SliderValue.Parent = SliderFrame
+    SliderValue.Parent = ElementCard
     
     local SliderTrack = Instance.new("Frame")
     SliderTrack.Name = "Track"
-    SliderTrack.Size = UDim2.new(1, -10, 0, 5)
-    SliderTrack.Position = UDim2.new(0, 5, 1, -18)
-    SliderTrack.BackgroundColor3 = FluentUI.Theme.Secondary
-    SliderTrack.Parent = SliderFrame
+    SliderTrack.Size = UDim2.new(1, -24, 0, 6)
+    SliderTrack.Position = UDim2.new(0, 12, 1, -22)
+    SliderTrack.BackgroundColor3 = SurfyUI.Theme.Secondary
+    SliderTrack.BackgroundTransparency = 0.3
+    SliderTrack.Parent = ElementCard
     
-    RoundCorners(SliderTrack, 2.5)
+    RoundCorners(SliderTrack, 3)
     
     local SliderFill = Instance.new("Frame")
     SliderFill.Name = "Fill"
     SliderFill.Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0)
-    SliderFill.BackgroundColor3 = FluentUI.Theme.Primary
+    SliderFill.BackgroundColor3 = SurfyUI.Theme.Primary
+    SliderFill.BackgroundTransparency = 0.2
     SliderFill.Parent = SliderTrack
     
-    RoundCorners(SliderFill, 2.5)
+    RoundCorners(SliderFill, 3)
+    AddGradient(SliderFill, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryLight, 0)
     
     local SliderButton = Instance.new("TextButton")
     SliderButton.Name = "Button"
-    SliderButton.Size = UDim2.new(0, 14, 0, 14)
-    SliderButton.Position = UDim2.new(SliderFill.Size.X.Scale, -7, 0.5, -7)
+    SliderButton.Size = UDim2.new(0, 16, 0, 16)
+    SliderButton.Position = UDim2.new(SliderFill.Size.X.Scale, -8, 0.5, -8)
     SliderButton.BackgroundColor3 = Color3.new(1, 1, 1)
+    SliderButton.BackgroundTransparency = 0
     SliderButton.Text = ""
     SliderButton.ZIndex = 2
     SliderButton.Parent = SliderTrack
     
-    RoundCorners(SliderButton, 7)
+    RoundCorners(SliderButton, 8)
+    AddStroke(SliderButton, SurfyUI.Theme.Primary, 2, 0.3)
     
     local RunService = game:GetService("RunService")
     
-    -- Pulsing animation when dragging
     local pulseConnection
     
     local function UpdateSlider(Input)
@@ -928,7 +1004,7 @@ function FluentUI:CreateSlider(Section, Config)
         SliderValue.Text = tostring(Slider.Value)
         
         Tween(SliderFill, {Size = UDim2.new(Value, 0, 1, 0)}, 0.1)
-        Tween(SliderButton, {Position = UDim2.new(Value, -7, 0.5, -7)}, 0.1)
+        Tween(SliderButton, {Position = UDim2.new(Value, -8, 0.5, -8)}, 0.1)
         
         if Slider.Callback then
             Slider.Callback(Slider.Value)
@@ -937,12 +1013,12 @@ function FluentUI:CreateSlider(Section, Config)
     
     SliderButton.MouseButton1Down:Connect(function()
         Slider.IsDragging = true
+        Tween(SliderButton, {Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(SliderButton.Position.X.Scale, -9, 0.5, -9)}, 0.2)
         
-        -- Start pulsing animation
         pulseConnection = RunService.Heartbeat:Connect(function()
             if Slider.IsDragging then
                 local pulse = math.abs(math.sin(tick() * 8))
-                SliderFill.BackgroundColor3 = FluentUI.Theme.Primary:Lerp(FluentUI.Theme.PrimaryLight, pulse * 0.5)
+                SliderFill.BackgroundColor3 = SurfyUI.Theme.Primary:Lerp(SurfyUI.Theme.PrimaryLight, pulse * 0.5)
             end
         end)
     end)
@@ -950,10 +1026,11 @@ function FluentUI:CreateSlider(Section, Config)
     UserInputService.InputEnded:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             Slider.IsDragging = false
+            Tween(SliderButton, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(SliderButton.Position.X.Scale, -8, 0.5, -8)}, 0.2)
             if pulseConnection then
                 pulseConnection:Disconnect()
                 pulseConnection = nil
-                SliderFill.BackgroundColor3 = FluentUI.Theme.Primary
+                SliderFill.BackgroundColor3 = SurfyUI.Theme.Primary
             end
         end
     end)
@@ -967,45 +1044,51 @@ function FluentUI:CreateSlider(Section, Config)
     return Slider
 end
 
-function FluentUI:CreateColorPicker(Section, Config)
+function SurfyUI:CreateColorPicker(Section, Config)
     Config = Config or {}
     
     local ColorPicker = {
-        Value = Config.Default or Color3.fromRGB(255, 255, 255),
+        Value = Config.Default or Color3.fromRGB(0, 180, 255),
         Callback = Config.Callback
     }
     
-    local PickerFrame = Instance.new("Frame")
-    PickerFrame.Name = Config.Title .. "ColorPicker"
-    PickerFrame.Size = UDim2.new(1, -20, 0, 32)
-    PickerFrame.BackgroundTransparency = 1
-    PickerFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    PickerFrame.Parent = Section.Frame
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
     local PickerLabel = Instance.new("TextLabel")
     PickerLabel.Name = "Label"
     PickerLabel.Size = UDim2.new(0.65, 0, 1, 0)
-    PickerLabel.Position = UDim2.new(0, 5, 0, 0)
+    PickerLabel.Position = UDim2.new(0, 12, 0, 0)
     PickerLabel.BackgroundTransparency = 1
     PickerLabel.Text = Config.Title or "Color"
-    PickerLabel.TextColor3 = FluentUI.Theme.Text
+    PickerLabel.TextColor3 = SurfyUI.Theme.Text
     PickerLabel.TextSize = 13
-    PickerLabel.Font = Enum.Font.Gotham
+    PickerLabel.Font = Enum.Font.GothamMedium
     PickerLabel.TextXAlignment = Enum.TextXAlignment.Left
     PickerLabel.TextYAlignment = Enum.TextYAlignment.Center
-    PickerLabel.Parent = PickerFrame
+    PickerLabel.Parent = ElementCard
     
     local ColorButton = Instance.new("TextButton")
     ColorButton.Name = "ColorButton"
-    ColorButton.Size = UDim2.new(0, 55, 0, 24)
-    ColorButton.Position = UDim2.new(1, -58, 0.5, -12)
+    ColorButton.Size = UDim2.new(0, 60, 0, 28)
+    ColorButton.Position = UDim2.new(1, -68, 0.5, -14)
     ColorButton.BackgroundColor3 = ColorPicker.Value
+    ColorButton.BackgroundTransparency = 0.1
     ColorButton.Text = ""
-    ColorButton.Parent = PickerFrame
+    ColorButton.Parent = ElementCard
     
-    RoundCorners(ColorButton, 6)
+    RoundCorners(ColorButton, 8)
+    AddStroke(ColorButton, Color3.new(1, 1, 1), 2, 0.7)
     
     local colors = {
         Color3.fromRGB(255, 50, 50),
@@ -1013,7 +1096,8 @@ function FluentUI:CreateColorPicker(Section, Config)
         Color3.fromRGB(255, 255, 50),
         Color3.fromRGB(50, 255, 50),
         Color3.fromRGB(50, 255, 255),
-        Color3.fromRGB(50, 50, 255),
+        Color3.fromRGB(50, 150, 255),
+        Color3.fromRGB(150, 50, 255),
         Color3.fromRGB(255, 50, 255),
         Color3.fromRGB(255, 255, 255)
     }
@@ -1040,7 +1124,7 @@ function FluentUI:CreateColorPicker(Section, Config)
     return ColorPicker
 end
 
-function FluentUI:CreateDropdown(Section, Config)
+function SurfyUI:CreateDropdown(Section, Config)
     Config = Config or {}
     
     local Dropdown = {
@@ -1050,89 +1134,112 @@ function FluentUI:CreateDropdown(Section, Config)
         IsOpen = false
     }
     
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Name = Config.Title .. "Dropdown"
-    DropdownFrame.Size = UDim2.new(1, -20, 0, 32)
-    DropdownFrame.BackgroundTransparency = 1
-    DropdownFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    DropdownFrame.Parent = Section.Frame
-    DropdownFrame.ClipsDescendants = false
-    DropdownFrame.ZIndex = 10
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    ElementCard.ClipsDescendants = false
+    ElementCard.ZIndex = 10
+    
+    RoundCorners(ElementCard, 10)
     
     Section.ElementOrder = Section.ElementOrder + 1
     
     local DropdownLabel = Instance.new("TextLabel")
     DropdownLabel.Name = "Label"
     DropdownLabel.Size = UDim2.new(0.4, 0, 1, 0)
-    DropdownLabel.Position = UDim2.new(0, 5, 0, 0)
+    DropdownLabel.Position = UDim2.new(0, 12, 0, 0)
     DropdownLabel.BackgroundTransparency = 1
     DropdownLabel.Text = Config.Title or "Dropdown"
-    DropdownLabel.TextColor3 = FluentUI.Theme.Text
+    DropdownLabel.TextColor3 = SurfyUI.Theme.Text
     DropdownLabel.TextSize = 13
-    DropdownLabel.Font = Enum.Font.Gotham
+    DropdownLabel.Font = Enum.Font.GothamMedium
     DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
     DropdownLabel.TextYAlignment = Enum.TextYAlignment.Center
-    DropdownLabel.Parent = DropdownFrame
+    DropdownLabel.Parent = ElementCard
     
     local DropdownButton = Instance.new("TextButton")
     DropdownButton.Name = "Button"
-    DropdownButton.Size = UDim2.new(0, 120, 0, 24)
-    DropdownButton.Position = UDim2.new(1, -123, 0.5, -12)
-    DropdownButton.BackgroundColor3 = FluentUI.Theme.Secondary
+    DropdownButton.Size = UDim2.new(0, 130, 0, 28)
+    DropdownButton.Position = UDim2.new(1, -138, 0.5, -14)
+    DropdownButton.BackgroundColor3 = SurfyUI.Theme.Secondary
+    DropdownButton.BackgroundTransparency = 0.3
     DropdownButton.Text = "  " .. Dropdown.Value
-    DropdownButton.TextColor3 = FluentUI.Theme.Text
+    DropdownButton.TextColor3 = SurfyUI.Theme.Text
     DropdownButton.TextSize = 12
-    DropdownButton.Font = Enum.Font.Gotham
+    DropdownButton.Font = Enum.Font.GothamMedium
     DropdownButton.TextXAlignment = Enum.TextXAlignment.Left
-    DropdownButton.Parent = DropdownFrame
+    DropdownButton.Parent = ElementCard
     
-    RoundCorners(DropdownButton, 6)
+    RoundCorners(DropdownButton, 8)
     
     local Arrow = Instance.new("TextLabel")
     Arrow.Name = "Arrow"
-    Arrow.Size = UDim2.new(0, 20, 1, 0)
-    Arrow.Position = UDim2.new(1, -20, 0, 0)
+    Arrow.Size = UDim2.new(0, 24, 1, 0)
+    Arrow.Position = UDim2.new(1, -24, 0, 0)
     Arrow.BackgroundTransparency = 1
     Arrow.Text = "▼"
-    Arrow.TextColor3 = FluentUI.Theme.SubText
+    Arrow.TextColor3 = SurfyUI.Theme.SubText
     Arrow.TextSize = 10
-    Arrow.Font = Enum.Font.Gotham
+    Arrow.Font = Enum.Font.GothamBold
     Arrow.Parent = DropdownButton
     
     local OptionsContainer = Instance.new("Frame")
     OptionsContainer.Name = "Options"
-    OptionsContainer.Size = UDim2.new(0, 120, 0, 0)
-    OptionsContainer.Position = UDim2.new(1, -123, 1, 4)
-    OptionsContainer.BackgroundColor3 = FluentUI.Theme.Surface
+    OptionsContainer.Size = UDim2.new(0, 130, 0, 0)
+    OptionsContainer.Position = UDim2.new(1, -138, 1, 6)
+    OptionsContainer.BackgroundColor3 = SurfyUI.Theme.Surface
+    OptionsContainer.BackgroundTransparency = 0.2
     OptionsContainer.BorderSizePixel = 0
     OptionsContainer.Visible = false
     OptionsContainer.ZIndex = 15
-    OptionsContainer.Parent = DropdownFrame
+    OptionsContainer.Parent = ElementCard
     
-    RoundCorners(OptionsContainer, 6)
+    RoundCorners(OptionsContainer, 8)
+    AddStroke(OptionsContainer, SurfyUI.Theme.Primary, 1, 0.6)
     
     local OptionsLayout = Instance.new("UIListLayout")
-    OptionsLayout.Padding = UDim.new(0, 2)
+    OptionsLayout.Padding = UDim.new(0, 3)
     OptionsLayout.Parent = OptionsContainer
     
     local OptionsPadding = Instance.new("UIPadding")
-    OptionsPadding.PaddingTop = UDim.new(0, 4)
-    OptionsPadding.PaddingBottom = UDim.new(0, 4)
+    OptionsPadding.PaddingTop = UDim.new(0, 6)
+    OptionsPadding.PaddingBottom = UDim.new(0, 6)
     OptionsPadding.Parent = OptionsContainer
     
     for _, option in ipairs(Dropdown.Options) do
         local OptionButton = Instance.new("TextButton")
         OptionButton.Name = option
-        OptionButton.Size = UDim2.new(1, 0, 0, 24)
-        OptionButton.BackgroundColor3 = FluentUI.Theme.SurfaceLight
-        OptionButton.BackgroundTransparency = option == Dropdown.Value and 0 or 0.5
+        OptionButton.Size = UDim2.new(1, 0, 0, 28)
+        OptionButton.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+        OptionButton.BackgroundTransparency = option == Dropdown.Value and 0.2 or 0.6
         OptionButton.Text = "  " .. option
-        OptionButton.TextColor3 = FluentUI.Theme.Text
+        OptionButton.TextColor3 = SurfyUI.Theme.Text
         OptionButton.TextSize = 11
-        OptionButton.Font = Enum.Font.Gotham
+        OptionButton.Font = Enum.Font.GothamMedium
         OptionButton.TextXAlignment = Enum.TextXAlignment.Left
         OptionButton.ZIndex = 16
         OptionButton.Parent = OptionsContainer
+        
+        if option == Dropdown.Value then
+            AddStroke(OptionButton, SurfyUI.Theme.Primary, 1, 0.5)
+        end
+        
+        OptionButton.MouseEnter:Connect(function()
+            if option ~= Dropdown.Value then
+                Tween(OptionButton, {BackgroundTransparency = 0.4}, 0.2)
+            end
+        end)
+        
+        OptionButton.MouseLeave:Connect(function()
+            if option ~= Dropdown.Value then
+                Tween(OptionButton, {BackgroundTransparency = 0.6}, 0.2)
+            end
+        end)
         
         OptionButton.MouseButton1Click:Connect(function()
             Dropdown.Value = option
@@ -1140,12 +1247,23 @@ function FluentUI:CreateDropdown(Section, Config)
             
             for _, btn in ipairs(OptionsContainer:GetChildren()) do
                 if btn:IsA("TextButton") then
-                    Tween(btn, {BackgroundTransparency = btn.Name == option and 0 or 0.5}, 0.2)
+                    Tween(btn, {BackgroundTransparency = btn.Name == option and 0.2 or 0.6}, 0.2)
+                    
+                    -- Remove old strokes and add to selected
+                    for _, child in ipairs(btn:GetChildren()) do
+                        if child:IsA("UIStroke") then
+                            child:Destroy()
+                        end
+                    end
+                    
+                    if btn.Name == option then
+                        AddStroke(btn, SurfyUI.Theme.Primary, 1, 0.5)
+                    end
                 end
             end
             
             Dropdown.IsOpen = false
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, 0)}, 0.2)
+            Tween(OptionsContainer, {Size = UDim2.new(0, 130, 0, 0)}, 0.2)
             Tween(Arrow, {Rotation = 0}, 0.2)
             task.wait(0.2)
             OptionsContainer.Visible = false
@@ -1161,12 +1279,12 @@ function FluentUI:CreateDropdown(Section, Config)
         
         if Dropdown.IsOpen then
             OptionsContainer.Visible = true
-            OptionsContainer.Size = UDim2.new(0, 120, 0, 0)
-            local targetHeight = #Dropdown.Options * 26 + 8
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
+            OptionsContainer.Size = UDim2.new(0, 130, 0, 0)
+            local targetHeight = #Dropdown.Options * 31 + 12
+            Tween(OptionsContainer, {Size = UDim2.new(0, 130, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
             Tween(Arrow, {Rotation = 180}, 0.2)
         else
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, 0)}, 0.2)
+            Tween(OptionsContainer, {Size = UDim2.new(0, 130, 0, 0)}, 0.2)
             Tween(Arrow, {Rotation = 0}, 0.2)
             task.wait(0.2)
             OptionsContainer.Visible = false
@@ -1176,4 +1294,179 @@ function FluentUI:CreateDropdown(Section, Config)
     return Dropdown
 end
 
-return FluentUI
+function SurfyUI:CreateButton(Section, Config)
+    Config = Config or {}
+    
+    local Button = {
+        Callback = Config.Callback
+    }
+    
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.Primary
+    ElementCard.BackgroundTransparency = 0.3
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
+    AddStroke(ElementCard, SurfyUI.Theme.PrimaryLight, 1.5, 0.5)
+    AddGradient(ElementCard, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryDark, 45)
+    
+    Section.ElementOrder = Section.ElementOrder + 1
+    
+    local ButtonElement = Instance.new("TextButton")
+    ButtonElement.Name = "Button"
+    ButtonElement.Size = UDim2.new(1, 0, 1, 0)
+    ButtonElement.BackgroundTransparency = 1
+    ButtonElement.Text = Config.Title or "Button"
+    ButtonElement.TextColor3 = SurfyUI.Theme.Text
+    ButtonElement.TextSize = 14
+    ButtonElement.Font = Enum.Font.GothamBold
+    ButtonElement.Parent = ElementCard
+    
+    ButtonElement.MouseEnter:Connect(function()
+        Tween(ElementCard, {BackgroundTransparency = 0.1}, 0.2)
+    end)
+    
+    ButtonElement.MouseLeave:Connect(function()
+        Tween(ElementCard, {BackgroundTransparency = 0.3}, 0.2)
+    end)
+    
+    ButtonElement.MouseButton1Click:Connect(function()
+        -- Click animation
+        Tween(ElementCard, {Size = UDim2.new(1, -16, 0, 38)}, 0.1)
+        task.wait(0.1)
+        Tween(ElementCard, {Size = UDim2.new(1, -16, 0, 40)}, 0.1)
+        
+        if Button.Callback then
+            Button.Callback()
+        end
+    end)
+    
+    return Button
+end
+
+function SurfyUI:CreateLabel(Section, Config)
+    Config = Config or {}
+    
+    local Label = {
+        Text = Config.Text or "Label"
+    }
+    
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = "LabelCard"
+    ElementCard.Size = UDim2.new(1, -16, 0, 35)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.6
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
+    
+    Section.ElementOrder = Section.ElementOrder + 1
+    
+    local LabelElement = Instance.new("TextLabel")
+    LabelElement.Name = "Label"
+    LabelElement.Size = UDim2.new(1, -20, 1, 0)
+    LabelElement.Position = UDim2.new(0, 10, 0, 0)
+    LabelElement.BackgroundTransparency = 1
+    LabelElement.Text = Label.Text
+    LabelElement.TextColor3 = SurfyUI.Theme.SubText
+    LabelElement.TextSize = 12
+    LabelElement.Font = Enum.Font.Gotham
+    LabelElement.TextXAlignment = Enum.TextXAlignment.Left
+    LabelElement.TextWrapped = true
+    LabelElement.Parent = ElementCard
+    
+    function Label:SetText(newText)
+        self.Text = newText
+        LabelElement.Text = newText
+    end
+    
+    return Label
+end
+
+function SurfyUI:CreateTextBox(Section, Config)
+    Config = Config or {}
+    
+    local TextBox = {
+        Value = Config.Default or "",
+        Callback = Config.Callback
+    }
+    
+    -- Element Card
+    local ElementCard = Instance.new("Frame")
+    ElementCard.Name = Config.Title .. "Card"
+    ElementCard.Size = UDim2.new(1, -16, 0, 40)
+    ElementCard.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
+    ElementCard.BackgroundTransparency = 0.5
+    ElementCard.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
+    ElementCard.Parent = Section.Frame
+    
+    RoundCorners(ElementCard, 10)
+    
+    Section.ElementOrder = Section.ElementOrder + 1
+    
+    local TextBoxLabel = Instance.new("TextLabel")
+    TextBoxLabel.Name = "Label"
+    TextBoxLabel.Size = UDim2.new(0.35, 0, 1, 0)
+    TextBoxLabel.Position = UDim2.new(0, 12, 0, 0)
+    TextBoxLabel.BackgroundTransparency = 1
+    TextBoxLabel.Text = Config.Title or "TextBox"
+    TextBoxLabel.TextColor3 = SurfyUI.Theme.Text
+    TextBoxLabel.TextSize = 13
+    TextBoxLabel.Font = Enum.Font.GothamMedium
+    TextBoxLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextBoxLabel.TextYAlignment = Enum.TextYAlignment.Center
+    TextBoxLabel.Parent = ElementCard
+    
+    local TextBoxElement = Instance.new("TextBox")
+    TextBoxElement.Name = "TextBox"
+    TextBoxElement.Size = UDim2.new(0, 150, 0, 28)
+    TextBoxElement.Position = UDim2.new(1, -158, 0.5, -14)
+    TextBoxElement.BackgroundColor3 = SurfyUI.Theme.Secondary
+    TextBoxElement.BackgroundTransparency = 0.3
+    TextBoxElement.Text = TextBox.Value
+    TextBoxElement.PlaceholderText = Config.Placeholder or "Enter text..."
+    TextBoxElement.TextColor3 = SurfyUI.Theme.Text
+    TextBoxElement.PlaceholderColor3 = SurfyUI.Theme.SubText
+    TextBoxElement.TextSize = 12
+    TextBoxElement.Font = Enum.Font.Gotham
+    TextBoxElement.ClearTextOnFocus = false
+    TextBoxElement.Parent = ElementCard
+    
+    RoundCorners(TextBoxElement, 8)
+    AddStroke(TextBoxElement, SurfyUI.Theme.Primary, 1, 0.8)
+    
+    local TextPadding = Instance.new("UIPadding")
+    TextPadding.PaddingLeft = UDim.new(0, 8)
+    TextPadding.PaddingRight = UDim.new(0, 8)
+    TextPadding.Parent = TextBoxElement
+    
+    TextBoxElement.Focused:Connect(function()
+        Tween(TextBoxElement, {BackgroundTransparency = 0.1}, 0.2)
+    end)
+    
+    TextBoxElement.FocusLost:Connect(function(enterPressed)
+        Tween(TextBoxElement, {BackgroundTransparency = 0.3}, 0.2)
+        
+        if enterPressed then
+            TextBox.Value = TextBoxElement.Text
+            if TextBox.Callback then
+                TextBox.Callback(TextBox.Value)
+            end
+        end
+    end)
+    
+    function TextBox:SetValue(value)
+        self.Value = value
+        TextBoxElement.Text = value
+    end
+    
+    return TextBox
+end
+
+return SurfyUI
