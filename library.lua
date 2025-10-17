@@ -1,1177 +1,961 @@
--- Surfy TC2 Library - Custom Fluent UI Library
+-- Surfy TC2 - Enhanced UI with Smooth Animations v2
+-- Load the FluentUI Library from GitHub
+local FluentUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Mate0007/Roblox-Scripts/main/library.lua"))()
+
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+local RepStorage = game:GetService("ReplicatedStorage")
 
--- Custom Fluent UI Library
-local FluentUI = {}
-FluentUI.__index = FluentUI
+-- Anti-AFK
+local VirtualUser = game:GetService("VirtualUser")
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
 
--- Aqua Color Theme
-FluentUI.Theme = {
-    Primary = Color3.fromRGB(0, 180, 255),
-    PrimaryLight = Color3.fromRGB(100, 220, 255),
-    Secondary = Color3.fromRGB(25, 35, 45),
-    Background = Color3.fromRGB(20, 30, 40),
-    Surface = Color3.fromRGB(40, 50, 60),
-    SurfaceLight = Color3.fromRGB(50, 60, 70),
-    Text = Color3.fromRGB(255, 255, 255),
-    SubText = Color3.fromRGB(180, 200, 220),
-    Success = Color3.fromRGB(0, 200, 100),
-    Error = Color3.fromRGB(255, 80, 80)
-}
+-- ===== TC2 SCRIPT IMPLEMENTATION =====
 
--- Utility Functions
-local function Tween(Object, Properties, Duration, Style, Direction)
-    local TweenInfo = TweenInfo.new(
-        Duration or 0.3, 
-        Style or Enum.EasingStyle.Quint, 
-        Direction or Enum.EasingDirection.Out
-    )
-    local Tween = TweenService:Create(Object, TweenInfo, Properties)
-    Tween:Play()
-    return Tween
+local Window = FluentUI:CreateWindow({
+    Title = "Surfy TC2"
+})
+
+local CombatTab = Window:CreateTab("Combat")
+local VisualsTab = Window:CreateTab("Visuals")
+local MiscTab = Window:CreateTab("Misc")
+local SettingsTab = Window:CreateTab("Settings")
+
+-- ===== COMBAT SECTIONS =====
+local AimbotSection = Window:CreateSection(CombatTab, "Aimbot / Aimlock")
+local HitboxSection = Window:CreateSection(CombatTab, "Hitbox Expander")
+local RapidFireSection = Window:CreateSection(CombatTab, "Rapid Fire")
+
+-- ===== VISUALS SECTIONS =====
+local PlayerESPSection = Window:CreateSection(VisualsTab, "Player ESP")
+
+-- ===== MISC SECTIONS =====
+local BhopSection = Window:CreateSection(MiscTab, "Bhop Features")
+local VoteSpamSection = Window:CreateSection(MiscTab, "Vote Spam")
+
+-- ===== SETTINGS SECTIONS =====
+local KeybindSection = Window:CreateSection(SettingsTab, "Keybind Settings")
+
+-- ===== AIMBOT / AIMLOCK SYSTEM =====
+local aimbotEnabled = false
+local wallcheckEnabled = false
+local targetEnemyOnly = true
+local aimbotFOV = 100
+local targetBodyPart = "Head"
+local aimbotSmoothness = 0.5
+
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.NumSides = 50
+fovCircle.Radius = aimbotFOV
+fovCircle.Filled = false
+fovCircle.Visible = false
+fovCircle.ZIndex = 999
+fovCircle.Transparency = 1
+fovCircle.Color = Color3.fromRGB(0, 180, 255)
+
+-- Efficient wallcheck with caching
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+raycastParams.IgnoreWater = true
+
+local function hasLineOfSight(targetPart)
+    if not wallcheckEnabled then return true end
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return false end
+    
+    local origin = LocalPlayer.Character.Head.Position
+    local direction = (targetPart.Position - origin)
+    
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, targetPart.Parent}
+    
+    local rayResult = workspace:Raycast(origin, direction, raycastParams)
+    
+    return rayResult == nil
 end
 
-local function RoundCorners(Object, Radius)
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, Radius or 6)
-    UICorner.Parent = Object
-    return UICorner
-end
-
--- Notification System
-FluentUI.NotificationQueue = {}
-
-function FluentUI:CreateNotification(Config)
-    Config = Config or {}
+local function getClosestPlayerInFOV()
+    local closestPlayer = nil
+    local shortestDistance = aimbotFOV
     
-    local NotifContainer = self.NotificationContainer
+    local camera = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
     
-    local Notification = Instance.new("Frame")
-    Notification.Name = "Notification"
-    Notification.Size = UDim2.new(0, 300, 0, 80)
-    Notification.Position = UDim2.new(1, 320, 1, -100 - (#self.NotificationQueue * 90))
-    Notification.BackgroundColor3 = FluentUI.Theme.Surface
-    Notification.BackgroundTransparency = 0.1
-    Notification.BorderSizePixel = 0
-    Notification.Parent = NotifContainer
-    
-    RoundCorners(Notification, 8)
-    
-    local Shadow = Instance.new("ImageLabel")
-    Shadow.Name = "Shadow"
-    Shadow.BackgroundTransparency = 1
-    Shadow.Position = UDim2.new(0, -15, 0, -15)
-    Shadow.Size = UDim2.new(1, 30, 1, 30)
-    Shadow.ZIndex = 0
-    Shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    Shadow.ImageTransparency = 0.7
-    Shadow.ScaleType = Enum.ScaleType.Slice
-    Shadow.SliceCenter = Rect.new(10, 10, 10, 10)
-    Shadow.Parent = Notification
-    
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(1, -20, 0, 25)
-    Title.Position = UDim2.new(0, 10, 0, 10)
-    Title.BackgroundTransparency = 1
-    Title.Text = Config.Title or "Notification"
-    Title.TextColor3 = FluentUI.Theme.Text
-    Title.TextSize = 14
-    Title.Font = Enum.Font.GothamBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = Notification
-    
-    local Description = Instance.new("TextLabel")
-    Description.Name = "Description"
-    Description.Size = UDim2.new(1, -20, 0, 35)
-    Description.Position = UDim2.new(0, 10, 0, 35)
-    Description.BackgroundTransparency = 1
-    Description.Text = Config.Description or ""
-    Description.TextColor3 = FluentUI.Theme.SubText
-    Description.TextSize = 12
-    Description.Font = Enum.Font.Gotham
-    Description.TextXAlignment = Enum.TextXAlignment.Left
-    Description.TextYAlignment = Enum.TextYAlignment.Top
-    Description.TextWrapped = true
-    Description.Parent = Notification
-    
-    table.insert(self.NotificationQueue, Notification)
-    
-    Tween(Notification, {Position = UDim2.new(1, -310, 1, -100 - ((#self.NotificationQueue - 1) * 90))}, 0.5, Enum.EasingStyle.Back)
-    
-    task.delay(Config.Duration or 3, function()
-        Tween(Notification, {Position = UDim2.new(1, 320, 1, Notification.Position.Y.Offset)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-        task.wait(0.4)
-        
-        for i, notif in ipairs(self.NotificationQueue) do
-            if notif == Notification then
-                table.remove(self.NotificationQueue, i)
-                break
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            if targetEnemyOnly and player.Team == LocalPlayer.Team then continue end
+            
+            local character = player.Character
+            local targetPart = character:FindFirstChild(targetBodyPart == "Body" and "Torso" or targetBodyPart)
+            if not targetPart then targetPart = character:FindFirstChild("HumanoidRootPart") end
+            if not targetPart then continue end
+            
+            local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+            if not onScreen then continue end
+            
+            local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+            
+            if distance < shortestDistance then
+                if hasLineOfSight(targetPart) then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
             end
         end
-        
-        Notification:Destroy()
-        
-        for i, notif in ipairs(self.NotificationQueue) do
-            Tween(notif, {Position = UDim2.new(1, -310, 1, -100 - ((i - 1) * 90))}, 0.3)
-        end
-    end)
-end
-
--- Create Window
-function FluentUI:CreateWindow(Config)
-    Config = Config or {}
-    
-    local Window = {
-        Tabs = {},
-        CurrentTab = nil,
-        IsMinimized = false,
-        IsVisible = false,
-        SavedPosition = nil
-    }
-    setmetatable(Window, FluentUI)
-    
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
-    Window.ScreenGui = Instance.new("ScreenGui")
-    Window.ScreenGui.Name = "FluentUI"
-    Window.ScreenGui.ResetOnSpawn = false
-    Window.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    Window.ScreenGui.DisplayOrder = 999
-    Window.ScreenGui.Parent = PlayerGui
-    
-    Window.NotificationContainer = Instance.new("Frame")
-    Window.NotificationContainer.Name = "Notifications"
-    Window.NotificationContainer.Size = UDim2.new(1, 0, 1, 0)
-    Window.NotificationContainer.BackgroundTransparency = 1
-    Window.NotificationContainer.Parent = Window.ScreenGui
-    
-    self.NotificationContainer = Window.NotificationContainer
-    
-    Window.MainFrame = Instance.new("Frame")
-    Window.MainFrame.Name = "MainFrame"
-    Window.MainFrame.Size = UDim2.new(0, 650, 0, 420)
-    Window.MainFrame.Position = UDim2.new(0.5, -325, 0.5, -210)
-    Window.MainFrame.BackgroundColor3 = FluentUI.Theme.Background
-    Window.MainFrame.BackgroundTransparency = 0.15
-    Window.MainFrame.BorderSizePixel = 0
-    Window.MainFrame.Visible = false
-    Window.MainFrame.ClipsDescendants = true
-    Window.MainFrame.Parent = Window.ScreenGui
-    
-    RoundCorners(Window.MainFrame, 14)
-    
-    -- Animated Background
-    local AnimatedBG = Instance.new("Frame")
-    AnimatedBG.Name = "AnimatedBackground"
-    AnimatedBG.Size = UDim2.new(1, 0, 1, 0)
-    AnimatedBG.BackgroundTransparency = 0.95
-    AnimatedBG.BorderSizePixel = 0
-    AnimatedBG.ZIndex = 0
-    AnimatedBG.Parent = Window.MainFrame
-    
-    local BGGradient = Instance.new("UIGradient")
-    BGGradient.Color = ColorSequence.new{
-        ColorSequenceKeypoint.new(0, FluentUI.Theme.Primary),
-        ColorSequenceKeypoint.new(0.5, FluentUI.Theme.PrimaryLight),
-        ColorSequenceKeypoint.new(1, FluentUI.Theme.Primary)
-    }
-    BGGradient.Rotation = 45
-    BGGradient.Parent = AnimatedBG
-    
-    task.spawn(function()
-        while Window.MainFrame and Window.MainFrame.Parent do
-            for i = 0, 360, 2 do
-                if not Window.MainFrame or not Window.MainFrame.Parent then break end
-                BGGradient.Rotation = i
-                task.wait(0.05)
-            end
-        end
-    end)
-    
-    Window.Header = Instance.new("Frame")
-    Window.Header.Name = "Header"
-    Window.Header.Size = UDim2.new(1, 0, 0, 40)
-    Window.Header.BackgroundColor3 = FluentUI.Theme.Surface
-    Window.Header.BackgroundTransparency = 0.2
-    Window.Header.BorderSizePixel = 0
-    Window.Header.Parent = Window.MainFrame
-    
-    -- Only round top corners of header
-    local HeaderCorner = Instance.new("UICorner")
-    HeaderCorner.CornerRadius = UDim.new(0, 14)
-    HeaderCorner.Parent = Window.Header
-    
-    -- Cover bottom rounded corners
-    local HeaderBottom = Instance.new("Frame")
-    HeaderBottom.Size = UDim2.new(1, 0, 0, 14)
-    HeaderBottom.Position = UDim2.new(0, 0, 1, -14)
-    HeaderBottom.BackgroundColor3 = FluentUI.Theme.Surface
-    HeaderBottom.BackgroundTransparency = 0.2
-    HeaderBottom.BorderSizePixel = 0
-    HeaderBottom.Parent = Window.Header
-    
-    Window.Title = Instance.new("TextLabel")
-    Window.Title.Name = "Title"
-    Window.Title.Size = UDim2.new(0, 200, 1, 0)
-    Window.Title.Position = UDim2.new(0, 15, 0, 0)
-    Window.Title.BackgroundTransparency = 1
-    Window.Title.Text = Config.Title or "Surfy TC2"
-    Window.Title.TextColor3 = FluentUI.Theme.Text
-    Window.Title.TextSize = 15
-    Window.Title.Font = Enum.Font.GothamBold
-    Window.Title.TextXAlignment = Enum.TextXAlignment.Left
-    Window.Title.Parent = Window.Header
-    
-    Window.MinimizeButton = Instance.new("TextButton")
-    Window.MinimizeButton.Name = "MinimizeButton"
-    Window.MinimizeButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.MinimizeButton.Position = UDim2.new(1, -64, 0.5, -14)
-    Window.MinimizeButton.BackgroundColor3 = FluentUI.Theme.SurfaceLight
-    Window.MinimizeButton.BackgroundTransparency = 0.3
-    Window.MinimizeButton.TextColor3 = FluentUI.Theme.Text
-    Window.MinimizeButton.Text = "━"
-    Window.MinimizeButton.TextSize = 14
-    Window.MinimizeButton.Font = Enum.Font.GothamBold
-    Window.MinimizeButton.Parent = Window.Header
-    
-    RoundCorners(Window.MinimizeButton, 6)
-    
-    Window.CloseButton = Instance.new("TextButton")
-    Window.CloseButton.Name = "CloseButton"
-    Window.CloseButton.Size = UDim2.new(0, 28, 0, 28)
-    Window.CloseButton.Position = UDim2.new(1, -32, 0.5, -14)
-    Window.CloseButton.BackgroundColor3 = FluentUI.Theme.Error
-    Window.CloseButton.BackgroundTransparency = 0.3
-    Window.CloseButton.TextColor3 = Color3.new(1, 1, 1)
-    Window.CloseButton.Text = "×"
-    Window.CloseButton.TextSize = 18
-    Window.CloseButton.Font = Enum.Font.GothamBold
-    Window.CloseButton.Parent = Window.Header
-    
-    RoundCorners(Window.CloseButton, 6)
-    
-    Window.MinimizeButton.MouseEnter:Connect(function()
-        Tween(Window.MinimizeButton, {BackgroundTransparency = 0}, 0.2)
-    end)
-    Window.MinimizeButton.MouseLeave:Connect(function()
-        Tween(Window.MinimizeButton, {BackgroundTransparency = 0.3}, 0.2)
-    end)
-    
-    Window.CloseButton.MouseEnter:Connect(function()
-        Tween(Window.CloseButton, {BackgroundTransparency = 0}, 0.2)
-    end)
-    Window.CloseButton.MouseLeave:Connect(function()
-        Tween(Window.CloseButton, {BackgroundTransparency = 0.3}, 0.2)
-    end)
-    
-    Window.TabContainer = Instance.new("Frame")
-    Window.TabContainer.Name = "TabContainer"
-    Window.TabContainer.Size = UDim2.new(0, 130, 1, -40)
-    Window.TabContainer.Position = UDim2.new(0, 0, 0, 40)
-    Window.TabContainer.BackgroundColor3 = FluentUI.Theme.Secondary
-    Window.TabContainer.BackgroundTransparency = 0.2
-    Window.TabContainer.BorderSizePixel = 0
-    Window.TabContainer.Parent = Window.MainFrame
-    
-    Window.ContentContainer = Instance.new("Frame")
-    Window.ContentContainer.Name = "ContentContainer"
-    Window.ContentContainer.Size = UDim2.new(1, -130, 1, -40)
-    Window.ContentContainer.Position = UDim2.new(0, 130, 0, 40)
-    Window.ContentContainer.BackgroundColor3 = FluentUI.Theme.Background
-    Window.ContentContainer.BackgroundTransparency = 0.2
-    Window.ContentContainer.BorderSizePixel = 0
-    Window.ContentContainer.ClipsDescendants = true
-    Window.ContentContainer.Parent = Window.MainFrame
-    
-    local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.Padding = UDim.new(0, 8)
-    UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    UIListLayout.Parent = Window.TabContainer
-    
-    local UIPadding = Instance.new("UIPadding")
-    UIPadding.PaddingTop = UDim.new(0, 10)
-    UIPadding.Parent = Window.TabContainer
-    
-    Window.CloseButton.MouseButton1Click:Connect(function()
-        Window:Toggle()
-    end)
-    
-    Window.MinimizeButton.MouseButton1Click:Connect(function()
-        Window:ToggleMinimize()
-    end)
-    
-    local dragging, dragInput, dragStart, startPos
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        Window.MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
     
-    Window.Header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = Window.MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
+    return closestPlayer
+end
+
+local function aimAtPlayer(player)
+    if not player or not player.Character then return end
     
-    Window.Header.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
+    local character = player.Character
+    local targetPart = character:FindFirstChild(targetBodyPart == "Body" and "Torso" or targetBodyPart)
+    if not targetPart then targetPart = character:FindFirstChild("HumanoidRootPart") end
+    if not targetPart then return end
     
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
+    local camera = workspace.CurrentCamera
+    local targetPos = targetPart.Position
+    local currentCFrame = camera.CFrame
+    local targetCFrame = CFrame.new(camera.CFrame.Position, targetPos)
     
-    function Window:Toggle()
-        self.IsVisible = not self.IsVisible
+    camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotSmoothness)
+end
+
+-- ===== AIMBOT CONTROLS IN CORRECT ORDER =====
+local isAimbotKeyHeld = false
+
+local AimbotKeybind = Window:CreateToggleWithKeybind(AimbotSection, {
+    Title = "Aimbot",
+    Default = false,
+    DefaultKey = Enum.UserInputType.MouseButton2,
+    LayoutOrder = 1,
+    Callback = function(Value)
+        aimbotEnabled = Value
+        Window:CreateNotification({
+            Title = "Aimbot",
+            Description = Value and "Enabled" or "Disabled",
+            Duration = 2
+        })
+    end,
+    KeybindCallback = function()
+        isAimbotKeyHeld = true
+    end
+})
+
+-- Track keybind release
+UserInputService.InputEnded:Connect(function(input)
+    if aimbotEnabled then
+        if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == AimbotKeybind.Key) or
+           (input.UserInputType == AimbotKeybind.Key) then
+            isAimbotKeyHeld = false
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if aimbotEnabled then
+        local mouseLocation = UserInputService:GetMouseLocation()
+        fovCircle.Position = mouseLocation
+        fovCircle.Radius = aimbotFOV
+        fovCircle.Visible = true
         
-        if self.IsVisible then
-            self.MainFrame.Visible = true
+        if isAimbotKeyHeld then
+            local target = getClosestPlayerInFOV()
+            if target then
+                aimAtPlayer(target)
+            end
+        end
+    else
+        fovCircle.Visible = false
+        isAimbotKeyHeld = false
+    end
+end)
+
+Window:CreateToggle(AimbotSection, {
+    Title = "Wallcheck",
+    Default = false,
+    LayoutOrder = 2,
+    Callback = function(Value)
+        wallcheckEnabled = Value
+    end
+})
+
+Window:CreateToggle(AimbotSection, {
+    Title = "Target Enemy Only",
+    Default = true,
+    LayoutOrder = 3,
+    Callback = function(Value)
+        targetEnemyOnly = Value
+    end
+})
+
+Window:CreateSlider(AimbotSection, {
+    Title = "Aimbot FOV Circle",
+    Default = 100,
+    Min = 20,
+    Max = 300,
+    Rounding = 0,
+    LayoutOrder = 4,
+    Callback = function(Value)
+        aimbotFOV = Value
+    end
+})
+
+Window:CreateDropdown(AimbotSection, {
+    Title = "Target Body Part",
+    Options = {"Head", "Neck", "Body"},
+    Default = "Head",
+    LayoutOrder = 5,
+    Callback = function(Value)
+        targetBodyPart = Value
+    end
+})
+
+Window:CreateSlider(AimbotSection, {
+    Title = "Smoothness",
+    Default = 0.5,
+    Min = 0.1,
+    Max = 1,
+    Rounding = 2,
+    LayoutOrder = 6,
+    Callback = function(Value)
+        aimbotSmoothness = Value
+    end
+})
+
+-- ===== HITBOX EXPANDER =====
+local hitboxEnabled = false
+local hitboxSize = 15
+local hitboxLoop = nil
+local showHitbox = false
+local hitboxTarget = "Head"
+local ExpandableHitboxes = {
+    Head = {"HeadHB"},
+    Body = {"Hitbox"}
+}
+
+local function ExpandPart(part, size, isTarget)
+    if part then
+        part.Massless = true
+        part.CanCollide = false
+        
+        if isTarget then
+            part.Transparency = showHitbox and 0.7 or 1
+            part.Size = size
             
-            if self.SavedPosition then
-                self.MainFrame.Position = self.SavedPosition
-                self.MainFrame.Size = UDim2.new(0, 650, 0, 0)
-                Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 420)}, 0.4, Enum.EasingStyle.Back)
+            if showHitbox and not part:FindFirstChild("HitboxOutline") then
+                local outline = Instance.new("SelectionBox")
+                outline.Name = "HitboxOutline"
+                outline.Adornee = part
+                outline.LineThickness = 0.03
+                outline.Color3 = Color3.fromRGB(150, 150, 150)
+                outline.SurfaceColor3 = Color3.fromRGB(100, 100, 100)
+                outline.SurfaceTransparency = 0.8
+                outline.Transparency = 0.5
+                outline.Parent = part
+            elseif not showHitbox and part:FindFirstChild("HitboxOutline") then
+                part.HitboxOutline:Destroy()
+            end
+        else
+            part.Transparency = 1
+            part.Size = size
+        end
+    end
+end
+
+local function updateHitboxes()
+    for _, player in Players:GetPlayers() do 
+        local Character = player.Character
+        if Character then
+            if player.Team ~= LocalPlayer.Team then
+                -- Expand target hitbox
+                for hitboxType, hitboxNames in pairs(ExpandableHitboxes) do
+                    for _, hitboxName in pairs(hitboxNames) do
+                        local hitbox = Character:FindFirstChild(hitboxName)
+                        if hitbox then
+                            if hitboxType == hitboxTarget then
+                                ExpandPart(hitbox, Vector3.one * hitboxSize, true)
+                            else
+                                -- Reset non-target hitboxes to normal
+                                if hitboxName == "HeadHB" then
+                                    ExpandPart(hitbox, Vector3.new(2, 2, 2), false)
+                                elseif hitboxName == "Hitbox" then
+                                    ExpandPart(hitbox, Vector3.new(5.59, 5.175, 5.175), false)
+                                end
+                            end
+                        end
+                    end
+                end
             else
-                self.MainFrame.Size = UDim2.new(0, 650, 0, 0)
-                self.MainFrame.Position = UDim2.new(0.5, -325, 0.5, 0)
-                Tween(self.MainFrame, {
-                    Size = UDim2.new(0, 650, 0, 420),
-                    Position = UDim2.new(0.5, -325, 0.5, -210)
-                }, 0.4, Enum.EasingStyle.Back)
+                -- Reset teammate hitboxes
+                ExpandPart(Character:FindFirstChild("HeadHB"), Vector3.new(2, 2, 2), false)
+                ExpandPart(Character:FindFirstChild("Hitbox"), Vector3.new(5.59, 5.175, 5.175), false)
             end
-            
-            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-            UserInputService.MouseIconEnabled = true
-        else
-            self.SavedPosition = self.MainFrame.Position
-            
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-            
-            task.delay(0.3, function()
-                self.MainFrame.Visible = false
+        end
+    end
+end
+
+Window:CreateToggle(HitboxSection, {
+    Title = "Hitbox Expander",
+    Default = false,
+    Callback = function(Value)
+        hitboxEnabled = Value
+        if Value then
+            hitboxLoop = RunService.Heartbeat:Connect(function()
+                updateHitboxes()
             end)
-            
-            UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-            UserInputService.MouseIconEnabled = false
-        end
-    end
-    
-    function Window:ToggleMinimize()
-        self.IsMinimized = not self.IsMinimized
-        if self.IsMinimized then
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 40)}, 0.3, Enum.EasingStyle.Quint)
-            self.ContentContainer.Visible = false
-            self.TabContainer.Visible = false
+            Window:CreateNotification({
+                Title = "Hitbox Expander",
+                Description = "Enabled",
+                Duration = 2
+            })
         else
-            Tween(self.MainFrame, {Size = UDim2.new(0, 650, 0, 420)}, 0.3, Enum.EasingStyle.Quint)
-            task.wait(0.15)
-            self.ContentContainer.Visible = true
-            self.TabContainer.Visible = true
-        end
-    end
-    
-    return Window
-end
-
--- Tab Icons
-local TabIcons = {
-    Combat = "⚔",
-    Visuals = "👁",
-    Misc = "⚙",
-    Settings = "🔧"
-}
-
-function FluentUI:CreateTab(Name)
-    local Tab = {
-        Name = Name,
-        Sections = {}
-    }
-    
-    local TabButton = Instance.new("TextButton")
-    TabButton.Name = Name .. "Tab"
-    TabButton.Size = UDim2.new(0.85, 0, 0, 45)
-    TabButton.BackgroundColor3 = FluentUI.Theme.Surface
-    TabButton.BackgroundTransparency = 0.4
-    TabButton.TextColor3 = FluentUI.Theme.SubText
-    TabButton.Text = (TabIcons[Name] or "•") .. "  " .. Name
-    TabButton.TextSize = 13
-    TabButton.Font = Enum.Font.GothamSemibold
-    TabButton.Parent = self.TabContainer
-    
-    RoundCorners(TabButton, 8)
-    
-    TabButton.MouseEnter:Connect(function()
-        if not Tab.IsActive then
-            Tween(TabButton, {BackgroundTransparency = 0.2}, 0.2)
-        end
-    end)
-    TabButton.MouseLeave:Connect(function()
-        if not Tab.IsActive then
-            Tween(TabButton, {BackgroundTransparency = 0.4}, 0.2)
-        end
-    end)
-    
-    local TabContent = Instance.new("ScrollingFrame")
-    TabContent.Name = Name .. "Content"
-    TabContent.Size = UDim2.new(1, 0, 1, 0)
-    TabContent.BackgroundTransparency = 1
-    TabContent.BorderSizePixel = 0
-    TabContent.ScrollBarThickness = 3
-    TabContent.ScrollBarImageColor3 = FluentUI.Theme.Primary
-    TabContent.ScrollBarImageTransparency = 0.4
-    TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
-    TabContent.Visible = false
-    TabContent.Parent = self.ContentContainer
-    
-    local ContentLayout = Instance.new("UIListLayout")
-    ContentLayout.Padding = UDim.new(0, 15)
-    ContentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ContentLayout.Parent = TabContent
-    
-    local ContentPadding = Instance.new("UIPadding")
-    ContentPadding.PaddingTop = UDim.new(0, 15)
-    ContentPadding.PaddingBottom = UDim.new(0, 15)
-    ContentPadding.Parent = TabContent
-    
-    ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        TabContent.CanvasSize = UDim2.new(0, 0, 0, ContentLayout.AbsoluteContentSize.Y + 30)
-    end)
-    
-    Tab.Button = TabButton
-    Tab.Content = TabContent
-    Tab.IsActive = false
-    
-    TabButton.MouseButton1Click:Connect(function()
-        self:SwitchTab(Tab)
-    end)
-    
-    table.insert(self.Tabs, Tab)
-    
-    if not self.CurrentTab then
-        self:SwitchTab(Tab)
-    end
-    
-    return Tab
-end
-
-function FluentUI:SwitchTab(Tab)
-    if self.CurrentTab then
-        self.CurrentTab.Content.Visible = false
-        self.CurrentTab.IsActive = false
-        Tween(self.CurrentTab.Button, {
-            BackgroundColor3 = FluentUI.Theme.Surface, 
-            BackgroundTransparency = 0.4,
-            TextColor3 = FluentUI.Theme.SubText
-        }, 0.2)
-    end
-    
-    self.CurrentTab = Tab
-    Tab.Content.Visible = true
-    Tab.IsActive = true
-    Tween(Tab.Button, {
-        BackgroundColor3 = FluentUI.Theme.Primary, 
-        BackgroundTransparency = 0,
-        TextColor3 = FluentUI.Theme.Text
-    }, 0.3, Enum.EasingStyle.Quint)
-end
-
-function FluentUI:CreateSection(Tab, Name)
-    local Section = {
-        Name = Name,
-        ElementOrder = 0
-    }
-    
-    local SectionContainer = Instance.new("Frame")
-    SectionContainer.Name = Name .. "Container"
-    SectionContainer.Size = UDim2.new(0.94, 0, 0, 0)
-    SectionContainer.AutomaticSize = Enum.AutomaticSize.Y
-    SectionContainer.BackgroundTransparency = 1
-    SectionContainer.LayoutOrder = #Tab.Content:GetChildren()
-    SectionContainer.Parent = Tab.Content
-    
-    local SectionTitle = Instance.new("TextLabel")
-    SectionTitle.Name = "Title"
-    SectionTitle.Size = UDim2.new(1, 0, 0, 25)
-    SectionTitle.BackgroundTransparency = 1
-    SectionTitle.Text = Name
-    SectionTitle.TextColor3 = FluentUI.Theme.Text
-    SectionTitle.TextSize = 14
-    SectionTitle.Font = Enum.Font.GothamBold
-    SectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-    SectionTitle.Parent = SectionContainer
-    
-    local SectionCard = Instance.new("Frame")
-    SectionCard.Name = "Card"
-    SectionCard.Size = UDim2.new(1, 0, 0, 0)
-    SectionCard.Position = UDim2.new(0, 0, 0, 30)
-    SectionCard.AutomaticSize = Enum.AutomaticSize.Y
-    SectionCard.BackgroundColor3 = FluentUI.Theme.Surface
-    SectionCard.BackgroundTransparency = 0.3
-    SectionCard.Parent = SectionContainer
-    
-    RoundCorners(SectionCard, 12)
-    
-    local CardLayout = Instance.new("UIListLayout")
-    CardLayout.Padding = UDim.new(0, 8)
-    CardLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    CardLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    CardLayout.Parent = SectionCard
-    
-    local CardPadding = Instance.new("UIPadding")
-    CardPadding.PaddingTop = UDim.new(0, 12)
-    CardPadding.PaddingBottom = UDim.new(0, 12)
-    CardPadding.PaddingLeft = UDim.new(0, 5)
-    CardPadding.PaddingRight = UDim.new(0, 5)
-    CardPadding.Parent = SectionCard
-    
-    Section.Frame = SectionCard
-    
-    return Section
-end
-
--- Keybind System
-function FluentUI:CreateKeybind(Section, Config)
-    Config = Config or {}
-    
-    local Keybind = {
-        Key = Config.Default or Enum.KeyCode.Unknown,
-        Callback = Config.Callback,
-        IsBinding = false
-    }
-    
-    local KeybindFrame = Instance.new("Frame")
-    KeybindFrame.Name = Config.Title .. "Keybind"
-    KeybindFrame.Size = UDim2.new(1, -20, 0, 32)
-    KeybindFrame.BackgroundTransparency = 1
-    KeybindFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    KeybindFrame.Parent = Section.Frame
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local KeybindLabel = Instance.new("TextLabel")
-    KeybindLabel.Name = "Label"
-    KeybindLabel.Size = UDim2.new(0.5, 0, 1, 0)
-    KeybindLabel.Position = UDim2.new(0, 5, 0, 0)
-    KeybindLabel.BackgroundTransparency = 1
-    KeybindLabel.Text = Config.Title or "Keybind"
-    KeybindLabel.TextColor3 = FluentUI.Theme.Text
-    KeybindLabel.TextSize = 13
-    KeybindLabel.Font = Enum.Font.Gotham
-    KeybindLabel.TextXAlignment = Enum.TextXAlignment.Left
-    KeybindLabel.TextYAlignment = Enum.TextYAlignment.Center
-    KeybindLabel.Parent = KeybindFrame
-    
-    local function GetKeyName(key)
-        if key == Enum.UserInputType.MouseButton1 then return "LMB"
-        elseif key == Enum.UserInputType.MouseButton2 then return "RMB"
-        elseif key == Enum.UserInputType.MouseButton3 then return "MMB"
-        elseif key == Enum.KeyCode.Unknown then return "None"
-        else return key.Name end
-    end
-    
-    local KeybindButton = Instance.new("TextButton")
-    KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 80, 0, 24)
-    KeybindButton.Position = UDim2.new(1, -83, 0.5, -12)
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
-    KeybindButton.Text = GetKeyName(Keybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
-    KeybindButton.TextSize = 11
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = KeybindFrame
-    
-    RoundCorners(KeybindButton, 6)
-    
-    local Connection
-    KeybindButton.MouseButton1Click:Connect(function()
-        Keybind.IsBinding = true
-        KeybindButton.Text = "..."
-        Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Primary}, 0.2)
-        
-        Connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if input.KeyCode ~= Enum.KeyCode.Unknown then
-                Keybind.Key = input.KeyCode
-                KeybindButton.Text = GetKeyName(input.KeyCode)
-            elseif input.UserInputType == Enum.UserInputType.MouseButton1 or 
-                   input.UserInputType == Enum.UserInputType.MouseButton2 or
-                   input.UserInputType == Enum.UserInputType.MouseButton3 then
-                Keybind.Key = input.UserInputType
-                KeybindButton.Text = GetKeyName(input.UserInputType)
+            if hitboxLoop then
+                hitboxLoop:Disconnect()
+                hitboxLoop = nil
             end
-            
-            Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.2)
-            Keybind.IsBinding = false
-            Connection:Disconnect()
-        end)
-    end)
-    
-    return Keybind
-end
-
-function FluentUI:CreateToggleWithKeybind(Section, Config)
-    Config = Config or {}
-    
-    local ToggleKeybind = {
-        Value = Config.Default or false,
-        Key = Config.DefaultKey or Enum.KeyCode.Unknown,
-        Callback = Config.Callback,
-        IsBinding = false
-    }
-    
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = Config.Title .. "ToggleKeybind"
-    ToggleFrame.Size = UDim2.new(1, -20, 0, 32)
-    ToggleFrame.BackgroundTransparency = 1
-    ToggleFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    ToggleFrame.Parent = Section.Frame
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local function GetKeyName(key)
-        if key == Enum.UserInputType.MouseButton1 then return "LMB"
-        elseif key == Enum.UserInputType.MouseButton2 then return "RMB"
-        elseif key == Enum.UserInputType.MouseButton3 then return "MMB"
-        elseif key == Enum.KeyCode.Unknown then return "None"
-        else return key.Name end
-    end
-    
-    -- Keybind Button (Left Side)
-    local KeybindButton = Instance.new("TextButton")
-    KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0, 60, 0, 24)
-    KeybindButton.Position = UDim2.new(0, 5, 0.5, -12)
-    KeybindButton.BackgroundColor3 = FluentUI.Theme.Secondary
-    KeybindButton.Text = GetKeyName(ToggleKeybind.Key)
-    KeybindButton.TextColor3 = FluentUI.Theme.Text
-    KeybindButton.TextSize = 10
-    KeybindButton.Font = Enum.Font.Gotham
-    KeybindButton.Parent = ToggleFrame
-    
-    RoundCorners(KeybindButton, 6)
-    
-    local ToggleLabel = Instance.new("TextLabel")
-    ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(0, 200, 1, 0)
-    ToggleLabel.Position = UDim2.new(0, 70, 0, 0)
-    ToggleLabel.BackgroundTransparency = 1
-    ToggleLabel.Text = Config.Title or "Toggle"
-    ToggleLabel.TextColor3 = FluentUI.Theme.Text
-    ToggleLabel.TextSize = 13
-    ToggleLabel.Font = Enum.Font.Gotham
-    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ToggleLabel.Parent = ToggleFrame
-    
-    local ToggleButton = Instance.new("TextButton")
-    ToggleButton.Name = "Toggle"
-    ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
-    ToggleButton.BackgroundColor3 = ToggleKeybind.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
-    ToggleButton.Text = ""
-    ToggleButton.Parent = ToggleFrame
-    
-    RoundCorners(ToggleButton, 12)
-    
-    local ToggleKnob = Instance.new("Frame")
-    ToggleKnob.Name = "Knob"
-    ToggleKnob.Size = UDim2.new(0, 18, 0, 18)
-    ToggleKnob.Position = ToggleKeybind.Value and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-    ToggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-    ToggleKnob.Parent = ToggleButton
-    
-    RoundCorners(ToggleKnob, 9)
-    
-    local function ToggleValue()
-        ToggleKeybind.Value = not ToggleKeybind.Value
-        
-        if ToggleKeybind.Value then
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Success}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(1, -21, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
-        else
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
-        end
-        
-        if ToggleKeybind.Callback then
-            ToggleKeybind.Callback(ToggleKeybind.Value)
-        end
-    end
-    
-    ToggleButton.MouseButton1Click:Connect(ToggleValue)
-    
-    local Connection
-    KeybindButton.MouseButton1Click:Connect(function()
-        ToggleKeybind.IsBinding = true
-        KeybindButton.Text = "..."
-        Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Primary}, 0.2)
-        
-        Connection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if input.KeyCode ~= Enum.KeyCode.Unknown then
-                ToggleKeybind.Key = input.KeyCode
-                KeybindButton.Text = GetKeyName(input.KeyCode)
-            elseif input.UserInputType == Enum.UserInputType.MouseButton1 or 
-                   input.UserInputType == Enum.UserInputType.MouseButton2 or
-                   input.UserInputType == Enum.UserInputType.MouseButton3 then
-                ToggleKeybind.Key = input.UserInputType
-                KeybindButton.Text = GetKeyName(input.UserInputType)
-            end
-            
-            Tween(KeybindButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.2)
-            ToggleKeybind.IsBinding = false
-            Connection:Disconnect()
-        end)
-    end)
-    
-    -- Keybind activation
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not ToggleKeybind.IsBinding and not gameProcessed then
-            if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == ToggleKeybind.Key) or
-               (input.UserInputType == ToggleKeybind.Key) then
-                ToggleValue()
-            end
-        end
-    end)
-    
-    return ToggleKeybind
-end
-
-function FluentUI:CreateToggle(Section, Config)
-    Config = Config or {}
-    
-    local Toggle = {
-        Value = Config.Default or false,
-        Callback = Config.Callback
-    }
-    
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = Config.Title .. "Toggle"
-    ToggleFrame.Size = UDim2.new(1, -20, 0, 32)
-    ToggleFrame.BackgroundTransparency = 1
-    ToggleFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    ToggleFrame.Parent = Section.Frame
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local ToggleLabel = Instance.new("TextLabel")
-    ToggleLabel.Name = "Label"
-    ToggleLabel.Size = UDim2.new(0.65, 0, 1, 0)
-    ToggleLabel.Position = UDim2.new(0, 5, 0, 0)
-    ToggleLabel.BackgroundTransparency = 1
-    ToggleLabel.Text = Config.Title or "Toggle"
-    ToggleLabel.TextColor3 = FluentUI.Theme.Text
-    ToggleLabel.TextSize = 13
-    ToggleLabel.Font = Enum.Font.Gotham
-    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    ToggleLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ToggleLabel.Parent = ToggleFrame
-    
-    -- Keybind hint
-    if Config.KeybindHint then
-        local KeybindHint = Instance.new("TextLabel")
-        KeybindHint.Name = "KeybindHint"
-        KeybindHint.Size = UDim2.new(1, -10, 0, 12)
-        KeybindHint.Position = UDim2.new(0, 5, 1, 2)
-        KeybindHint.BackgroundTransparency = 1
-        KeybindHint.Text = "Key: " .. Config.KeybindHint
-        KeybindHint.TextColor3 = FluentUI.Theme.SubText
-        KeybindHint.TextSize = 10
-        KeybindHint.Font = Enum.Font.Gotham
-        KeybindHint.TextXAlignment = Enum.TextXAlignment.Left
-        KeybindHint.TextTransparency = 0.5
-        KeybindHint.Parent = ToggleFrame
-        
-        ToggleFrame.Size = UDim2.new(1, -20, 0, 44)
-    end
-    
-    local ToggleButton = Instance.new("TextButton")
-    ToggleButton.Name = "Toggle"
-    ToggleButton.Size = UDim2.new(0, 46, 0, 24)
-    ToggleButton.Position = UDim2.new(1, -50, 0.5, -12)
-    ToggleButton.BackgroundColor3 = Toggle.Value and FluentUI.Theme.Success or FluentUI.Theme.Secondary
-    ToggleButton.Text = ""
-    ToggleButton.Parent = ToggleFrame
-    
-    RoundCorners(ToggleButton, 12)
-    
-    local ToggleKnob = Instance.new("Frame")
-    ToggleKnob.Name = "Knob"
-    ToggleKnob.Size = UDim2.new(0, 18, 0, 18)
-    ToggleKnob.Position = Toggle.Value and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-    ToggleKnob.BackgroundColor3 = Color3.new(1, 1, 1)
-    ToggleKnob.Parent = ToggleButton
-    
-    RoundCorners(ToggleKnob, 9)
-    
-    ToggleButton.MouseButton1Click:Connect(function()
-        Toggle.Value = not Toggle.Value
-        
-        if Toggle.Value then
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Success}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(1, -21, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
-        else
-            Tween(ToggleButton, {BackgroundColor3 = FluentUI.Theme.Secondary}, 0.3)
-            Tween(ToggleKnob, {Position = UDim2.new(0, 3, 0.5, -9)}, 0.3, Enum.EasingStyle.Quint)
-        end
-        
-        if Toggle.Callback then
-            Toggle.Callback(Toggle.Value)
-        end
-    end)
-    
-    return Toggle
-end
-
-function FluentUI:CreateSlider(Section, Config)
-    Config = Config or {}
-    
-    local Slider = {
-        Value = Config.Default or Config.Min or 0,
-        Min = Config.Min or 0,
-        Max = Config.Max or 100,
-        Rounding = Config.Rounding or 0,
-        Callback = Config.Callback,
-        IsDragging = false
-    }
-    
-    local SliderFrame = Instance.new("Frame")
-    SliderFrame.Name = Config.Title .. "Slider"
-    SliderFrame.Size = UDim2.new(1, -20, 0, 50)
-    SliderFrame.BackgroundTransparency = 1
-    SliderFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    SliderFrame.Parent = Section.Frame
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local SliderLabel = Instance.new("TextLabel")
-    SliderLabel.Name = "Label"
-    SliderLabel.Size = UDim2.new(1, 0, 0, 18)
-    SliderLabel.Position = UDim2.new(0, 5, 0, 0)
-    SliderLabel.BackgroundTransparency = 1
-    SliderLabel.Text = Config.Title or "Slider"
-    SliderLabel.TextColor3 = FluentUI.Theme.Text
-    SliderLabel.TextSize = 13
-    SliderLabel.Font = Enum.Font.Gotham
-    SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-    SliderLabel.Parent = SliderFrame
-    
-    local SliderValue = Instance.new("TextLabel")
-    SliderValue.Name = "Value"
-    SliderValue.Size = UDim2.new(0, 60, 0, 18)
-    SliderValue.Position = UDim2.new(1, -65, 0, 0)
-    SliderValue.BackgroundTransparency = 1
-    SliderValue.Text = tostring(Slider.Value)
-    SliderValue.TextColor3 = FluentUI.Theme.SubText
-    SliderValue.TextSize = 13
-    SliderValue.Font = Enum.Font.Gotham
-    SliderValue.TextXAlignment = Enum.TextXAlignment.Right
-    SliderValue.Parent = SliderFrame
-    
-    local SliderTrack = Instance.new("Frame")
-    SliderTrack.Name = "Track"
-    SliderTrack.Size = UDim2.new(1, -10, 0, 5)
-    SliderTrack.Position = UDim2.new(0, 5, 1, -18)
-    SliderTrack.BackgroundColor3 = FluentUI.Theme.Secondary
-    SliderTrack.Parent = SliderFrame
-    
-    RoundCorners(SliderTrack, 2.5)
-    
-    local SliderFill = Instance.new("Frame")
-    SliderFill.Name = "Fill"
-    SliderFill.Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0)
-    SliderFill.BackgroundColor3 = FluentUI.Theme.Primary
-    SliderFill.Parent = SliderTrack
-    
-    RoundCorners(SliderFill, 2.5)
-    
-    local SliderButton = Instance.new("TextButton")
-    SliderButton.Name = "Button"
-    SliderButton.Size = UDim2.new(0, 14, 0, 14)
-    SliderButton.Position = UDim2.new(SliderFill.Size.X.Scale, -7, 0.5, -7)
-    SliderButton.BackgroundColor3 = Color3.new(1, 1, 1)
-    SliderButton.Text = ""
-    SliderButton.ZIndex = 2
-    SliderButton.Parent = SliderTrack
-    
-    RoundCorners(SliderButton, 7)
-    
-    local RunService = game:GetService("RunService")
-    
-    -- Pulsing animation when dragging
-    local pulseConnection
-    
-    local function UpdateSlider(Input)
-        local RelativeX = (Input.Position.X - SliderTrack.AbsolutePosition.X) / SliderTrack.AbsoluteSize.X
-        local Value = math.clamp(RelativeX, 0, 1)
-        
-        Slider.Value = math.floor((Slider.Min + (Slider.Max - Slider.Min) * Value) * (10 ^ Slider.Rounding)) / (10 ^ Slider.Rounding)
-        SliderValue.Text = tostring(Slider.Value)
-        
-        Tween(SliderFill, {Size = UDim2.new(Value, 0, 1, 0)}, 0.1)
-        Tween(SliderButton, {Position = UDim2.new(Value, -7, 0.5, -7)}, 0.1)
-        
-        if Slider.Callback then
-            Slider.Callback(Slider.Value)
-        end
-    end
-    
-    SliderButton.MouseButton1Down:Connect(function()
-        Slider.IsDragging = true
-        
-        -- Start pulsing animation
-        pulseConnection = RunService.Heartbeat:Connect(function()
-            if Slider.IsDragging then
-                local pulse = math.abs(math.sin(tick() * 8))
-                SliderFill.BackgroundColor3 = FluentUI.Theme.Primary:Lerp(FluentUI.Theme.PrimaryLight, pulse * 0.5)
-            end
-        end)
-    end)
-    
-    UserInputService.InputEnded:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Slider.IsDragging = false
-            if pulseConnection then
-                pulseConnection:Disconnect()
-                pulseConnection = nil
-                SliderFill.BackgroundColor3 = FluentUI.Theme.Primary
-            end
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseMovement and Slider.IsDragging then
-            UpdateSlider(Input)
-        end
-    end)
-    
-    return Slider
-end
-
-function FluentUI:CreateColorPicker(Section, Config)
-    Config = Config or {}
-    
-    local ColorPicker = {
-        Value = Config.Default or Color3.fromRGB(255, 255, 255),
-        Callback = Config.Callback
-    }
-    
-    local PickerFrame = Instance.new("Frame")
-    PickerFrame.Name = Config.Title .. "ColorPicker"
-    PickerFrame.Size = UDim2.new(1, -20, 0, 32)
-    PickerFrame.BackgroundTransparency = 1
-    PickerFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    PickerFrame.Parent = Section.Frame
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local PickerLabel = Instance.new("TextLabel")
-    PickerLabel.Name = "Label"
-    PickerLabel.Size = UDim2.new(0.65, 0, 1, 0)
-    PickerLabel.Position = UDim2.new(0, 5, 0, 0)
-    PickerLabel.BackgroundTransparency = 1
-    PickerLabel.Text = Config.Title or "Color"
-    PickerLabel.TextColor3 = FluentUI.Theme.Text
-    PickerLabel.TextSize = 13
-    PickerLabel.Font = Enum.Font.Gotham
-    PickerLabel.TextXAlignment = Enum.TextXAlignment.Left
-    PickerLabel.TextYAlignment = Enum.TextYAlignment.Center
-    PickerLabel.Parent = PickerFrame
-    
-    local ColorButton = Instance.new("TextButton")
-    ColorButton.Name = "ColorButton"
-    ColorButton.Size = UDim2.new(0, 55, 0, 24)
-    ColorButton.Position = UDim2.new(1, -58, 0.5, -12)
-    ColorButton.BackgroundColor3 = ColorPicker.Value
-    ColorButton.Text = ""
-    ColorButton.Parent = PickerFrame
-    
-    RoundCorners(ColorButton, 6)
-    
-    local colors = {
-        Color3.fromRGB(255, 50, 50),
-        Color3.fromRGB(255, 150, 50),
-        Color3.fromRGB(255, 255, 50),
-        Color3.fromRGB(50, 255, 50),
-        Color3.fromRGB(50, 255, 255),
-        Color3.fromRGB(50, 50, 255),
-        Color3.fromRGB(255, 50, 255),
-        Color3.fromRGB(255, 255, 255)
-    }
-    
-    local currentIndex = 1
-    for i, color in ipairs(colors) do
-        if color == ColorPicker.Value then
-            currentIndex = i
-            break
-        end
-    end
-    
-    ColorButton.MouseButton1Click:Connect(function()
-        currentIndex = (currentIndex % #colors) + 1
-        ColorPicker.Value = colors[currentIndex]
-        
-        Tween(ColorButton, {BackgroundColor3 = ColorPicker.Value}, 0.3)
-        
-        if ColorPicker.Callback then
-            ColorPicker.Callback(ColorPicker.Value)
-        end
-    end)
-    
-    return ColorPicker
-end
-
-function FluentUI:CreateDropdown(Section, Config)
-    Config = Config or {}
-    
-    local Dropdown = {
-        Value = Config.Default or Config.Options[1],
-        Options = Config.Options or {"Option 1"},
-        Callback = Config.Callback,
-        IsOpen = false
-    }
-    
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Name = Config.Title .. "Dropdown"
-    DropdownFrame.Size = UDim2.new(1, -20, 0, 32)
-    DropdownFrame.BackgroundTransparency = 1
-    DropdownFrame.LayoutOrder = Config.LayoutOrder or Section.ElementOrder
-    DropdownFrame.Parent = Section.Frame
-    DropdownFrame.ClipsDescendants = false
-    DropdownFrame.ZIndex = 10
-    
-    Section.ElementOrder = Section.ElementOrder + 1
-    
-    local DropdownLabel = Instance.new("TextLabel")
-    DropdownLabel.Name = "Label"
-    DropdownLabel.Size = UDim2.new(0.4, 0, 1, 0)
-    DropdownLabel.Position = UDim2.new(0, 5, 0, 0)
-    DropdownLabel.BackgroundTransparency = 1
-    DropdownLabel.Text = Config.Title or "Dropdown"
-    DropdownLabel.TextColor3 = FluentUI.Theme.Text
-    DropdownLabel.TextSize = 13
-    DropdownLabel.Font = Enum.Font.Gotham
-    DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-    DropdownLabel.TextYAlignment = Enum.TextYAlignment.Center
-    DropdownLabel.Parent = DropdownFrame
-    
-    local DropdownButton = Instance.new("TextButton")
-    DropdownButton.Name = "Button"
-    DropdownButton.Size = UDim2.new(0, 120, 0, 24)
-    DropdownButton.Position = UDim2.new(1, -123, 0.5, -12)
-    DropdownButton.BackgroundColor3 = FluentUI.Theme.Secondary
-    DropdownButton.Text = "  " .. Dropdown.Value
-    DropdownButton.TextColor3 = FluentUI.Theme.Text
-    DropdownButton.TextSize = 12
-    DropdownButton.Font = Enum.Font.Gotham
-    DropdownButton.TextXAlignment = Enum.TextXAlignment.Left
-    DropdownButton.Parent = DropdownFrame
-    
-    RoundCorners(DropdownButton, 6)
-    
-    local Arrow = Instance.new("TextLabel")
-    Arrow.Name = "Arrow"
-    Arrow.Size = UDim2.new(0, 20, 1, 0)
-    Arrow.Position = UDim2.new(1, -20, 0, 0)
-    Arrow.BackgroundTransparency = 1
-    Arrow.Text = "▼"
-    Arrow.TextColor3 = FluentUI.Theme.SubText
-    Arrow.TextSize = 10
-    Arrow.Font = Enum.Font.Gotham
-    Arrow.Parent = DropdownButton
-    
-    local OptionsContainer = Instance.new("Frame")
-    OptionsContainer.Name = "Options"
-    OptionsContainer.Size = UDim2.new(0, 120, 0, 0)
-    OptionsContainer.Position = UDim2.new(1, -123, 1, 4)
-    OptionsContainer.BackgroundColor3 = FluentUI.Theme.Surface
-    OptionsContainer.BorderSizePixel = 0
-    OptionsContainer.Visible = false
-    OptionsContainer.ZIndex = 15
-    OptionsContainer.Parent = DropdownFrame
-    
-    RoundCorners(OptionsContainer, 6)
-    
-    local OptionsLayout = Instance.new("UIListLayout")
-    OptionsLayout.Padding = UDim.new(0, 2)
-    OptionsLayout.Parent = OptionsContainer
-    
-    local OptionsPadding = Instance.new("UIPadding")
-    OptionsPadding.PaddingTop = UDim.new(0, 4)
-    OptionsPadding.PaddingBottom = UDim.new(0, 4)
-    OptionsPadding.Parent = OptionsContainer
-    
-    for _, option in ipairs(Dropdown.Options) do
-        local OptionButton = Instance.new("TextButton")
-        OptionButton.Name = option
-        OptionButton.Size = UDim2.new(1, 0, 0, 24)
-        OptionButton.BackgroundColor3 = FluentUI.Theme.SurfaceLight
-        OptionButton.BackgroundTransparency = option == Dropdown.Value and 0 or 0.5
-        OptionButton.Text = "  " .. option
-        OptionButton.TextColor3 = FluentUI.Theme.Text
-        OptionButton.TextSize = 11
-        OptionButton.Font = Enum.Font.Gotham
-        OptionButton.TextXAlignment = Enum.TextXAlignment.Left
-        OptionButton.ZIndex = 16
-        OptionButton.Parent = OptionsContainer
-        
-        OptionButton.MouseButton1Click:Connect(function()
-            Dropdown.Value = option
-            DropdownButton.Text = "  " .. option
-            
-            for _, btn in ipairs(OptionsContainer:GetChildren()) do
-                if btn:IsA("TextButton") then
-                    Tween(btn, {BackgroundTransparency = btn.Name == option and 0 or 0.5}, 0.2)
+            -- Reset all hitboxes
+            for _, player in Players:GetPlayers() do 
+                local Character = player.Character
+                if Character then
+                    local headHB = Character:FindFirstChild("HeadHB")
+                    local bodyHB = Character:FindFirstChild("Hitbox")
+                    if headHB then
+                        headHB.Size = Vector3.new(2, 2, 2)
+                        headHB.Transparency = 1
+                        if headHB:FindFirstChild("HitboxOutline") then
+                            headHB.HitboxOutline:Destroy()
+                        end
+                    end
+                    if bodyHB then
+                        bodyHB.Size = Vector3.new(5.59, 5.175, 5.175)
+                        bodyHB.Transparency = 1
+                        if bodyHB:FindFirstChild("HitboxOutline") then
+                            bodyHB.HitboxOutline:Destroy()
+                        end
+                    end
                 end
             end
-            
-            Dropdown.IsOpen = false
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, 0)}, 0.2)
-            Tween(Arrow, {Rotation = 0}, 0.2)
-            task.wait(0.2)
-            OptionsContainer.Visible = false
-            
-            if Dropdown.Callback then
-                Dropdown.Callback(option)
-            end
-        end)
-    end
-    
-    DropdownButton.MouseButton1Click:Connect(function()
-        Dropdown.IsOpen = not Dropdown.IsOpen
-        
-        if Dropdown.IsOpen then
-            OptionsContainer.Visible = true
-            OptionsContainer.Size = UDim2.new(0, 120, 0, 0)
-            local targetHeight = #Dropdown.Options * 26 + 8
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
-            Tween(Arrow, {Rotation = 180}, 0.2)
-        else
-            Tween(OptionsContainer, {Size = UDim2.new(0, 120, 0, 0)}, 0.2)
-            Tween(Arrow, {Rotation = 0}, 0.2)
-            task.wait(0.2)
-            OptionsContainer.Visible = false
+            Window:CreateNotification({
+                Title = "Hitbox Expander",
+                Description = "Disabled",
+                Duration = 2
+            })
         end
-    end)
+    end
+})
+
+Window:CreateDropdown(HitboxSection, {
+    Title = "Hitbox Target",
+    Options = {"Head", "Body"},
+    Default = "Head",
+    Callback = function(Value)
+        hitboxTarget = Value
+    end
+})
+
+Window:CreateSlider(HitboxSection, {
+    Title = "Hitbox Size",
+    Default = 15,
+    Min = 5,
+    Max = 50,
+    Rounding = 0,
+    Callback = function(Value)
+        hitboxSize = Value
+    end
+})
+
+Window:CreateToggle(HitboxSection, {
+    Title = "Show Hitbox",
+    Default = false,
+    Callback = function(Value)
+        showHitbox = Value
+        updateHitboxes()
+    end
+})
+
+-- ===== RAPID FIRE SYSTEM =====
+local rapidFireEnabled = false
+local rapidFireRate = 0.1
+local isHoldingLeftClick = false
+local capturedRemote = nil
+local spaceFolder = nil
+local character = nil
+local hrp = nil
+local rapidFireLoop = nil
+local rapidFireNotification = nil
+
+-- Get folder once
+local function initializeFolder()
+    if spaceFolder then return true end
     
-    return Dropdown
+    local folder = RepStorage:FindFirstChild("Folder")
+    if not folder then return false end
+    
+    spaceFolder = folder:FindFirstChild(" ")
+    return spaceFolder ~= nil
 end
 
-return FluentUI
+-- Find remote once and cache it
+local function findRemote()
+    if capturedRemote then return capturedRemote end
+    
+    if not initializeFolder() then return nil end
+    
+    for _, child in pairs(spaceFolder:GetChildren()) do
+        if child:IsA("RemoteEvent") then
+            capturedRemote = child
+            return child
+        end
+    end
+end
+
+-- Optimized args function with caching
+local function getGrenadeArgs()
+    -- Update character cache if needed
+    if not character or not character.Parent then
+        character = LocalPlayer.Character
+        if not character then return nil end
+        hrp = character:FindFirstChild("HumanoidRootPart")
+    end
+    
+    if not hrp then return nil end
+    
+    local mouse = LocalPlayer:GetMouse()
+    local pos = hrp.Position
+    local mousePos = mouse.Hit.Position
+    local firePos = pos + Vector3.new(0, 1.57, 0)
+    local dir = (mousePos - firePos).Unit
+    
+    return {
+        mousePos,
+        "Grenade",
+        CFrame.new(firePos, firePos + dir),
+        "Grenade Launcher",
+        pos,
+        [9] = false,
+        [11] = 0
+    }
+end
+
+-- Fire loop
+local function fireLoop()
+    local remote = findRemote()
+    if not remote then
+        if rapidFireNotification then
+            rapidFireNotification = nil
+        end
+        Window:CreateNotification({
+            Title = "Rapid Fire",
+            Description = "No remote found!",
+            Duration = 3
+        })
+        return
+    end
+    
+    -- Show persistent notification
+    if not rapidFireNotification then
+        rapidFireNotification = true
+        Window:CreateNotification({
+            Title = "Rapid Fire",
+            Description = "Only works with grenade launcher for now",
+            Duration = 999999
+        })
+    end
+    
+    while isHoldingLeftClick and rapidFireEnabled do
+        local args = getGrenadeArgs()
+        if args then
+            pcall(function()
+                remote:FireServer(unpack(args))
+            end)
+        end
+        task.wait(rapidFireRate)
+    end
+end
+
+-- Update character cache when it respawns
+LocalPlayer.CharacterAdded:Connect(function(char)
+    character = char
+    hrp = char:WaitForChild("HumanoidRootPart")
+end)
+
+-- Rapid Fire Toggle
+Window:CreateToggle(RapidFireSection, {
+    Title = "Rapid Fire",
+    Default = false,
+    LayoutOrder = 1,
+    Callback = function(Value)
+        rapidFireEnabled = Value
+        if Value then
+            Window:CreateNotification({
+                Title = "Rapid Fire",
+                Description = "Enabled - Hold LEFT CLICK to fire",
+                Duration = 3
+            })
+        else
+            isHoldingLeftClick = false
+            rapidFireNotification = nil
+            Window:CreateNotification({
+                Title = "Rapid Fire",
+                Description = "Disabled",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- Fire Rate Slider
+Window:CreateSlider(RapidFireSection, {
+    Title = "Fire Rate Delay",
+    Default = 0.1,
+    Min = 0.15,
+    Max = 0.5,
+    Rounding = 2,
+    LayoutOrder = 2,
+    Callback = function(Value)
+        rapidFireRate = Value
+    end
+})
+
+-- Left Click Detection
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and rapidFireEnabled then
+        if not isHoldingLeftClick then
+            isHoldingLeftClick = true
+            task.spawn(fireLoop)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isHoldingLeftClick = false
+    end
+end)
+
+-- ===== PLAYER ESP SYSTEM =====
+local espMasterEnabled = false
+local outlinesEnabled = false
+local chamsEnabled = false
+local teamBasedColoring = false
+local espMaxDistance = 500
+local enemyColor = Color3.fromRGB(255, 50, 50)
+local teamColor = Color3.fromRGB(50, 255, 50)
+
+local espCache = {}
+local chamsCache = {}
+
+local function isEnemy(player)
+    return player.Team ~= LocalPlayer.Team
+end
+
+local function getPlayerColor(player)
+    if teamBasedColoring then
+        -- Team-based: Red for enemies, Green for teammates
+        return isEnemy(player) and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50, 255, 50)
+    else
+        -- Custom colors set by user
+        return isEnemy(player) and enemyColor or teamColor
+    end
+end
+
+local function clearPlayerESP(player)
+    if espCache[player] then
+        pcall(function() espCache[player]:Destroy() end)
+        espCache[player] = nil
+    end
+    if chamsCache[player] then
+        pcall(function() chamsCache[player]:Destroy() end)
+        chamsCache[player] = nil
+    end
+end
+
+local function updateESP()
+    for _, player in Players:GetPlayers() do
+        if player ~= LocalPlayer then
+            if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
+                clearPlayerESP(player)
+                continue
+            end
+            
+            local hrp = player.Character.HumanoidRootPart
+            local distance = (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            
+            if distance > espMaxDistance then
+                if espCache[player] then espCache[player].Enabled = false end
+                if chamsCache[player] then chamsCache[player].Enabled = false end
+                continue
+            end
+            
+            if espMasterEnabled then
+                if outlinesEnabled then
+                    if not espCache[player] or not espCache[player].Parent then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "SurfyESP"
+                        highlight.Adornee = player.Character
+                        highlight.FillTransparency = 1
+                        highlight.OutlineColor = getPlayerColor(player)
+                        highlight.OutlineTransparency = 0
+                        highlight.Parent = player.Character
+                        espCache[player] = highlight
+                    end
+                    espCache[player].Enabled = true
+                    espCache[player].OutlineColor = getPlayerColor(player)
+                else
+                    if espCache[player] and espCache[player].Parent then
+                        espCache[player].Enabled = false
+                    end
+                end
+                
+                if chamsEnabled then
+                    if not chamsCache[player] or not chamsCache[player].Parent then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "SurfyChams"
+                        highlight.Adornee = player.Character
+                        highlight.FillColor = getPlayerColor(player)
+                        highlight.FillTransparency = 0.4
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlight.OutlineTransparency = 0.5
+                        highlight.Parent = player.Character
+                        chamsCache[player] = highlight
+                    end
+                    chamsCache[player].Enabled = true
+                    chamsCache[player].FillColor = getPlayerColor(player)
+                else
+                    if chamsCache[player] and chamsCache[player].Parent then
+                        chamsCache[player].Enabled = false
+                    end
+                end
+            else
+                if espCache[player] and espCache[player].Parent then
+                    espCache[player].Enabled = false
+                end
+                if chamsCache[player] and chamsCache[player].Parent then
+                    chamsCache[player].Enabled = false
+                end
+            end
+        end
+    end
+end
+
+-- ===== ESP CONTROLS IN CORRECT ORDER =====
+Window:CreateToggle(PlayerESPSection, {
+    Title = "Player ESP Toggle",
+    Default = false,
+    LayoutOrder = 1,
+    Callback = function(Value)
+        espMasterEnabled = Value
+        updateESP()
+        Window:CreateNotification({
+            Title = "Player ESP",
+            Description = Value and "Enabled" or "Disabled",
+            Duration = 2
+        })
+    end
+})
+
+Window:CreateToggle(PlayerESPSection, {
+    Title = "Outline ESP",
+    Default = false,
+    LayoutOrder = 2,
+    Callback = function(Value)
+        outlinesEnabled = Value
+        updateESP()
+    end
+})
+
+Window:CreateToggle(PlayerESPSection, {
+    Title = "Chams ESP",
+    Default = false,
+    LayoutOrder = 3,
+    Callback = function(Value)
+        chamsEnabled = Value
+        updateESP()
+    end
+})
+
+Window:CreateToggle(PlayerESPSection, {
+    Title = "Team Based Coloring",
+    Default = false,
+    LayoutOrder = 4,
+    Callback = function(Value)
+        teamBasedColoring = Value
+        updateESP()
+    end
+})
+
+Window:CreateSlider(PlayerESPSection, {
+    Title = "ESP Distance",
+    Default = 500,
+    Min = 50,
+    Max = 2000,
+    Rounding = 0,
+    LayoutOrder = 5,
+    Callback = function(Value)
+        espMaxDistance = Value
+        updateESP()
+    end
+})
+
+Window:CreateColorPicker(PlayerESPSection, {
+    Title = "Enemy ESP Color",
+    Default = Color3.fromRGB(255, 50, 50),
+    LayoutOrder = 6,
+    Callback = function(Value)
+        enemyColor = Value
+        updateESP()
+    end
+})
+
+Window:CreateColorPicker(PlayerESPSection, {
+    Title = "Team ESP Color", 
+    Default = Color3.fromRGB(50, 255, 50),
+    LayoutOrder = 7,
+    Callback = function(Value)
+        teamColor = Value
+        updateESP()
+    end
+})
+
+-- ===== BHOP SYSTEM =====
+local bhopEnabled = false
+local bhopMode = "Exploit Bhop"
+local legitBhopConnection = nil
+
+local function enableExploitBhop(enabled)
+    local success, err = pcall(function()
+        if RepStorage:FindFirstChild("VIPSettings") and RepStorage.VIPSettings:FindFirstChild("SpeedDemon") then
+            RepStorage.VIPSettings.SpeedDemon.Value = enabled
+        end
+    end)
+    return success
+end
+
+local function enableLegitBhop(enabled)
+    if legitBhopConnection then
+        legitBhopConnection:Disconnect()
+        legitBhopConnection = nil
+    end
+    
+    if not enabled then return end
+    
+    local lastJumpTime = 0
+    local jumpCooldown = 0.05
+    
+    legitBhopConnection = RunService.Heartbeat:Connect(function()
+        if not LocalPlayer.Character then return end
+        
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not humanoid or not hrp then return end
+        
+        local isSpaceHeld = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+        local currentTime = tick()
+        
+        if isSpaceHeld and (currentTime - lastJumpTime) >= jumpCooldown then
+            local state = humanoid:GetState()
+            
+            if state == Enum.HumanoidStateType.Landed or 
+               state == Enum.HumanoidStateType.Running or
+               state == Enum.HumanoidStateType.RunningNoPhysics then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                lastJumpTime = currentTime
+            end
+        end
+    end)
+end
+
+Window:CreateToggle(BhopSection, {
+    Title = "Bhop Toggle",
+    Default = false,
+    LayoutOrder = 1,
+    KeybindHint = "Hold Space",
+    Callback = function(Value)
+        bhopEnabled = Value
+        
+        if Value then
+            if bhopMode == "Exploit Bhop" then
+                local success = enableExploitBhop(true)
+                enableLegitBhop(false)
+                Window:CreateNotification({
+                    Title = "Bhop",
+                    Description = success and "Exploit Bhop Enabled" or "Failed to enable",
+                    Duration = 2
+                })
+            else
+                enableExploitBhop(false)
+                enableLegitBhop(true)
+                Window:CreateNotification({
+                    Title = "Bhop",
+                    Description = "Legit Bhop Enabled",
+                    Duration = 2
+                })
+            end
+        else
+            enableExploitBhop(false)
+            enableLegitBhop(false)
+            Window:CreateNotification({
+                Title = "Bhop",
+                Description = "Disabled",
+                Duration = 2
+            })
+        end
+    end
+})
+
+Window:CreateDropdown(BhopSection, {
+    Title = "Bhop Mode",
+    Options = {"Exploit Bhop", "Legit Bhop"},
+    Default = "Exploit Bhop",
+    LayoutOrder = 2,
+    Callback = function(Value)
+        bhopMode = Value
+        
+        if bhopEnabled then
+            enableExploitBhop(false)
+            enableLegitBhop(false)
+            
+            task.wait(0.1)
+            
+            if Value == "Exploit Bhop" then
+                local success = enableExploitBhop(true)
+                Window:CreateNotification({
+                    Title = "Bhop Mode",
+                    Description = success and "Switched to Exploit Bhop" or "Failed to switch",
+                    Duration = 2
+                })
+            else
+                enableLegitBhop(true)
+                Window:CreateNotification({
+                    Title = "Bhop Mode",
+                    Description = "Switched to Legit Bhop",
+                    Duration = 2
+                })
+            end
+        end
+    end
+})
+
+-- ===== MAP VOTE SPAM =====
+local voteSpamEnabled = false
+local voteSpamLoop = nil
+local mapVotes = {"Map1", "Map2", "Map3", "Map4"}
+local currentVoteIndex = 1
+
+Window:CreateToggle(VoteSpamSection, {
+    Title = "Spam Vote Maps",
+    Default = false,
+    Callback = function(Value)
+        voteSpamEnabled = Value
+        
+        if Value then
+            voteSpamLoop = task.spawn(function()
+                while voteSpamEnabled do
+                    pcall(function()
+                        local args = {mapVotes[currentVoteIndex]}
+                        game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("VoteMap"):FireServer(unpack(args))
+                    end)
+                    
+                    currentVoteIndex = currentVoteIndex + 1
+                    if currentVoteIndex > #mapVotes then
+                        currentVoteIndex = 1
+                    end
+                    
+                    task.wait(0.1)
+                end
+            end)
+            
+            Window:CreateNotification({
+                Title = "Vote Spam",
+                Description = "Started spamming map votes",
+                Duration = 2
+            })
+        else
+            voteSpamEnabled = false
+            if voteSpamLoop then
+                task.cancel(voteSpamLoop)
+                voteSpamLoop = nil
+            end
+            
+            Window:CreateNotification({
+                Title = "Vote Spam",
+                Description = "Stopped spamming",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- ===== SETTINGS TAB =====
+local UIToggleKeybind = Window:CreateKeybind(KeybindSection, {
+    Title = "Toggle UI",
+    Default = Enum.KeyCode.RightShift,
+    Callback = function() end
+})
+
+-- Override the UI toggle functionality
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and not UIToggleKeybind.IsBinding then
+        if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == UIToggleKeybind.Key) or
+           (input.UserInputType == UIToggleKeybind.Key) then
+            Window:Toggle()
+        end
+    end
+end)
+
+-- ===== PLAYER CONNECTIONS =====
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        clearPlayerESP(player)
+        task.wait(0.5)
+        updateESP()
+    end)
+    
+    player.CharacterRemoving:Connect(function()
+        clearPlayerESP(player)
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    clearPlayerESP(player)
+end)
+
+for _, player in Players:GetPlayers() do
+    if player ~= LocalPlayer then
+        player.CharacterAdded:Connect(function()
+            clearPlayerESP(player)
+            task.wait(0.5)
+            updateESP()
+        end)
+        
+        player.CharacterRemoving:Connect(function()
+            clearPlayerESP(player)
+        end)
+    end
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        if espMasterEnabled then
+            updateESP()
+        end
+    end
+end)
+
+Window:CreateNotification({
+    Title = "Surfy TC2",
+    Description = "Press RightShift to toggle UI",
+    Duration = 4
+})
+
+print("Surfy TC2 Enhanced - Loaded Successfully")
