@@ -1,4 +1,4 @@
--- Surfy TC2 - Bottom Drawer UI
+-- Surfy TC2 - Bottom Drawer UI (FIXED)
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -172,7 +172,8 @@ function SurfyUI:CreateWindow(config)
     local Window = {
         Tabs = {},
         CurrentTab = nil,
-        IsOpen = false
+        IsOpen = false,
+        IconOffset = config.IconOffset or 20
     }
     setmetatable(Window, SurfyUI)
     
@@ -185,7 +186,6 @@ function SurfyUI:CreateWindow(config)
     
     Window.ScreenGui = ScreenGui
     
-    -- Icon cubes container (always visible at bottom, perfectly centered)
     local IconBar = Instance.new("Frame")
     IconBar.Name = "IconBar"
     IconBar.Size = UDim2.new(0, 0, 0, 50)
@@ -201,7 +201,6 @@ function SurfyUI:CreateWindow(config)
     IconLayout.Padding = UDim.new(0, 10)
     IconLayout.Parent = IconBar
     
-    -- Module drawer (shows above icons when open)
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
     Drawer.Size = UDim2.new(0, 600, 0, 0)
@@ -227,7 +226,6 @@ function SurfyUI:CreateWindow(config)
     Round(DrawerOverlay, 16)
     AddGradient(DrawerOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 180)
     
-    -- Module list inside drawer
     local ModuleList = Instance.new("ScrollingFrame")
     ModuleList.Name = "ModuleList"
     ModuleList.Size = UDim2.new(1, -40, 1, -20)
@@ -261,10 +259,7 @@ function SurfyUI:CreateWindow(config)
         
         Drawer.Visible = true
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
-        -- CHANGE THIS LINE TO MOVE ICONS UP MORE WHEN UI OPENS:
-        -- Change the -495 value to a LOWER number (more negative) to move icons UP more
-        -- Example: -520 would move them up more, -470 would move them up less
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -560)}, 0.4, Enum.EasingStyle.Back)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495 - self.IconOffset)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
@@ -280,7 +275,6 @@ function SurfyUI:CreateWindow(config)
     
     function Window:Toggle()
         if self.IsOpen then
-            -- Close and deselect current tab
             if self.CurrentTab then
                 Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
                 Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
@@ -288,7 +282,6 @@ function SurfyUI:CreateWindow(config)
             end
             self:Close()
         else
-            -- Open and select first tab if available
             if #self.Tabs > 0 and not self.CurrentTab then
                 self:SelectTab(self.Tabs[1])
             else
@@ -297,7 +290,6 @@ function SurfyUI:CreateWindow(config)
         end
     end
     
-    -- Load notification
     task.delay(0.1, function()
         self:CreateNotification({
             Title = config.Title or "Surfy UI",
@@ -318,7 +310,6 @@ function SurfyUI:CreateTab(name)
     
     table.insert(self.Tabs, Tab)
     
-    -- Create icon cube
     local Cube = Instance.new("TextButton")
     Cube.Name = name
     Cube.Size = UDim2.new(0, 50, 0, 50)
@@ -338,7 +329,6 @@ function SurfyUI:CreateTab(name)
     
     Cube.MouseButton1Click:Connect(function()
         if self.CurrentTab == Tab then
-            -- Clicking same tab closes it
             Tween(Cube, {BackgroundTransparency = 0.3}, 0.2)
             Tween(Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
             self.CurrentTab = nil
@@ -360,7 +350,6 @@ function SurfyUI:CreateTab(name)
         end
     end)
     
-    -- Auto-resize icon bar
     task.wait()
     local totalWidth = #self.Tabs * 60
     self.IconBar.Size = UDim2.new(0, totalWidth, 0, 50)
@@ -394,7 +383,35 @@ function SurfyUI:RefreshModules()
     
     if not self.CurrentTab then return end
     
+    local addedSections = {}
+    
     for _, module in ipairs(self.CurrentTab.Modules) do
+        if module.Section and not addedSections[module.Section.Name] then
+            addedSections[module.Section.Name] = true
+            
+            local SectionContainer = Instance.new("Frame")
+            SectionContainer.Name = "Section_" .. module.Section.Name
+            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
+            SectionContainer.BackgroundTransparency = 1
+            SectionContainer.BorderSizePixel = 0
+            SectionContainer.ZIndex = 9999
+            SectionContainer.LayoutOrder = module.LayoutOrder - 1000
+            SectionContainer.Parent = self.ModuleList
+            
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
+            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = module.Section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 14
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.Parent = SectionContainer
+        end
+        
         module:Render(self.ModuleList)
     end
 end
@@ -417,41 +434,6 @@ function SurfyUI:CreateToggle(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -544,41 +526,6 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -728,41 +675,6 @@ function SurfyUI:CreateSlider(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 58)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -889,41 +801,6 @@ function SurfyUI:CreateDropdown(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -950,23 +827,23 @@ function SurfyUI:CreateDropdown(section, config)
         NameLabel.Parent = Container
         
         local DropBtn = Instance.new("TextButton")
-        DropBtn.Size = UDim2.new(0, 120, 0, 28)
-        DropBtn.Position = UDim2.new(1, -130, 0.5, -14)
+        DropBtn.Size = UDim2.new(0, 140, 0, 32)
+        DropBtn.Position = UDim2.new(1, -150, 0.5, -16)
         DropBtn.BackgroundColor3 = SurfyUI.Theme.Secondary
         DropBtn.BackgroundTransparency = 0.3
-        DropBtn.Text = "  " .. self.Value
+        DropBtn.Text = self.Value
         DropBtn.TextColor3 = SurfyUI.Theme.Text
-        DropBtn.TextSize = 11
+        DropBtn.TextSize = 12
         DropBtn.Font = Enum.Font.GothamMedium
-        DropBtn.TextXAlignment = Enum.TextXAlignment.Left
+        DropBtn.TextXAlignment = Enum.TextXAlignment.Center
         DropBtn.ZIndex = 10000
         DropBtn.Parent = Container
         
         Round(DropBtn, 8)
         
         local Arrow = Instance.new("TextLabel")
-        Arrow.Size = UDim2.new(0, 24, 1, 0)
-        Arrow.Position = UDim2.new(1, -24, 0, 0)
+        Arrow.Size = UDim2.new(0, 20, 1, 0)
+        Arrow.Position = UDim2.new(1, -20, 0, 0)
         Arrow.BackgroundTransparency = 1
         Arrow.Text = "▼"
         Arrow.TextColor3 = SurfyUI.Theme.TextDim
@@ -985,50 +862,63 @@ function SurfyUI:CreateDropdown(section, config)
             if self.IsOpen then
                 local OptionsFrame = Instance.new("Frame")
                 OptionsFrame.Name = "Options"
-                OptionsFrame.Size = UDim2.new(0, 120, 0, 0)
-                OptionsFrame.Position = UDim2.new(1, -130, 1, 6)
+                OptionsFrame.Size = UDim2.new(0, 140, 0, 0)
+                OptionsFrame.Position = UDim2.new(1, -150, 1, 8)
                 OptionsFrame.BackgroundColor3 = SurfyUI.Theme.Surface
-                OptionsFrame.BackgroundTransparency = 0.1
+                OptionsFrame.BackgroundTransparency = 0.05
                 OptionsFrame.BorderSizePixel = 0
-                OptionsFrame.ZIndex = 10005
+                OptionsFrame.ZIndex = 15000
                 OptionsFrame.Parent = Container
                 
                 Round(OptionsFrame, 8)
-                AddStroke(OptionsFrame, SurfyUI.Theme.Primary, 1, 0.5)
+                AddStroke(OptionsFrame, SurfyUI.Theme.Primary, 1.5, 0.4)
                 
                 local OptLayout = Instance.new("UIListLayout")
-                OptLayout.Padding = UDim.new(0, 2)
+                OptLayout.Padding = UDim.new(0, 4)
+                OptLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
                 OptLayout.Parent = OptionsFrame
                 
                 local OptPadding = Instance.new("UIPadding")
-                OptPadding.PaddingTop = UDim.new(0, 4)
-                OptPadding.PaddingBottom = UDim.new(0, 4)
-                OptPadding.PaddingLeft = UDim.new(0, 4)
-                OptPadding.PaddingRight = UDim.new(0, 4)
+                OptPadding.PaddingTop = UDim.new(0, 6)
+                OptPadding.PaddingBottom = UDim.new(0, 6)
+                OptPadding.PaddingLeft = UDim.new(0, 6)
+                OptPadding.PaddingRight = UDim.new(0, 6)
                 OptPadding.Parent = OptionsFrame
                 
                 for _, option in ipairs(self.Options) do
                     local OptBtn = Instance.new("TextButton")
-                    OptBtn.Size = UDim2.new(1, -8, 0, 24)
+                    OptBtn.Size = UDim2.new(1, -12, 0, 30)
                     OptBtn.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-                    OptBtn.BackgroundTransparency = (self.Value == option) and 0.2 or 0.6
-                    OptBtn.Text = " " .. option
+                    OptBtn.BackgroundTransparency = (self.Value == option) and 0.1 or 0.4
+                    OptBtn.Text = option
                     OptBtn.TextColor3 = (self.Value == option) and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
-                    OptBtn.TextSize = 11
+                    OptBtn.TextSize = 12
                     OptBtn.Font = Enum.Font.GothamMedium
-                    OptBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    OptBtn.ZIndex = 10006
+                    OptBtn.TextXAlignment = Enum.TextXAlignment.Center
+                    OptBtn.ZIndex = 15001
                     OptBtn.Parent = OptionsFrame
                     
                     Round(OptBtn, 6)
                     
                     if self.Value == option then
-                        AddStroke(OptBtn, SurfyUI.Theme.Primary, 1, 0.5)
+                        AddStroke(OptBtn, SurfyUI.Theme.Primary, 1.5, 0.3)
                     end
+                    
+                    OptBtn.MouseEnter:Connect(function()
+                        if self.Value ~= option then
+                            Tween(OptBtn, {BackgroundTransparency = 0.2}, 0.2)
+                        end
+                    end)
+                    
+                    OptBtn.MouseLeave:Connect(function()
+                        if self.Value ~= option then
+                            Tween(OptBtn, {BackgroundTransparency = 0.4}, 0.2)
+                        end
+                    end)
                     
                     OptBtn.MouseButton1Click:Connect(function()
                         self.Value = option
-                        DropBtn.Text = "  " .. option
+                        DropBtn.Text = option
                         OptionsFrame:Destroy()
                         self.IsOpen = false
                         Tween(Arrow, {Rotation = 0}, 0.2)
@@ -1039,8 +929,8 @@ function SurfyUI:CreateDropdown(section, config)
                     end)
                 end
                 
-                local targetHeight = (#self.Options * 26) + 8
-                Tween(OptionsFrame, {Size = UDim2.new(0, 120, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
+                local targetHeight = (#self.Options * 34) + 12
+                Tween(OptionsFrame, {Size = UDim2.new(0, 140, 0, targetHeight)}, 0.3, Enum.EasingStyle.Back)
                 Tween(Arrow, {Rotation = 180}, 0.2)
             else
                 if Container:FindFirstChild("Options") then
@@ -1068,41 +958,6 @@ function SurfyUI:CreateKeybind(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -1189,41 +1044,6 @@ function SurfyUI:CreateColorPicker(section, config)
     }
     
     function Module:Render(parent)
-        -- Add section header if this is the first module in the section
-        local isFirstInSection = true
-        for _, mod in ipairs(section.Tab.Modules) do
-            if mod.Section == section and mod ~= self then
-                isFirstInSection = false
-                break
-            end
-        end
-        
-        if isFirstInSection then
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
-            SectionContainer.Parent = parent
-            
-            Round(SectionContainer, 10)
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
