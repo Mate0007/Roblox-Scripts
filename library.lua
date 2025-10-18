@@ -264,7 +264,7 @@ function SurfyUI:CreateWindow(config)
         -- CHANGE THIS LINE TO MOVE ICONS UP MORE WHEN UI OPENS:
         -- Change the -495 value to a LOWER number (more negative) to move icons UP more
         -- Example: -520 would move them up more, -470 would move them up less
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495)}, 0.4, Enum.EasingStyle.Back)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -530)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
