@@ -1,4 +1,4 @@
--- Surfy TC2 - Vape V4 Style Bottom Drawer UI
+-- Surfy TC2 - Bottom Drawer UI
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -16,6 +16,7 @@ SurfyUI.Theme = {
     Background = Color3.fromRGB(12, 15, 25),
     Surface = Color3.fromRGB(18, 22, 35),
     SurfaceLight = Color3.fromRGB(25, 30, 45),
+    ModuleBackground = Color3.fromRGB(22, 27, 40),
     Text = Color3.fromRGB(255, 255, 255),
     TextDim = Color3.fromRGB(150, 170, 200),
     Active = Color3.fromRGB(0, 255, 200),
@@ -189,6 +190,7 @@ function SurfyUI:CreateWindow(config)
     IconBar.Name = "IconBar"
     IconBar.Size = UDim2.new(0, 0, 0, 50)
     IconBar.Position = UDim2.new(0.5, 0, 1, -65)
+    IconBar.AnchorPoint = Vector2.new(0.5, 0)
     IconBar.BackgroundTransparency = 1
     IconBar.ZIndex = 10000
     IconBar.Parent = ScreenGui
@@ -240,7 +242,7 @@ function SurfyUI:CreateWindow(config)
     ModuleList.Parent = Drawer
     
     local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 8)
+    ListLayout.Padding = UDim.new(0, 12)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ListLayout.Parent = ModuleList
     
@@ -349,15 +351,10 @@ function SurfyUI:CreateTab(name)
         end
     end)
     
-    -- Auto-resize and center icon bar
+    -- Auto-resize icon bar
     task.wait()
     local totalWidth = #self.Tabs * 60
     self.IconBar.Size = UDim2.new(0, totalWidth, 0, 50)
-    self.IconBar.Position = UDim2.new(0.5, -totalWidth/2, self.IconBar.Position.Y.Scale, self.IconBar.Position.Y.Offset)
-    
-    if not self.CurrentTab then
-        self:SelectTab(Tab)
-    end
     
     return Tab
 end
@@ -411,13 +408,14 @@ function SurfyUI:CreateToggle(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local Indicator = Instance.new("Frame")
         Indicator.Size = UDim2.new(0, 4, 0.7, 0)
@@ -471,7 +469,7 @@ function SurfyUI:CreateToggle(section, config)
                 end
                 AddGradient(self.Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
             else
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.Surface}, 0.3)
+                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.3)
             end
         end
         
@@ -499,13 +497,14 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local Indicator = Instance.new("Frame")
         Indicator.Size = UDim2.new(0, 4, 0.7, 0)
@@ -615,7 +614,7 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
                 end
                 AddGradient(self.Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
             else
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.Surface}, 0.3)
+                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.3)
             end
         end
         
@@ -644,13 +643,14 @@ function SurfyUI:CreateSlider(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 50)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(0, 200, 0, 18)
@@ -673,7 +673,7 @@ function SurfyUI:CreateSlider(section, config)
         ValueLabel.TextSize = 13
         ValueLabel.Font = Enum.Font.GothamBold
         ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-        ValueLabel.ZIndex = 10000
+                ValueLabel.ZIndex = 10000
         ValueLabel.Parent = Container
         
         local Track = Instance.new("Frame")
@@ -766,14 +766,15 @@ function SurfyUI:CreateDropdown(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.ClipsDescendants = false
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(0, 200, 1, 0)
@@ -906,13 +907,14 @@ function SurfyUI:CreateKeybind(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(0, 200, 1, 0)
@@ -988,13 +990,14 @@ function SurfyUI:CreateColorPicker(section, config)
     function Module:Render(parent)
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
-        Container.BackgroundColor3 = SurfyUI.Theme.Surface
-        Container.BackgroundTransparency = 0.3
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.Parent = parent
         
         Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
         
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(0, 200, 1, 0)
@@ -1050,3 +1053,4 @@ function SurfyUI:CreateColorPicker(section, config)
 end
 
 return SurfyUI
+
