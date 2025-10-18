@@ -670,7 +670,7 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
             Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3)
             Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3)
             
-            ifself.Enabled then
+            if self.Enabled then
                 Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3)
                 for _, child in ipairs(self.Indicator:GetChildren()) do
                     if child:IsA("UIGradient") then child:Destroy() end
