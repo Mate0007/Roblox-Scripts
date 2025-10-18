@@ -1,4 +1,4 @@
--- Surfy TC2 - Bottom Drawer UI (FIXED)
+-- Surfy TC2 - Bottom Drawer UI (FIXED + Proper Section Ordering + Visual Line)
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -201,6 +201,19 @@ function SurfyUI:CreateWindow(config)
     IconLayout.Padding = UDim.new(0, 10)
     IconLayout.Parent = IconBar
     
+    -- Connection line between icons and drawer
+    local ConnectionLine = Instance.new("Frame")
+    ConnectionLine.Name = "ConnectionLine"
+    ConnectionLine.Size = UDim2.new(0, 1, 0, 0)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -65)
+    ConnectionLine.AnchorPoint = Vector2.new(0.5, 1)
+    ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
+    ConnectionLine.BackgroundTransparency = 0.3
+    ConnectionLine.BorderSizePixel = 0
+    ConnectionLine.ZIndex = 9997
+    ConnectionLine.Visible = false
+    ConnectionLine.Parent = ScreenGui
+    
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
     Drawer.Size = UDim2.new(0, 600, 0, 0)
@@ -252,14 +265,17 @@ function SurfyUI:CreateWindow(config)
     Window.IconLayout = IconLayout
     Window.Drawer = Drawer
     Window.ModuleList = ModuleList
+    Window.ConnectionLine = ConnectionLine
     
     function Window:Open()
         if self.IsOpen then return end
         self.IsOpen = true
         
         Drawer.Visible = true
+        ConnectionLine.Visible = true
+        
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495 - self.IconOffset)}, 0.4, Enum.EasingStyle.Back)
+        Tween(ConnectionLine, {Size = UDim2.new(0, 1, 0, 410), Position = UDim2.new(0.5, 0, 1, -475)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
@@ -267,10 +283,11 @@ function SurfyUI:CreateWindow(config)
         self.IsOpen = false
         
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
+        Tween(ConnectionLine, {Size = UDim2.new(0, 1, 0, 0), Position = UDim2.new(0.5, 0, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
         
         task.wait(0.3)
         Drawer.Visible = false
+        ConnectionLine.Visible = false
     end
     
     function Window:Toggle()
@@ -383,11 +400,17 @@ function SurfyUI:RefreshModules()
     
     if not self.CurrentTab then return end
     
-    local addedSections = {}
+    -- Sort modules by LayoutOrder first
+    table.sort(self.CurrentTab.Modules, function(a, b)
+        return a.LayoutOrder < b.LayoutOrder
+    end)
+    
+    local lastSection = nil
     
     for _, module in ipairs(self.CurrentTab.Modules) do
-        if module.Section and not addedSections[module.Section.Name] then
-            addedSections[module.Section.Name] = true
+        -- Add section header only when we encounter a new section
+        if module.Section and module.Section ~= lastSection then
+            lastSection = module.Section
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
@@ -395,7 +418,7 @@ function SurfyUI:RefreshModules()
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = module.LayoutOrder - 1000
+            SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
             SectionContainer.Parent = self.ModuleList
             
             local SectionHeader = Instance.new("TextLabel")
