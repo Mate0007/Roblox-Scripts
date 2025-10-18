@@ -227,34 +227,11 @@ function SurfyUI:CreateWindow(config)
     Round(DrawerOverlay, 16)
     AddGradient(DrawerOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 180)
     
-    -- Section list (left side)
-    local SectionList = Instance.new("ScrollingFrame")
-    SectionList.Name = "SectionList"
-    SectionList.Size = UDim2.new(0, 160, 1, -20)
-    SectionList.Position = UDim2.new(0, 10, 0, 10)
-    SectionList.BackgroundTransparency = 1
-    SectionList.BorderSizePixel = 0
-    SectionList.ScrollBarThickness = 3
-    SectionList.ScrollBarImageColor3 = SurfyUI.Theme.Primary
-    SectionList.ScrollBarImageTransparency = 0.5
-    SectionList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    SectionList.ZIndex = 9999
-    SectionList.Parent = Drawer
-    
-    local SectionLayout = Instance.new("UIListLayout")
-    SectionLayout.Padding = UDim.new(0, 8)
-    SectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    SectionLayout.Parent = SectionList
-    
-    SectionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        SectionList.CanvasSize = UDim2.new(0, 0, 0, SectionLayout.AbsoluteContentSize.Y + 10)
-    end)
-    
-    -- Module list inside drawer (right side)
+    -- Module list inside drawer
     local ModuleList = Instance.new("ScrollingFrame")
     ModuleList.Name = "ModuleList"
-    ModuleList.Size = UDim2.new(0, 400, 1, -20)
-    ModuleList.Position = UDim2.new(0, 180, 0, 10)
+    ModuleList.Size = UDim2.new(1, -40, 1, -20)
+    ModuleList.Position = UDim2.new(0, 20, 0, 10)
     ModuleList.BackgroundTransparency = 1
     ModuleList.BorderSizePixel = 0
     ModuleList.ScrollBarThickness = 4
@@ -276,7 +253,6 @@ function SurfyUI:CreateWindow(config)
     Window.IconBar = IconBar
     Window.IconLayout = IconLayout
     Window.Drawer = Drawer
-    Window.SectionList = SectionList
     Window.ModuleList = ModuleList
     
     function Window:Open()
@@ -285,7 +261,7 @@ function SurfyUI:CreateWindow(config)
         
         Drawer.Visible = true
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495)}, 0.4, Enum.EasingStyle.Back)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -505)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
@@ -399,7 +375,6 @@ function SurfyUI:SelectTab(tab)
     Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3)
     Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3)
     
-    self:RefreshSections()
     self:RefreshModules()
     
     if not self.IsOpen then
@@ -407,37 +382,9 @@ function SurfyUI:SelectTab(tab)
     end
 end
 
-function SurfyUI:RefreshSections()
-    for _, child in ipairs(self.SectionList:GetChildren()) do
-        if child:IsA("TextLabel") then
-            child:Destroy()
-        end
-    end
-    
-    if not self.CurrentTab then return end
-    
-    for _, section in ipairs(self.CurrentTab.Sections) do
-        local SectionLabel = Instance.new("TextLabel")
-        SectionLabel.Size = UDim2.new(1, 0, 0, 25)
-        SectionLabel.BackgroundTransparency = 1
-        SectionLabel.Text = section.Name
-        SectionLabel.TextColor3 = SurfyUI.Theme.Text
-        SectionLabel.TextSize = 13
-        SectionLabel.Font = Enum.Font.GothamBold
-        SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-        SectionLabel.TextYAlignment = Enum.TextYAlignment.Center
-        SectionLabel.ZIndex = 10000
-        SectionLabel.Parent = self.SectionList
-        
-        local Padding = Instance.new("UIPadding")
-        Padding.PaddingLeft = UDim.new(0, 10)
-        Padding.Parent = SectionLabel
-    end
-end
-
 function SurfyUI:RefreshModules()
     for _, child in ipairs(self.ModuleList:GetChildren()) do
-        if child:IsA("Frame") then
+        if child:IsA("Frame") or child:IsA("TextLabel") then
             child:Destroy()
         end
     end
@@ -462,10 +409,39 @@ function SurfyUI:CreateToggle(section, config)
         Name = config.Title or "Toggle",
         Enabled = config.Default or false,
         Callback = config.Callback,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -553,10 +529,39 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         Callback = config.Callback,
         KeybindCallback = config.KeybindCallback,
         IsBinding = false,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -701,10 +706,39 @@ function SurfyUI:CreateSlider(section, config)
         Rounding = config.Rounding or 0,
         Callback = config.Callback,
         IsDragging = false,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 50)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -826,10 +860,39 @@ function SurfyUI:CreateDropdown(section, config)
         Options = config.Options or {"Option 1"},
         Callback = config.Callback,
         IsOpen = false,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -969,10 +1032,39 @@ function SurfyUI:CreateKeybind(section, config)
         Key = config.Default or Enum.KeyCode.Unknown,
         Callback = config.Callback,
         IsBinding = false,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
@@ -1054,10 +1146,39 @@ function SurfyUI:CreateColorPicker(section, config)
         Name = config.Title or "Color",
         Value = config.Default or Color3.fromRGB(0, 230, 255),
         Callback = config.Callback,
-        LayoutOrder = config.LayoutOrder or 999
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
     }
     
     function Module:Render(parent)
+        -- Add section header if this is the first module in the section
+        local isFirstInSection = true
+        for _, mod in ipairs(section.Tab.Modules) do
+            if mod.Section == section and mod ~= self then
+                isFirstInSection = false
+                break
+            end
+        end
+        
+        if isFirstInSection then
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, 0, 0, 30)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = section.Name
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.LayoutOrder = self.LayoutOrder - 0.5
+            SectionHeader.Parent = parent
+            
+            local Padding = Instance.new("UIPadding")
+            Padding.PaddingLeft = UDim.new(0, 5)
+            Padding.Parent = SectionHeader
+        end
+        
         local Container = Instance.new("Frame")
         Container.Size = UDim2.new(1, 0, 0, 40)
         Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
