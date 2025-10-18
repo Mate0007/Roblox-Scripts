@@ -184,34 +184,13 @@ function SurfyUI:CreateWindow(config)
     
     Window.ScreenGui = ScreenGui
     
-    -- White drag line
-    local DragLine = Instance.new("Frame")
-    DragLine.Name = "DragLine"
-    DragLine.Size = UDim2.new(0, 60, 0, 3)
-    DragLine.Position = UDim2.new(0.5, -30, 1, -15)
-    DragLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    DragLine.BackgroundTransparency = 0.3
-    DragLine.BorderSizePixel = 0
-    DragLine.ZIndex = 10000
-    DragLine.Parent = ScreenGui
-    
-    Round(DragLine, 2)
-    
-    local DragButton = Instance.new("TextButton")
-    DragButton.Size = UDim2.new(1, 40, 1, 40)
-    DragButton.Position = UDim2.new(0, -20, 0, -20)
-    DragButton.BackgroundTransparency = 1
-    DragButton.Text = ""
-    DragButton.ZIndex = 10001
-    DragButton.Parent = DragLine
-    
-    -- Icon cubes container (always visible at bottom)
+    -- Icon cubes container (always visible at bottom, perfectly centered)
     local IconBar = Instance.new("Frame")
     IconBar.Name = "IconBar"
     IconBar.Size = UDim2.new(0, 0, 0, 50)
-    IconBar.Position = UDim2.new(0.5, 0, 1, -60)
+    IconBar.Position = UDim2.new(0.5, 0, 1, -65)
     IconBar.BackgroundTransparency = 1
-    IconBar.ZIndex = 9999
+    IconBar.ZIndex = 10000
     IconBar.Parent = ScreenGui
     
     local IconLayout = Instance.new("UIListLayout")
@@ -224,7 +203,7 @@ function SurfyUI:CreateWindow(config)
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
     Drawer.Size = UDim2.new(0, 600, 0, 0)
-    Drawer.Position = UDim2.new(0.5, -300, 1, -60)
+    Drawer.Position = UDim2.new(0.5, -300, 1, -65)
     Drawer.BackgroundColor3 = SurfyUI.Theme.Background
     Drawer.BackgroundTransparency = 0.05
     Drawer.BorderSizePixel = 0
@@ -261,7 +240,7 @@ function SurfyUI:CreateWindow(config)
     ModuleList.Parent = Drawer
     
     local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 6)
+    ListLayout.Padding = UDim.new(0, 8)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ListLayout.Parent = ModuleList
     
@@ -269,69 +248,26 @@ function SurfyUI:CreateWindow(config)
         ModuleList.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 20)
     end)
     
-    Window.DragLine = DragLine
-    Window.DragButton = DragButton
     Window.IconBar = IconBar
     Window.IconLayout = IconLayout
     Window.Drawer = Drawer
     Window.ModuleList = ModuleList
-    
-    -- Drag functionality
-    local dragging = false
-    local dragStart, startPos
-    
-    DragButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position.Y
-            startPos = Drawer.Position.Y.Offset
-            Tween(DragLine, {BackgroundTransparency = 0}, 0.2)
-        end
-    end)
-    
-    DragButton.MouseButton1Click:Connect(function()
-        if not dragging then
-            Window:Toggle()
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position.Y - dragStart
-            local newY = math.clamp(startPos + delta, -400, -60)
-            
-            if newY < -150 and not Window.IsOpen then
-                Window:Open()
-            elseif newY > -100 and Window.IsOpen then
-                Window:Close()
-            end
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-            Tween(DragLine, {BackgroundTransparency = 0.3}, 0.2)
-        end
-    end)
     
     function Window:Open()
         if self.IsOpen then return end
         self.IsOpen = true
         
         Drawer.Visible = true
-        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 380), Position = UDim2.new(0.5, -300, 1, -450)}, 0.4, Enum.EasingStyle.Back)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -460)}, 0.4, Enum.EasingStyle.Back)
-        Tween(DragLine, {Position = UDim2.new(0.5, -30, 1, -465)}, 0.4, Enum.EasingStyle.Back)
+        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 380), Position = UDim2.new(0.5, -300, 1, -455)}, 0.4, Enum.EasingStyle.Back)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -465)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
         if not self.IsOpen then return end
         self.IsOpen = false
         
-        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -60)}, 0.3, Enum.EasingStyle.Quint)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -60)}, 0.3, Enum.EasingStyle.Quint)
-        Tween(DragLine, {Position = UDim2.new(0.5, -30, 1, -15)}, 0.3, Enum.EasingStyle.Quint)
+        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
         
         task.wait(0.3)
         Drawer.Visible = false
@@ -349,7 +285,7 @@ function SurfyUI:CreateWindow(config)
     task.delay(0.1, function()
         self:CreateNotification({
             Title = config.Title or "Surfy UI",
-            Description = "Press the white line to open",
+            Description = "Click any icon to open",
             Duration = 5
         })
     end)
@@ -413,7 +349,8 @@ function SurfyUI:CreateTab(name)
         end
     end)
     
-    -- Auto-resize icon bar
+    -- Auto-resize and center icon bar
+    task.wait()
     local totalWidth = #self.Tabs * 60
     self.IconBar.Size = UDim2.new(0, totalWidth, 0, 50)
     self.IconBar.Position = UDim2.new(0.5, -totalWidth/2, self.IconBar.Position.Y.Scale, self.IconBar.Position.Y.Offset)
