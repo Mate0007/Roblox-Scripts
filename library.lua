@@ -426,22 +426,21 @@ function SurfyUI:CreateToggle(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -477,20 +476,9 @@ function SurfyUI:CreateToggle(section, config)
             AddGradient(Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
         end
         
-        -- Toggle Icon (checkbox style)
-        local ToggleIcon = Instance.new("ImageLabel")
-        ToggleIcon.Size = UDim2.new(0, 20, 0, 20)
-        ToggleIcon.Position = UDim2.new(0, 15, 0.5, -10)
-        ToggleIcon.BackgroundTransparency = 1
-        ToggleIcon.ImageColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.TextDim
-        ToggleIcon.Image = "rbxassetid://7733964640"
-        ToggleIcon.ImageTransparency = self.Enabled and 0 or 0.5
-        ToggleIcon.ZIndex = 10000
-        ToggleIcon.Parent = Container
-        
         local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(1, -50, 1, 0)
-        NameLabel.Position = UDim2.new(0, 45, 0, 0)
+        NameLabel.Size = UDim2.new(1, -30, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
         NameLabel.BackgroundTransparency = 1
         NameLabel.Text = self.Name
         NameLabel.TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
@@ -502,7 +490,6 @@ function SurfyUI:CreateToggle(section, config)
         
         Module.Container = Container
         Module.Indicator = Indicator
-        Module.ToggleIcon = ToggleIcon
         Module.NameLabel = NameLabel
         
         Container.InputBegan:Connect(function(input)
@@ -518,7 +505,6 @@ function SurfyUI:CreateToggle(section, config)
         if self.Container then
             Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3)
             Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3)
-            Tween(self.ToggleIcon, {ImageColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.TextDim, ImageTransparency = self.Enabled and 0 or 0.5}, 0.3)
             
             if self.Enabled then
                 Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3)
@@ -567,22 +553,21 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -618,20 +603,9 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
             AddGradient(Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
         end
         
-        -- Toggle Icon (checkbox style)
-        local ToggleIcon = Instance.new("ImageLabel")
-        ToggleIcon.Size = UDim2.new(0, 20, 0, 20)
-        ToggleIcon.Position = UDim2.new(0, 15, 0.5, -10)
-        ToggleIcon.BackgroundTransparency = 1
-        ToggleIcon.ImageColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.TextDim
-        ToggleIcon.Image = "rbxassetid://7733964640"
-        ToggleIcon.ImageTransparency = self.Enabled and 0 or 0.5
-        ToggleIcon.ZIndex = 10000
-        ToggleIcon.Parent = Container
-        
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(1, -160, 1, 0)
-        NameLabel.Position = UDim2.new(0, 45, 0, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
         NameLabel.BackgroundTransparency = 1
         NameLabel.Text = self.Name
         NameLabel.TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
@@ -665,7 +639,6 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         
         Module.Container = Container
         Module.Indicator = Indicator
-        Module.ToggleIcon = ToggleIcon
         Module.NameLabel = NameLabel
         Module.KeybindLabel = KeybindLabel
         
@@ -715,7 +688,6 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         if self.Container then
             Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3)
             Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3)
-            Tween(self.ToggleIcon, {ImageColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.TextDim, ImageTransparency = self.Enabled and 0 or 0.5}, 0.3)
             
             if self.Enabled then
                 Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3)
@@ -765,22 +737,21 @@ function SurfyUI:CreateSlider(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -927,22 +898,21 @@ function SurfyUI:CreateDropdown(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -1107,22 +1077,21 @@ function SurfyUI:CreateKeybind(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -1229,22 +1198,21 @@ function SurfyUI:CreateColorPicker(section, config)
         if isFirstInSection then
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
-            SectionContainer.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-            SectionContainer.BackgroundTransparency = 0.3
+            SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
+            SectionContainer.BackgroundTransparency = 0.05
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
             SectionContainer.Parent = parent
             
             Round(SectionContainer, 10)
-            AddStroke(SectionContainer, SurfyUI.Theme.Primary, 1, 0.7)
             
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 1, 0)
             SectionHeader.Position = UDim2.new(0, 10, 0, 0)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextColor3 = SurfyUI.Theme.Text
             SectionHeader.TextSize = 14
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
@@ -1307,7 +1275,8 @@ function SurfyUI:CreateColorPicker(section, config)
             self.Value = colors[currentIndex]
             
             Tween(ColorBtn, {BackgroundColor3 = self.Value}, 0.3)
-                if self.Callback then
+            
+            if self.Callback then
                 self.Callback(self.Value)
             end
         end)
