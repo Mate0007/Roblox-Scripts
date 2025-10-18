@@ -78,7 +78,7 @@ function SurfyUI:CreateNotification(config)
     local Notification = Instance.new("Frame")
     Notification.Name = "Notification"
     Notification.Size = UDim2.new(0, 320, 0, 70)
-    Notification.Position = UDim2.new(1, 340, 0, 20)
+    Notification.Position = UDim2.new(1, 340, 1, -100)
     Notification.BackgroundColor3 = SurfyUI.Theme.Surface
     Notification.BackgroundTransparency = 0.1
     Notification.BorderSizePixel = 0
@@ -154,10 +154,10 @@ function SurfyUI:CreateNotification(config)
     CloseBtn.ZIndex = 10002
     CloseBtn.Parent = Notification
     
-    Tween(Notification, {Position = UDim2.new(1, -330, 0, 20)}, 0.5, Enum.EasingStyle.Back)
+    Tween(Notification, {Position = UDim2.new(1, -330, 1, -100)}, 0.5, Enum.EasingStyle.Back)
     
     local function Remove()
-        Tween(Notification, {Position = UDim2.new(1, 340, 0, 20)}, 0.4, Enum.EasingStyle.Back)
+        Tween(Notification, {Position = UDim2.new(1, 340, 1, -100)}, 0.4, Enum.EasingStyle.Back)
         task.wait(0.4)
         Notification:Destroy()
     end
@@ -173,7 +173,14 @@ function SurfyUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         IsOpen = false,
-        IconOffset = config.IconOffset or 20
+        IconOffset = config.IconOffset or 20,
+        IconPaths = config.IconPaths or {
+            Combat = "rbxassetid://7733992358",
+            Visuals = "rbxassetid://7733920644",
+            Movement = "rbxassetid://7734000129",
+            Misc = "rbxassetid://7734053495",
+            Settings = "rbxassetid://7734053495"
+        }
     }
     setmetatable(Window, SurfyUI)
     
@@ -216,6 +223,23 @@ function SurfyUI:CreateWindow(config)
     
     AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
     
+    -- Tab Name Label (outside and above drawer)
+    local TabNameLabel = Instance.new("TextLabel")
+    TabNameLabel.Name = "TabNameLabel"
+    TabNameLabel.Size = UDim2.new(0, 400, 0, 50)
+    TabNameLabel.Position = UDim2.new(0.5, -200, 1, -540)
+    TabNameLabel.BackgroundTransparency = 1
+    TabNameLabel.Text = ""
+    TabNameLabel.TextColor3 = SurfyUI.Theme.Primary
+    TabNameLabel.TextSize = 28
+    TabNameLabel.Font = Enum.Font.GothamBold
+    TabNameLabel.TextXAlignment = Enum.TextXAlignment.Center
+    TabNameLabel.TextTransparency = 1
+    TabNameLabel.ZIndex = 9999
+    TabNameLabel.Parent = ScreenGui
+    
+    AddGradient(TabNameLabel, SurfyUI.Theme.Primary, Color3.new(1, 1, 1), 0)
+    
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
     Drawer.Size = UDim2.new(0, 600, 0, 0)
@@ -247,15 +271,15 @@ function SurfyUI:CreateWindow(config)
     ModuleList.Position = UDim2.new(0, 20, 0, 10)
     ModuleList.BackgroundTransparency = 1
     ModuleList.BorderSizePixel = 0
-    ModuleList.ScrollBarThickness = 4
+    ModuleList.ScrollBarThickness = 0
     ModuleList.ScrollBarImageColor3 = SurfyUI.Theme.Primary
-    ModuleList.ScrollBarImageTransparency = 0.5
+    ModuleList.ScrollBarImageTransparency = 1
     ModuleList.CanvasSize = UDim2.new(0, 0, 0, 0)
     ModuleList.ZIndex = 9999
     ModuleList.Parent = Drawer
     
     local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 8)
+    ListLayout.Padding = UDim.new(0, 12)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ListLayout.Parent = ModuleList
     
@@ -268,6 +292,7 @@ function SurfyUI:CreateWindow(config)
     Window.Drawer = Drawer
     Window.ModuleList = ModuleList
     Window.ConnectionLine = ConnectionLine
+    Window.TabNameLabel = TabNameLabel
     
     function Window:Open()
         if self.IsOpen then return end
@@ -282,6 +307,12 @@ function SurfyUI:CreateWindow(config)
         ConnectionLine.BackgroundTransparency = 1
         ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
         Tween(ConnectionLine, {Size = UDim2.new(0, 80, 0, 1), BackgroundTransparency = 0.3}, 0.5, Enum.EasingStyle.Quint)
+        
+        -- Show tab name
+        if self.CurrentTab then
+            TabNameLabel.Text = self.CurrentTab.Name:upper()
+            Tween(TabNameLabel, {TextTransparency = 0}, 0.4, Enum.EasingStyle.Quint)
+        end
     end
     
     function Window:Close()
@@ -290,12 +321,17 @@ function SurfyUI:CreateWindow(config)
         
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
         
-        -- Fade out and shrink line to center
-        Tween(ConnectionLine, {Size = UDim2.new(0, 0, 0, 1), BackgroundTransparency = 1}, 0.3, Enum.EasingStyle.Quint)
+        -- Fade out and shrink line to center (faster)
+        Tween(ConnectionLine, {Size = UDim2.new(0, 0, 0, 1), BackgroundTransparency = 1}, 0.15, Enum.EasingStyle.Quint)
         
-        task.wait(0.3)
-        Drawer.Visible = false
+        -- Hide tab name
+        Tween(TabNameLabel, {TextTransparency = 1}, 0.2, Enum.EasingStyle.Quint)
+        
+        task.wait(0.15)
         ConnectionLine.Visible = false
+        
+        task.wait(0.15)
+        Drawer.Visible = false
     end
     
     function Window:Toggle()
@@ -312,6 +348,18 @@ function SurfyUI:CreateWindow(config)
             else
                 self:Open()
             end
+        end
+    end
+    
+    function Window:SetIconBarOffset(yOffset)
+        self.IconOffset = yOffset
+        IconBar.Position = UDim2.new(0.5, 0, 1, -65 - yOffset)
+        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232 - yOffset)
+        Drawer.Position = UDim2.new(0.5, -300, 1, -65 - yOffset)
+        TabNameLabel.Position = UDim2.new(0.5, -200, 1, -540 - yOffset)
+        
+        if self.IsOpen then
+            Drawer.Position = UDim2.new(0.5, -300, 1, -475 - yOffset)
         end
     end
     
@@ -347,7 +395,14 @@ function SurfyUI:CreateTab(name)
     Round(Cube, 12)
     AddStroke(Cube, SurfyUI.Theme.Primary, 2, 0.6)
     
-    local Icon = CreateIcon(Cube, name)
+    local Icon = Instance.new("ImageLabel")
+    Icon.Size = UDim2.new(0, 24, 0, 24)
+    Icon.Position = UDim2.new(0.5, -12, 0.5, -12)
+    Icon.BackgroundTransparency = 1
+    Icon.ImageColor3 = SurfyUI.Theme.TextDim
+    Icon.Image = self.IconPaths[name] or self.IconPaths.Misc
+    Icon.ZIndex = 10001
+    Icon.Parent = Cube
     
     Tab.Cube = Cube
     Tab.Icon = Icon
@@ -392,6 +447,14 @@ function SurfyUI:SelectTab(tab)
     Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3)
     Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3)
     
+    -- Update tab name label
+    if self.TabNameLabel then
+        self.TabNameLabel.Text = tab.Name:upper()
+        if self.IsOpen then
+            Tween(self.TabNameLabel, {TextTransparency = 0}, 0.3, Enum.EasingStyle.Quint)
+        end
+    end
+    
     self:RefreshModules()
     
     if not self.IsOpen then
@@ -422,20 +485,29 @@ function SurfyUI:RefreshModules()
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 38)
+            SectionContainer.Size = UDim2.new(1, 0, 0, 45)
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
             SectionContainer.Parent = self.ModuleList
             
+            local SectionDivider = Instance.new("Frame")
+            SectionDivider.Size = UDim2.new(1, -20, 0, 1)
+            SectionDivider.Position = UDim2.new(0, 10, 0, 0)
+            SectionDivider.BackgroundColor3 = SurfyUI.Theme.Primary
+            SectionDivider.BackgroundTransparency = 0.7
+            SectionDivider.BorderSizePixel = 0
+            SectionDivider.ZIndex = 9999
+            SectionDivider.Parent = SectionContainer
+            
             local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
+            SectionHeader.Size = UDim2.new(1, -20, 1, -8)
+            SectionHeader.Position = UDim2.new(0, 10, 0, 8)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = module.Section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Text
-            SectionHeader.TextSize = 14
+            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
+            SectionHeader.TextSize = 16
             SectionHeader.Font = Enum.Font.GothamBold
             SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
             SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
@@ -968,6 +1040,74 @@ function SurfyUI:CreateDropdown(section, config)
                     Container.Options:Destroy()
                 end
                 Tween(Arrow, {Rotation = 0}, 0.2)
+            end
+        end)
+    end
+    
+    table.insert(section.Tab.Modules, Module)
+    return Module
+end
+
+function SurfyUI:CreateButton(section, config)
+    config = config or {}
+    
+    local Module = {
+        Name = config.Title or "Button",
+        Callback = config.Callback,
+        LayoutOrder = config.LayoutOrder or 999,
+        Section = section
+    }
+    
+    function Module:Render(parent)
+        local Container = Instance.new("TextButton")
+        Container.Size = UDim2.new(1, 0, 0, 48)
+        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.2
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Text = ""
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(1, -30, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = SurfyUI.Theme.Text
+        NameLabel.TextSize = 14
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        Module.Container = Container
+        Module.NameLabel = NameLabel
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.2)
+            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Primary}, 0.2)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.2)
+            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Text}, 0.2)
+        end)
+        
+        Container.MouseButton1Click:Connect(function()
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.Primary}, 0.1)
+            Tween(NameLabel, {TextColor3 = Color3.new(1, 1, 1)}, 0.1)
+            
+            task.wait(0.1)
+            
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.2)
+            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Text}, 0.2)
+            
+            if self.Callback then
+                self.Callback()
             end
         end)
     end
