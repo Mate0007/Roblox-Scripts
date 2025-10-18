@@ -201,18 +201,20 @@ function SurfyUI:CreateWindow(config)
     IconLayout.Padding = UDim.new(0, 10)
     IconLayout.Parent = IconBar
     
-    -- Connection line between icons and drawer
+    -- Connection line between icons and drawer (horizontal, centered)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
-    ConnectionLine.Size = UDim2.new(0, 1, 0, 0)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -65)
-    ConnectionLine.AnchorPoint = Vector2.new(0.5, 1)
+    ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232)
+    ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
     ConnectionLine.BackgroundTransparency = 0.3
     ConnectionLine.BorderSizePixel = 0
     ConnectionLine.ZIndex = 9997
     ConnectionLine.Visible = false
     ConnectionLine.Parent = ScreenGui
+    
+    AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
     
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
@@ -275,7 +277,11 @@ function SurfyUI:CreateWindow(config)
         ConnectionLine.Visible = true
         
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
-        Tween(ConnectionLine, {Size = UDim2.new(0, 1, 0, 410), Position = UDim2.new(0.5, 0, 1, -475)}, 0.4, Enum.EasingStyle.Back)
+        
+        -- Fade in and expand line from center
+        ConnectionLine.BackgroundTransparency = 1
+        ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
+        Tween(ConnectionLine, {Size = UDim2.new(0, 80, 0, 1), BackgroundTransparency = 0.3}, 0.5, Enum.EasingStyle.Quint)
     end
     
     function Window:Close()
@@ -283,7 +289,9 @@ function SurfyUI:CreateWindow(config)
         self.IsOpen = false
         
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
-        Tween(ConnectionLine, {Size = UDim2.new(0, 1, 0, 0), Position = UDim2.new(0.5, 0, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
+        
+        -- Fade out and shrink line to center
+        Tween(ConnectionLine, {Size = UDim2.new(0, 0, 0, 1), BackgroundTransparency = 1}, 0.3, Enum.EasingStyle.Quint)
         
         task.wait(0.3)
         Drawer.Visible = false
@@ -662,7 +670,7 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
             Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3)
             Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3)
             
-            if self.Enabled then
+            ifself.Enabled then
                 Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3)
                 for _, child in ipairs(self.Indicator:GetChildren()) do
                     if child:IsA("UIGradient") then child:Destroy() end
