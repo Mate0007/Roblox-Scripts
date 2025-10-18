@@ -261,6 +261,9 @@ function SurfyUI:CreateWindow(config)
         
         Drawer.Visible = true
         Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
+        -- CHANGE THIS LINE TO MOVE ICONS UP MORE WHEN UI OPENS:
+        -- Change the -495 value to a LOWER number (more negative) to move icons UP more
+        -- Example: -520 would move them up more, -470 would move them up less
         Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495)}, 0.4, Enum.EasingStyle.Back)
     end
     
@@ -427,7 +430,7 @@ function SurfyUI:CreateToggle(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
@@ -554,7 +557,7 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
@@ -738,7 +741,7 @@ function SurfyUI:CreateSlider(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
@@ -899,7 +902,7 @@ function SurfyUI:CreateDropdown(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
@@ -1078,7 +1081,7 @@ function SurfyUI:CreateKeybind(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
@@ -1199,7 +1202,7 @@ function SurfyUI:CreateColorPicker(section, config)
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Size = UDim2.new(1, 0, 0, 38)
             SectionContainer.BackgroundColor3 = SurfyUI.Theme.Background
-            SectionContainer.BackgroundTransparency = 0.05
+            SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = self.LayoutOrder - 0.5
