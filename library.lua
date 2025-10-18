@@ -227,11 +227,34 @@ function SurfyUI:CreateWindow(config)
     Round(DrawerOverlay, 16)
     AddGradient(DrawerOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 180)
     
-    -- Module list inside drawer
+    -- Section list (left side)
+    local SectionList = Instance.new("ScrollingFrame")
+    SectionList.Name = "SectionList"
+    SectionList.Size = UDim2.new(0, 160, 1, -20)
+    SectionList.Position = UDim2.new(0, 10, 0, 10)
+    SectionList.BackgroundTransparency = 1
+    SectionList.BorderSizePixel = 0
+    SectionList.ScrollBarThickness = 3
+    SectionList.ScrollBarImageColor3 = SurfyUI.Theme.Primary
+    SectionList.ScrollBarImageTransparency = 0.5
+    SectionList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    SectionList.ZIndex = 9999
+    SectionList.Parent = Drawer
+    
+    local SectionLayout = Instance.new("UIListLayout")
+    SectionLayout.Padding = UDim.new(0, 8)
+    SectionLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    SectionLayout.Parent = SectionList
+    
+    SectionLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        SectionList.CanvasSize = UDim2.new(0, 0, 0, SectionLayout.AbsoluteContentSize.Y + 10)
+    end)
+    
+    -- Module list inside drawer (right side)
     local ModuleList = Instance.new("ScrollingFrame")
     ModuleList.Name = "ModuleList"
-    ModuleList.Size = UDim2.new(1, -40, 1, -20)
-    ModuleList.Position = UDim2.new(0, 20, 0, 10)
+    ModuleList.Size = UDim2.new(0, 400, 1, -20)
+    ModuleList.Position = UDim2.new(0, 180, 0, 10)
     ModuleList.BackgroundTransparency = 1
     ModuleList.BorderSizePixel = 0
     ModuleList.ScrollBarThickness = 4
@@ -253,6 +276,7 @@ function SurfyUI:CreateWindow(config)
     Window.IconBar = IconBar
     Window.IconLayout = IconLayout
     Window.Drawer = Drawer
+    Window.SectionList = SectionList
     Window.ModuleList = ModuleList
     
     function Window:Open()
@@ -260,8 +284,8 @@ function SurfyUI:CreateWindow(config)
         self.IsOpen = true
         
         Drawer.Visible = true
-        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 380), Position = UDim2.new(0.5, -300, 1, -455)}, 0.4, Enum.EasingStyle.Back)
-        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -465)}, 0.4, Enum.EasingStyle.Back)
+        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
+        Tween(IconBar, {Position = UDim2.new(0.5, 0, 1, -495)}, 0.4, Enum.EasingStyle.Back)
     end
     
     function Window:Close()
@@ -277,9 +301,20 @@ function SurfyUI:CreateWindow(config)
     
     function Window:Toggle()
         if self.IsOpen then
+            -- Close and deselect current tab
+            if self.CurrentTab then
+                Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
+                Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
+                self.CurrentTab = nil
+            end
             self:Close()
         else
-            self:Open()
+            -- Open and select first tab if available
+            if #self.Tabs > 0 and not self.CurrentTab then
+                self:SelectTab(self.Tabs[1])
+            else
+                self:Open()
+            end
         end
     end
     
@@ -319,24 +354,19 @@ function SurfyUI:CreateTab(name)
     
     local Icon = CreateIcon(Cube, name)
     
-    local Glow = Instance.new("Frame")
-    Glow.Size = UDim2.new(0.8, 0, 0, 3)
-    Glow.Position = UDim2.new(0.1, 0, 1, -6)
-    Glow.BackgroundColor3 = SurfyUI.Theme.Primary
-    Glow.BackgroundTransparency = 1
-    Glow.BorderSizePixel = 0
-    Glow.ZIndex = 10001
-    Glow.Parent = Cube
-    
-    Round(Glow, 2)
-    AddGradient(Glow, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
-    
     Tab.Cube = Cube
     Tab.Icon = Icon
-    Tab.Glow = Glow
     
     Cube.MouseButton1Click:Connect(function()
-        self:SelectTab(Tab)
+        if self.CurrentTab == Tab then
+            -- Clicking same tab closes it
+            Tween(Cube, {BackgroundTransparency = 0.3}, 0.2)
+            Tween(Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
+            self.CurrentTab = nil
+            self:Close()
+        else
+            self:SelectTab(Tab)
+        end
     end)
     
     Cube.MouseEnter:Connect(function()
@@ -363,18 +393,45 @@ function SurfyUI:SelectTab(tab)
     if self.CurrentTab then
         Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
         Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
-        Tween(self.CurrentTab.Glow, {BackgroundTransparency = 1}, 0.2)
     end
     
     self.CurrentTab = tab
     Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3)
     Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3)
-    Tween(tab.Glow, {BackgroundTransparency = 0}, 0.3)
     
+    self:RefreshSections()
     self:RefreshModules()
     
     if not self.IsOpen then
         self:Open()
+    end
+end
+
+function SurfyUI:RefreshSections()
+    for _, child in ipairs(self.SectionList:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+    
+    if not self.CurrentTab then return end
+    
+    for _, section in ipairs(self.CurrentTab.Sections) do
+        local SectionLabel = Instance.new("TextLabel")
+        SectionLabel.Size = UDim2.new(1, 0, 0, 25)
+        SectionLabel.BackgroundTransparency = 1
+        SectionLabel.Text = section.Name
+        SectionLabel.TextColor3 = SurfyUI.Theme.Text
+        SectionLabel.TextSize = 13
+        SectionLabel.Font = Enum.Font.GothamBold
+        SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+        SectionLabel.TextYAlignment = Enum.TextYAlignment.Center
+        SectionLabel.ZIndex = 10000
+        SectionLabel.Parent = self.SectionList
+        
+        local Padding = Instance.new("UIPadding")
+        Padding.PaddingLeft = UDim.new(0, 10)
+        Padding.Parent = SectionLabel
     end
 end
 
@@ -393,7 +450,9 @@ function SurfyUI:RefreshModules()
 end
 
 function SurfyUI:CreateSection(tab, name)
-    return { Name = name, Tab = tab }
+    local section = { Name = name, Tab = tab }
+    table.insert(tab.Sections, section)
+    return section
 end
 
 function SurfyUI:CreateToggle(section, config)
@@ -402,7 +461,8 @@ function SurfyUI:CreateToggle(section, config)
     local Module = {
         Name = config.Title or "Toggle",
         Enabled = config.Default or false,
-        Callback = config.Callback
+        Callback = config.Callback,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -412,6 +472,7 @@ function SurfyUI:CreateToggle(section, config)
         Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -491,7 +552,8 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         Key = config.DefaultKey or Enum.KeyCode.Unknown,
         Callback = config.Callback,
         KeybindCallback = config.KeybindCallback,
-        IsBinding = false
+        IsBinding = false,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -501,6 +563,7 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
         Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -637,7 +700,8 @@ function SurfyUI:CreateSlider(section, config)
         Max = config.Max or 100,
         Rounding = config.Rounding or 0,
         Callback = config.Callback,
-        IsDragging = false
+        IsDragging = false,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -647,6 +711,7 @@ function SurfyUI:CreateSlider(section, config)
         Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -673,7 +738,7 @@ function SurfyUI:CreateSlider(section, config)
         ValueLabel.TextSize = 13
         ValueLabel.Font = Enum.Font.GothamBold
         ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-                ValueLabel.ZIndex = 10000
+        ValueLabel.ZIndex = 10000
         ValueLabel.Parent = Container
         
         local Track = Instance.new("Frame")
@@ -760,7 +825,8 @@ function SurfyUI:CreateDropdown(section, config)
         Value = config.Default or config.Options[1],
         Options = config.Options or {"Option 1"},
         Callback = config.Callback,
-        IsOpen = false
+        IsOpen = false,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -771,6 +837,7 @@ function SurfyUI:CreateDropdown(section, config)
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.ClipsDescendants = false
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -901,7 +968,8 @@ function SurfyUI:CreateKeybind(section, config)
         Name = config.Title or "Keybind",
         Key = config.Default or Enum.KeyCode.Unknown,
         Callback = config.Callback,
-        IsBinding = false
+        IsBinding = false,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -911,6 +979,7 @@ function SurfyUI:CreateKeybind(section, config)
         Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -984,7 +1053,8 @@ function SurfyUI:CreateColorPicker(section, config)
     local Module = {
         Name = config.Title or "Color",
         Value = config.Default or Color3.fromRGB(0, 230, 255),
-        Callback = config.Callback
+        Callback = config.Callback,
+        LayoutOrder = config.LayoutOrder or 999
     }
     
     function Module:Render(parent)
@@ -994,6 +1064,7 @@ function SurfyUI:CreateColorPicker(section, config)
         Container.BackgroundTransparency = 0.2
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
         Container.Parent = parent
         
         Round(Container, 10)
@@ -1053,4 +1124,3 @@ function SurfyUI:CreateColorPicker(section, config)
 end
 
 return SurfyUI
-
