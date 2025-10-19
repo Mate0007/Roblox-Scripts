@@ -1,1493 +1,1300 @@
--- Surfy TC2 - Bottom Drawer UI (Fixed Slider State)
+-- Load the Surfy UI Library with error handling
+local success, SurfyUI = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Mate0007/Roblox-Scripts/refs/heads/main/library.lua"))()
+end)
+
+if not success or not SurfyUI then
+    warn("Failed to load Surfy UI library!")
+    return
+end
+
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
+local RepStorage = game:GetService("ReplicatedStorage")
 
-local SurfyUI = {}
-SurfyUI.__index = SurfyUI
+-- Performance optimization flags
+local PERFORMANCE_MODE = true
+local ESP_UPDATE_INTERVAL = 0.5
+local HITBOX_UPDATE_INTERVAL = 0.3
 
--- Aqua Theme
-SurfyUI.Theme = {
-    Primary = Color3.fromRGB(0, 230, 255),
-    PrimaryDark = Color3.fromRGB(0, 180, 230),
-    PrimaryBright = Color3.fromRGB(100, 255, 255),
-    Secondary = Color3.fromRGB(0, 150, 200),
-    Background = Color3.fromRGB(12, 15, 25),
-    Surface = Color3.fromRGB(18, 22, 35),
-    SurfaceLight = Color3.fromRGB(25, 30, 45),
-    ModuleBackground = Color3.fromRGB(22, 27, 40),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDim = Color3.fromRGB(150, 170, 200),
-    Active = Color3.fromRGB(0, 255, 200),
-}
+-- ===== TC2 SCRIPT IMPLEMENTATION =====
 
--- Lucide Icon Cache
-local LucideCache = {}
+local Window = SurfyUI:CreateWindow({
+    Title = "Surfy TC2 - v3.0"
+})
 
-local function Tween(obj, props, duration, style)
-    local info = TweenInfo.new(duration or 0.3, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-    TweenService:Create(obj, info, props):Play()
+-- Create tabs in the correct order
+local CombatTab = Window:CreateTab("Combat")
+local VisualsTab = Window:CreateTab("Visuals")
+local MiscTab = Window:CreateTab("Misc")
+local SettingsTab = Window:CreateTab("Settings")
+
+-- ===== COMBAT SECTIONS =====
+local AimbotSection = SurfyUI:CreateSection(CombatTab, "Aimbot / Aimlock")
+local HitboxSection = SurfyUI:CreateSection(CombatTab, "Hitbox Expander")
+local RapidFireSection = SurfyUI:CreateSection(CombatTab, "Rapid Fire")
+
+-- ===== VISUALS SECTIONS =====
+local PlayerESPSection = SurfyUI:CreateSection(VisualsTab, "Player ESP")
+
+-- ===== MISC SECTIONS =====
+local BhopSection = SurfyUI:CreateSection(MiscTab, "Bhop Features")
+local AntiFeaturesSection = SurfyUI:CreateSection(MiscTab, "Anti Features")
+local VoteSpamSection = SurfyUI:CreateSection(MiscTab, "Vote Spam")
+
+-- ===== SETTINGS SECTIONS =====
+local KeybindSection = SurfyUI:CreateSection(SettingsTab, "Keybind Settings")
+
+-- ===== PERFORMANCE OPTIMIZATIONS =====
+local lastESPCheck = 0
+local lastHitboxCheck = 0
+local cachedPlayers = {}
+local playerCacheValid = false
+
+-- Cache player list for better performance
+local function updatePlayerCache()
+    cachedPlayers = Players:GetPlayers()
+    playerCacheValid = true
 end
 
-local function Round(obj, radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius or 8)
-    corner.Parent = obj
-end
+Players.PlayerAdded:Connect(updatePlayerCache)
+Players.PlayerRemoving:Connect(updatePlayerCache)
+updatePlayerCache()
 
-local function AddGradient(obj, color1, color2, rotation)
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new(color1, color2)
-    gradient.Rotation = rotation or 90
-    gradient.Parent = obj
-end
+-- ===== AIMBOT / AIMLOCK SYSTEM (OPTIMIZED) =====
+local aimbotEnabled = false
+local wallcheckEnabled = false
+local targetEnemyOnly = true
+local aimbotFOV = 100
+local targetBodyPart = "Head"
+local aimbotSmoothness = 0.5
+local isAimbotKeyHeld = false
 
-local function AddStroke(obj, color, thickness, transparency)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color
-    stroke.Thickness = thickness or 1
-    stroke.Transparency = transparency or 0.5
-    stroke.Parent = obj
-    return stroke
-end
+-- FOV Circle with reduced updates
+local fovCircle = Drawing.new("Circle")
+fovCircle.Thickness = 2
+fovCircle.NumSides = 30
+fovCircle.Radius = aimbotFOV
+fovCircle.Filled = false
+fovCircle.Visible = false
+fovCircle.ZIndex = 999
+fovCircle.Transparency = 1
+fovCircle.Color = Color3.fromRGB(0, 180, 255)
 
--- Lucide Icon Loader
-local function LoadLucideIcon(iconName)
-    if LucideCache[iconName] then
-        return LucideCache[iconName]
+-- Optimized wallcheck with caching
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+raycastParams.IgnoreWater = true
+local lastWallCheck = {}
+local wallCheckCache = {}
+
+local function hasLineOfSight(targetPart)
+    if not wallcheckEnabled then return true end
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then return false end
+    
+    local cacheKey = targetPart and tostring(targetPart)
+    if cacheKey and wallCheckCache[cacheKey] and (tick() - lastWallCheck[cacheKey] < 0.1) then
+        return wallCheckCache[cacheKey]
     end
     
-    local success, result = pcall(function()
-        local url = "https://api.lucide.dev/api/gh/main/icons/" .. iconName
-        return HttpService:GetAsync(url)
+    local origin = LocalPlayer.Character.Head.Position
+    local direction = (targetPart.Position - origin)
+    
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, targetPart.Parent}
+    
+    local rayResult = workspace:Raycast(origin, direction, raycastParams)
+    local result = rayResult == nil
+    
+    if cacheKey then
+        wallCheckCache[cacheKey] = result
+        lastWallCheck[cacheKey] = tick()
+    end
+    
+    return result
+end
+
+-- Optimized player iteration
+local function getClosestPlayerInFOV()
+    local closestPlayer = nil
+    local shortestDistance = aimbotFOV
+    
+    local camera = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
+    
+    for _, player in ipairs(cachedPlayers) do
+        if player == LocalPlayer then continue end
+        
+        local character = player.Character
+        if not character then continue end
+        
+        if targetEnemyOnly and player.Team == LocalPlayer.Team then continue end
+        
+        local targetPart = character:FindFirstChild(targetBodyPart == "Body" and "Torso" or targetBodyPart)
+        if not targetPart then targetPart = character:FindFirstChild("HumanoidRootPart") end
+        if not targetPart then continue end
+        
+        local screenPos, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+        if not onScreen then continue end
+        
+        local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+        
+        if distance < shortestDistance then
+            if hasLineOfSight(targetPart) then
+                shortestDistance = distance
+                closestPlayer = player
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+local function aimAtPlayer(player)
+    if not player or not player.Character then return end
+    
+    local character = player.Character
+    local targetPart = character:FindFirstChild(targetBodyPart == "Body" and "Torso" or targetBodyPart)
+    if not targetPart then targetPart = character:FindFirstChild("HumanoidRootPart") end
+    if not targetPart then return end
+    
+    local camera = workspace.CurrentCamera
+    local targetPos = targetPart.Position
+    local currentCFrame = camera.CFrame
+    
+    local lookVector = (targetPos - currentCFrame.Position).Unit
+    local currentLook = currentCFrame.LookVector
+    if (lookVector - currentLook).Magnitude > 0.01 then
+        local targetCFrame = CFrame.new(camera.CFrame.Position, targetPos)
+        camera.CFrame = currentCFrame:Lerp(targetCFrame, aimbotSmoothness)
+    end
+end
+
+-- ===== AIMBOT CONTROLS =====
+local AimbotKeybind = SurfyUI:CreateToggleWithKeybind(AimbotSection, {
+    Title = "Aimbot",
+    Default = false,
+    DefaultKey = Enum.UserInputType.MouseButton2,
+    LayoutOrder = 1,
+    Callback = function(Value)
+        aimbotEnabled = Value
+        fovCircle.Visible = Value
+        SurfyUI:CreateNotification({
+            Title = "Aimbot",
+            Description = Value and "Enabled" or "Disabled",
+            Duration = 2
+        })
+    end,
+    KeybindCallback = function()
+        isAimbotKeyHeld = true
+    end
+})
+
+UserInputService.InputEnded:Connect(function(input)
+    if aimbotEnabled then
+        if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == AimbotKeybind.Key) or
+           (input.UserInputType == AimbotKeybind.Key) then
+            isAimbotKeyHeld = false
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not aimbotEnabled then 
+        if fovCircle.Visible then
+            fovCircle.Visible = false
+        end
+        return 
+    end
+    
+    local mouseLocation = UserInputService:GetMouseLocation()
+    fovCircle.Position = mouseLocation
+    fovCircle.Radius = aimbotFOV
+    
+    if isAimbotKeyHeld then
+        local target = getClosestPlayerInFOV()
+        if target then
+            aimAtPlayer(target)
+        end
+    end
+end)
+
+SurfyUI:CreateToggle(AimbotSection, {
+    Title = "Wallcheck",
+    Default = false,
+    LayoutOrder = 2,
+    Callback = function(Value)
+        wallcheckEnabled = Value
+        wallCheckCache = {}
+        lastWallCheck = {}
+    end
+})
+
+SurfyUI:CreateToggle(AimbotSection, {
+    Title = "Target Enemy Only",
+    Default = true,
+    LayoutOrder = 3,
+    Callback = function(Value)
+        targetEnemyOnly = Value
+    end
+})
+
+SurfyUI:CreateSlider(AimbotSection, {
+    Title = "Aimbot FOV Circle",
+    Default = 100,
+    Min = 20,
+    Max = 300,
+    Rounding = 0,
+    LayoutOrder = 4,
+    Callback = function(Value)
+        aimbotFOV = Value
+    end
+})
+
+SurfyUI:CreateDropdown(AimbotSection, {
+    Title = "Target Body Part",
+    Options = {"Head", "Neck", "Body"},
+    Default = "Head",
+    LayoutOrder = 5,
+    Callback = function(Value)
+        targetBodyPart = Value
+    end
+})
+
+SurfyUI:CreateSlider(AimbotSection, {
+    Title = "Smoothness",
+    Default = 0.5,
+    Min = 0.1,
+    Max = 1,
+    Rounding = 2,
+    LayoutOrder = 6,
+    Callback = function(Value)
+        aimbotSmoothness = Value
+    end
+})
+
+-- ===== OPTIMIZED HITBOX EXPANDER =====
+local hitboxEnabled = false
+local hitboxSize = 15
+local hitboxLoop = nil
+local showHitbox = false
+local hitboxTarget = "Head"
+local ExpandableHitboxes = {
+    Head = {"HeadHB"},
+    Body = {"Hitbox"}
+}
+
+local originalSizes = {
+    HeadHB = Vector3.new(2, 2, 2),
+    Hitbox = Vector3.new(5.59, 5.175, 5.175)
+}
+
+local hitboxCache = {}
+
+local function ExpandPart(part, size, isTarget)
+    if not part then return end
+    
+    part.Massless = true
+    part.CanCollide = false
+    
+    if isTarget then
+        part.Transparency = showHitbox and 0.7 or 1
+        part.Size = size
+        
+        if showHitbox and not part:FindFirstChild("HitboxOutline") then
+            local outline = Instance.new("SelectionBox")
+            outline.Name = "HitboxOutline"
+            outline.Adornee = part
+            outline.LineThickness = 0.03
+            outline.Color3 = Color3.fromRGB(150, 150, 150)
+            outline.SurfaceColor3 = Color3.fromRGB(100, 100, 100)
+            outline.SurfaceTransparency = 0.8
+            outline.Transparency = 0.5
+            outline.Parent = part
+        elseif not showHitbox and part:FindFirstChild("HitboxOutline") then
+            part.HitboxOutline:Destroy()
+        end
+    else
+        part.Transparency = 1
+        part.Size = size
+    end
+end
+
+local function updateHitboxes()
+    local currentTime = tick()
+    if currentTime - lastHitboxCheck < HITBOX_UPDATE_INTERVAL then return end
+    lastHitboxCheck = currentTime
+    
+    for _, player in ipairs(cachedPlayers) do 
+        local Character = player.Character
+        if not Character then continue end
+        
+        local cacheKey = tostring(player.UserId)
+        local lastUpdate = hitboxCache[cacheKey]
+        
+        if lastUpdate and lastUpdate.character == Character and lastUpdate.time > currentTime - 2 then
+            continue
+        end
+        
+        if player.Team ~= LocalPlayer.Team then
+            for hitboxType, hitboxNames in pairs(ExpandableHitboxes) do
+                for _, hitboxName in pairs(hitboxNames) do
+                    local hitbox = Character:FindFirstChild(hitboxName)
+                    if hitbox then
+                        if hitboxType == hitboxTarget then
+                            ExpandPart(hitbox, Vector3.one * hitboxSize, true)
+                        else
+                            ExpandPart(hitbox, originalSizes[hitboxName], false)
+                        end
+                    end
+                end
+            end
+        else
+            for hitboxName, originalSize in pairs(originalSizes) do
+                local hitbox = Character:FindFirstChild(hitboxName)
+                if hitbox then
+                    ExpandPart(hitbox, originalSize, false)
+                end
+            end
+        end
+        
+        hitboxCache[cacheKey] = {
+            character = Character,
+            time = currentTime
+        }
+    end
+end
+
+local function resetAllHitboxes()
+    for _, player in ipairs(cachedPlayers) do 
+        local Character = player.Character
+        if Character then
+            for hitboxName, originalSize in pairs(originalSizes) do
+                local hitbox = Character:FindFirstChild(hitboxName)
+                if hitbox then
+                    hitbox.Size = originalSize
+                    hitbox.Transparency = 1
+                    hitbox.Massless = false
+                    if hitbox:FindFirstChild("HitboxOutline") then
+                        hitbox.HitboxOutline:Destroy()
+                    end
+                end
+            end
+        end
+    end
+    hitboxCache = {}
+end
+
+SurfyUI:CreateToggle(HitboxSection, {
+    Title = "Hitbox Expander",
+    Default = false,
+    LayoutOrder = 10,
+    Callback = function(Value)
+        hitboxEnabled = Value
+        if Value then
+            hitboxLoop = RunService.Heartbeat:Connect(function()
+                if hitboxEnabled then
+                    updateHitboxes()
+                end
+            end)
+            SurfyUI:CreateNotification({
+                Title = "Hitbox Expander",
+                Description = "Enabled",
+                Duration = 2
+            })
+        else
+            if hitboxLoop then
+                hitboxLoop:Disconnect()
+                hitboxLoop = nil
+            end
+            resetAllHitboxes()
+            SurfyUI:CreateNotification({
+                Title = "Hitbox Expander",
+                Description = "Disabled",
+                Duration = 2
+            })
+        end
+    end
+})
+
+SurfyUI:CreateDropdown(HitboxSection, {
+    Title = "Hitbox Target",
+    Options = {"Head", "Body"},
+    Default = "Head",
+    LayoutOrder = 11,
+    Callback = function(Value)
+        hitboxTarget = Value
+        hitboxCache = {}
+    end
+})
+
+SurfyUI:CreateSlider(HitboxSection, {
+    Title = "Hitbox Size",
+    Default = 15,
+    Min = 5,
+    Max = 50,
+    Rounding = 0,
+    LayoutOrder = 12,
+    Callback = function(Value)
+        hitboxSize = Value
+        hitboxCache = {}
+    end
+})
+
+SurfyUI:CreateToggle(HitboxSection, {
+    Title = "Show Hitbox",
+    Default = false,
+    LayoutOrder = 13,
+    Callback = function(Value)
+        showHitbox = Value
+        hitboxCache = {}
+    end
+})
+
+-- ===== ULTRA OPTIMIZED RAPID FIRE SYSTEM WITH ROCKET LAUNCHER SUPPORT =====
+local rapidFireEnabled = false
+local rapidFireRate = 0.2
+local isHoldingFireKey = false
+local capturedRemote = nil
+local spaceFolder = nil
+local currentWeaponType = nil
+local lastWeaponCheck = 0
+local weaponCheckInterval = 1
+local isHooked = false
+
+-- Pre-cache references
+local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local hrp = char:WaitForChild("HumanoidRootPart")
+local mouse = LocalPlayer:GetMouse()
+
+-- Constants
+local offsetVec = Vector3.new(0, 1.57, 0)
+local mapClips = workspace:WaitForChild("Map"):WaitForChild("Clips")
+local debris = workspace:WaitForChild("Debris")
+local workspaceRefs = {mapClips, debris}
+
+-- Weapon detection strings
+local GRENADE_STR = "Grenade"
+local GRENADE_LAUNCHER_STR = "Grenade Launcher"
+local ROCKET_STR = "Rocket"
+local ROCKET_LAUNCHER_STR = "Rocket Launcher"
+
+-- Static arguments (never change)
+local staticArgs = {
+    [7] = workspaceRefs,
+    [9] = false,
+    [11] = 0,
+    [13] = 111465880
+}
+
+-- Reusable args table for Grenade Launcher
+local grenadeArgs = {
+    nil, -- [1] mousePos
+    GRENADE_STR, -- [2]
+    nil, -- [3] CFrame
+    GRENADE_LAUNCHER_STR, -- [4]
+    nil, -- [5] pos
+    [7] = workspaceRefs,
+    [9] = false,
+    [11] = 0
+}
+
+-- Reusable args table for Rocket Launcher
+local rocketArgs = {
+    nil, -- [1] mousePos
+    ROCKET_STR, -- [2]
+    nil, -- [3] CFrame
+    ROCKET_LAUNCHER_STR, -- [4]
+    nil, -- [5] pos
+    [7] = workspaceRefs,
+    [9] = false,
+    [11] = 0,
+    [13] = 111465880
+}
+
+-- Get folder once at startup
+local function initFolder()
+    if spaceFolder then return true end
+    local folder = RepStorage:FindFirstChild("Folder")
+    if not folder then return false end
+    spaceFolder = folder:FindFirstChild(" ")
+    return spaceFolder ~= nil
+end
+
+-- Check what weapon player is currently holding (optimized)
+local function checkCurrentWeapon()
+    local currentTime = tick()
+    if currentTime - lastWeaponCheck < weaponCheckInterval then 
+        return currentWeaponType 
+    end
+    lastWeaponCheck = currentTime
+    
+    local success, weapon = pcall(function()
+        local stats = LocalPlayer:FindFirstChild("CurrentLifeStats")
+        if not stats then return nil end
+        
+        local timeAlive = stats:FindFirstChild("TimeAlive")
+        if not timeAlive then return nil end
+        
+        -- Check for Rocket Launcher first
+        if timeAlive:FindFirstChild(ROCKET_LAUNCHER_STR) then
+            return ROCKET_LAUNCHER_STR
+        end
+        
+        -- Check for Grenade Launcher
+        if timeAlive:FindFirstChild(GRENADE_LAUNCHER_STR) then
+            return GRENADE_LAUNCHER_STR
+        end
+        
+        return nil
     end)
     
-    if success then
-        LucideCache[iconName] = result
-        return result
+    if success and weapon then
+        if currentWeaponType ~= weapon then
+            currentWeaponType = weapon
+            print("Weapon changed to:", weapon)
+        end
+        return weapon
     end
     
     return nil
 end
 
-local function CreateIcon(parent, iconName)
-    local presetPaths = {
-        Combat = "rbxassetid://7733992358",
-        Visuals = "rbxassetid://7733920644",
-        Movement = "rbxassetid://7734000129",
-        Misc = "rbxassetid://7734053495",
-        Settings = "rbxassetid://7734053495"
-    }
+-- Build arguments based on current weapon
+local function buildWeaponArgs()
+    if not hrp or not hrp.Parent then return nil end
     
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 24, 0, 24)
-    icon.Position = UDim2.new(0.5, -12, 0.5, -12)
-    icon.BackgroundTransparency = 1
-    icon.ImageColor3 = SurfyUI.Theme.TextDim
-    icon.ZIndex = 10001
-    icon.Parent = parent
+    local weapon = checkCurrentWeapon()
+    if not weapon then return nil end
     
-    if presetPaths[iconName] then
-        icon.Image = presetPaths[iconName]
-    else
-        local svgData = LoadLucideIcon(iconName)
-        if svgData then
-            icon.Image = presetPaths.Misc
-        else
-            icon.Image = presetPaths.Misc
-        end
+    local pos = hrp.Position
+    local targetPos = mouse.Hit.Position
+    local firePos = pos + offsetVec
+    local direction = (targetPos - firePos).Unit
+    
+    if weapon == ROCKET_LAUNCHER_STR then
+        rocketArgs[1] = targetPos
+        rocketArgs[3] = CFrame.new(firePos, firePos + direction)
+        rocketArgs[5] = pos
+        return rocketArgs
+    elseif weapon == GRENADE_LAUNCHER_STR then
+        grenadeArgs[1] = targetPos
+        grenadeArgs[3] = CFrame.new(firePos, firePos + direction)
+        grenadeArgs[5] = pos
+        return grenadeArgs
     end
     
-    return icon
+    return nil
 end
 
-function SurfyUI:CreateNotification(config)
-    config = config or {}
-    
-    local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("SurfyUI")
-    if not ScreenGui then return end
-    
-    local Notification = Instance.new("Frame")
-    Notification.Name = "Notification"
-    Notification.Size = UDim2.new(0, 360, 0, 85)
-    Notification.Position = UDim2.new(1, 380, 1, -110)
-    Notification.BackgroundColor3 = SurfyUI.Theme.Surface
-    Notification.BackgroundTransparency = 0.15
-    Notification.BorderSizePixel = 0
-    Notification.ZIndex = 10000
-    Notification.Parent = ScreenGui
-    
-    Round(Notification, 12)
-    AddStroke(Notification, SurfyUI.Theme.Primary, 1.5, 0.4)
-    
-    local Overlay = Instance.new("Frame")
-    Overlay.Size = UDim2.new(1, 0, 1, 0)
-    Overlay.BackgroundTransparency = 0.92
-    Overlay.BorderSizePixel = 0
-    Overlay.ZIndex = 10000
-    Overlay.Parent = Notification
-    
-    Round(Overlay, 12)
-    AddGradient(Overlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 135)
-    
-    local Dot = Instance.new("Frame")
-    Dot.Size = UDim2.new(0, 6, 0, 6)
-    Dot.Position = UDim2.new(0, 16, 0, 20)
-    Dot.BackgroundColor3 = SurfyUI.Theme.Active
-    Dot.BorderSizePixel = 0
-    Dot.ZIndex = 10001
-    Dot.Parent = Notification
-    
-    Round(Dot, 3)
-    
-    local Title = Instance.new("TextLabel")
-    Title.Size = UDim2.new(1, -70, 0, 22)
-    Title.Position = UDim2.new(0, 32, 0, 12)
-    Title.BackgroundTransparency = 1
-    Title.Text = config.Title or "Notification"
-    Title.TextColor3 = SurfyUI.Theme.Text
-    Title.TextSize = 14
-    Title.Font = Enum.Font.GothamBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.ZIndex = 10001
-    Title.Parent = Notification
-    
-    local Description = Instance.new("TextLabel")
-    Description.Size = UDim2.new(1, -70, 0, 40)
-    Description.Position = UDim2.new(0, 32, 0, 36)
-    Description.BackgroundTransparency = 1
-    Description.Text = config.Description or ""
-    Description.TextColor3 = SurfyUI.Theme.TextDim
-    Description.TextSize = 12
-    Description.Font = Enum.Font.Gotham
-    Description.TextXAlignment = Enum.TextXAlignment.Left
-    Description.TextYAlignment = Enum.TextYAlignment.Top
-    Description.TextWrapped = true
-    Description.ZIndex = 10001
-    Description.Parent = Notification
-    
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Size = UDim2.new(0, 20, 0, 20)
-    CloseBtn.Position = UDim2.new(1, -28, 0, 10)
-    CloseBtn.BackgroundTransparency = 1
-    CloseBtn.Text = "×"
-    CloseBtn.TextColor3 = SurfyUI.Theme.TextDim
-    CloseBtn.TextSize = 20
-    CloseBtn.Font = Enum.Font.GothamBold
-    CloseBtn.ZIndex = 10002
-    CloseBtn.Parent = Notification
-    
-    Tween(Notification, {Position = UDim2.new(1, -370, 1, -110)}, 0.6, Enum.EasingStyle.Exponential)
-    
-    local function Remove()
-        Tween(Notification, {Position = UDim2.new(1, 380, 1, -110)}, 0.5, Enum.EasingStyle.Exponential)
-        task.wait(0.5)
-        Notification:Destroy()
+-- Lightweight hook that STAYS ACTIVE
+local function setupHook()
+    if isHooked then return end
+    if not initFolder() then 
+        warn("Folder not found for rapid fire!")
+        return 
     end
     
-    CloseBtn.MouseButton1Click:Connect(Remove)
-    task.delay(config.Duration or 4, Remove)
-end
-
-function SurfyUI:CreateWindow(config)
-    config = config or {}
-    
-    local Window = {
-        Tabs = {},
-        CurrentTab = nil,
-        IsOpen = false,
-        IconOffset = config.IconOffset or 0,
-        IsAnimating = false,
-        ToggleKeybind = config.ToggleKeybind or Enum.KeyCode.RightShift
-    }
-    setmetatable(Window, SurfyUI)
-    
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SurfyUI"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.DisplayOrder = 999999
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    Window.ScreenGui = ScreenGui
-    
-    local IconBar = Instance.new("Frame")
-    IconBar.Name = "IconBar"
-    IconBar.Size = UDim2.new(0, 0, 0, 50)
-    IconBar.Position = UDim2.new(0.5, 0, 1, -65 - Window.IconOffset)
-    IconBar.AnchorPoint = Vector2.new(0.5, 0)
-    IconBar.BackgroundTransparency = 1
-    IconBar.ZIndex = 10000
-    IconBar.Parent = ScreenGui
-    
-    local IconLayout = Instance.new("UIListLayout")
-    IconLayout.FillDirection = Enum.FillDirection.Horizontal
-    IconLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    IconLayout.Padding = UDim.new(0, 10)
-    IconLayout.Parent = IconBar
-    
-    local ConnectionLine = Instance.new("Frame")
-    ConnectionLine.Name = "ConnectionLine"
-    ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -100 - Window.IconOffset)
-    ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
-    ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
-    ConnectionLine.BackgroundTransparency = 1
-    ConnectionLine.BorderSizePixel = 0
-    ConnectionLine.ZIndex = 9997
-    ConnectionLine.Visible = false
-    ConnectionLine.Parent = ScreenGui
-    
-    AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
-    
-    local TabNameContainer = Instance.new("Frame")
-    TabNameContainer.Name = "TabNameContainer"
-    TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
-    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -65 - Window.IconOffset)
-    TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
-    TabNameContainer.BackgroundTransparency = 1
-    TabNameContainer.BorderSizePixel = 0
-    TabNameContainer.ZIndex = 10100
-    TabNameContainer.Parent = ScreenGui
-    
-    Round(TabNameContainer, 12)
-    local TabNameStroke = AddStroke(TabNameContainer, SurfyUI.Theme.Primary, 2, 1)
-    
-    local TabNameLabel = Instance.new("TextLabel")
-    TabNameLabel.Name = "TabNameLabel"
-    TabNameLabel.Size = UDim2.new(1, 0, 1, 0)
-    TabNameLabel.Position = UDim2.new(0, 0, 0, 0)
-    TabNameLabel.BackgroundTransparency = 1
-    TabNameLabel.Text = ""
-    TabNameLabel.TextColor3 = SurfyUI.Theme.Primary
-    TabNameLabel.TextSize = 22
-    TabNameLabel.Font = Enum.Font.GothamBold
-    TabNameLabel.TextXAlignment = Enum.TextXAlignment.Center
-    TabNameLabel.TextTransparency = 1
-    TabNameLabel.ZIndex = 10101
-    TabNameLabel.Parent = TabNameContainer
-    
-    local Drawer = Instance.new("Frame")
-    Drawer.Name = "Drawer"
-    Drawer.Size = UDim2.new(0, 600, 0, 0)
-    Drawer.Position = UDim2.new(0.5, -300, 1, -65 - Window.IconOffset)
-    Drawer.BackgroundColor3 = SurfyUI.Theme.Background
-    Drawer.BackgroundTransparency = 0.25
-    Drawer.BorderSizePixel = 0
-    Drawer.ClipsDescendants = true
-    Drawer.Visible = false
-    Drawer.ZIndex = 9998
-    Drawer.Parent = ScreenGui
-    
-    Round(Drawer, 16)
-    local DrawerStroke = AddStroke(Drawer, SurfyUI.Theme.Primary, 2, 0.4)
-    
-    local DrawerOverlay = Instance.new("Frame")
-    DrawerOverlay.Size = UDim2.new(1, 0, 1, 0)
-    DrawerOverlay.BackgroundTransparency = 0.96
-    DrawerOverlay.BorderSizePixel = 0
-    DrawerOverlay.ZIndex = 9998
-    DrawerOverlay.Parent = Drawer
-    
-    Round(DrawerOverlay, 16)
-    AddGradient(DrawerOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 180)
-    
-    local LeftStrokeCover = Instance.new("Frame")
-    LeftStrokeCover.Name = "LeftStrokeCover"
-    LeftStrokeCover.Size = UDim2.new(0, 120, 0, 4)
-    LeftStrokeCover.Position = UDim2.new(0.5, -120, 0, -2)
-    LeftStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
-    LeftStrokeCover.BackgroundTransparency = 0.25
-    LeftStrokeCover.BorderSizePixel = 0
-    LeftStrokeCover.ZIndex = 10099
-    LeftStrokeCover.Visible = false
-    LeftStrokeCover.Parent = Drawer
-    
-    local RightStrokeCover = Instance.new("Frame")
-    RightStrokeCover.Name = "RightStrokeCover"
-    RightStrokeCover.Size = UDim2.new(0, 120, 0, 4)
-    RightStrokeCover.Position = UDim2.new(0.5, 0, 0, -2)
-    RightStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
-    RightStrokeCover.BackgroundTransparency = 0.25
-    RightStrokeCover.BorderSizePixel = 0
-    RightStrokeCover.ZIndex = 10099
-    RightStrokeCover.Visible = false
-    RightStrokeCover.Parent = Drawer
-    
-    local ModuleList = Instance.new("ScrollingFrame")
-    ModuleList.Name = "ModuleList"
-    ModuleList.Size = UDim2.new(1, -40, 1, -20)
-    ModuleList.Position = UDim2.new(0, 20, 0, 10)
-    ModuleList.BackgroundTransparency = 1
-    ModuleList.BorderSizePixel = 0
-    ModuleList.ScrollBarThickness = 0
-    ModuleList.ScrollBarImageColor3 = SurfyUI.Theme.Primary
-    ModuleList.ScrollBarImageTransparency = 1
-    ModuleList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ModuleList.ZIndex = 9999
-    ModuleList.Parent = Drawer
-    
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 12)
-    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ListLayout.Parent = ModuleList
-    
-    ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        ModuleList.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 20)
-    end)
-    
-    Window.IconBar = IconBar
-    Window.IconLayout = IconLayout
-    Window.Drawer = Drawer
-    Window.DrawerStroke = DrawerStroke
-    Window.ModuleList = ModuleList
-    Window.ConnectionLine = ConnectionLine
-    Window.TabNameContainer = TabNameContainer
-    Window.TabNameLabel = TabNameLabel
-    Window.TabNameStroke = TabNameStroke
-    Window.LeftStrokeCover = LeftStrokeCover
-    Window.RightStrokeCover = RightStrokeCover
-    
-    function Window:Open()
-        if self.IsOpen or self.IsAnimating then return end
-        self.IsAnimating = true
-        self.IsOpen = true
-        
-        Drawer.Visible = true
-        ConnectionLine.Visible = true
-        
-        self.DrawerStroke.Transparency = 0.4
-        
-        if self.CurrentTab then
-            TabNameLabel.Text = self.CurrentTab.Name:upper()
+    for _, remote in pairs(spaceFolder:GetChildren()) do
+        if remote:IsA("RemoteEvent") then
+            local mt = getrawmetatable(remote)
+            setreadonly(mt, false)
             
-            TabNameContainer.Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset)
-            TabNameContainer.BackgroundTransparency = 1
-            self.TabNameStroke.Transparency = 1
-            TabNameLabel.TextTransparency = 1
-            
-            Tween(TabNameContainer, {
-                Position = UDim2.new(0.5, -120, 1, -520 - self.IconOffset),
-                BackgroundTransparency = 0.2
-            }, 0.5, Enum.EasingStyle.Exponential)
-            
-            Tween(self.TabNameStroke, {Transparency = 0.4}, 0.5)
-            Tween(TabNameLabel, {TextTransparency = 0}, 0.5, Enum.EasingStyle.Exponential)
-            
-            LeftStrokeCover.Visible = true
-            RightStrokeCover.Visible = true
-        end
-        
-        Tween(Drawer, {
-            Size = UDim2.new(0, 600, 0, 400), 
-            Position = UDim2.new(0.5, -300, 1, -480 - self.IconOffset)
-        }, 0.5, Enum.EasingStyle.Exponential)
-        
-        ConnectionLine.BackgroundTransparency = 1
-        ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-        Tween(ConnectionLine, {
-            Size = UDim2.new(0, 80, 0, 1), 
-            BackgroundTransparency = 0.3
-        }, 0.5, Enum.EasingStyle.Exponential)
-        
-        task.delay(0.5, function()
-            self.IsAnimating = false
-        end)
-    end
-    
-    function Window:Close()
-        if not self.IsOpen or self.IsAnimating then return end
-        self.IsAnimating = true
-        self.IsOpen = false
-        
-        LeftStrokeCover.Visible = false
-        RightStrokeCover.Visible = false
-        
-        Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Exponential)
-        Tween(TabNameContainer, {
-            Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
-            BackgroundTransparency = 1
-        }, 0.4, Enum.EasingStyle.Exponential)
-        Tween(self.TabNameStroke, {Transparency = 1}, 0.4)
-        
-        Tween(ConnectionLine, {
-            Size = UDim2.new(0, 0, 0, 1), 
-            BackgroundTransparency = 1
-        }, 0.2, Enum.EasingStyle.Exponential)
-        
-        task.wait(0.1)
-        ConnectionLine.Visible = false
-        
-        local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
-        Tween(Drawer, {
-            Size = UDim2.new(0, 600, 0, 0), 
-            Position = closePos
-        }, 0.4, Enum.EasingStyle.Exponential)
-        
-        task.delay(0.3, function()
-            Tween(self.DrawerStroke, {Transparency = 1}, 0.1, Enum.EasingStyle.Exponential)
-        end)
-        
-        task.wait(0.4)
-        Drawer.Visible = false
-        self.IsAnimating = false
-    end
-    
-    function Window:Toggle()
-        if self.IsAnimating then return end
-        
-        if self.IsOpen then
-            if self.CurrentTab then
-                Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
-                Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
-                self.CurrentTab = nil
-            end
-            self:Close()
-        else
-            if #self.Tabs > 0 and not self.CurrentTab then
-                self:SelectTab(self.Tabs[1])
-            else
-                self:Open()
-            end
-        end
-    end
-    
-    function Window:SetIconBarOffset(yOffset)
-        self.IconOffset = yOffset
-        IconBar.Position = UDim2.new(0.5, 0, 1, -65 - yOffset)
-        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -100 - yOffset)
-        Drawer.Position = UDim2.new(0.5, -300, 1, -65 - yOffset)
-        
-        if self.IsOpen then
-            Drawer.Position = UDim2.new(0.5, -300, 1, -480 - yOffset)
-            TabNameContainer.Position = UDim2.new(0.5, -120, 1, -520 - yOffset)
-        else
-            TabNameContainer.Position = UDim2.new(0.5, -120, 1, -65 - yOffset)
-        end
-    end
-    
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if not gameProcessed and input.KeyCode == Window.ToggleKeybind then
-            Window:Toggle()
-        end
-    end)
-    
-    return Window
-end
-
-function SurfyUI:CreateTab(name)
-    local Tab = {
-        Name = name,
-        Sections = {},
-        Modules = {}
-    }
-    
-    table.insert(self.Tabs, Tab)
-    
-    local Cube = Instance.new("TextButton")
-    Cube.Name = name
-    Cube.Size = UDim2.new(0, 50, 0, 50)
-    Cube.BackgroundColor3 = SurfyUI.Theme.Surface
-    Cube.BackgroundTransparency = 0.3
-    Cube.Text = ""
-    Cube.ZIndex = 10000
-    Cube.Parent = self.IconBar
-    
-    Round(Cube, 12)
-    AddStroke(Cube, SurfyUI.Theme.Primary, 2, 0.6)
-    
-    local Icon = CreateIcon(Cube, name)
-    
-    Tab.Cube = Cube
-    Tab.Icon = Icon
-    
-    Cube.MouseButton1Click:Connect(function()
-        if self.IsAnimating then return end
-        
-        if self.CurrentTab == Tab then
-            Tween(Cube, {BackgroundTransparency = 0.3}, 0.2)
-            Tween(Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
-            self.CurrentTab = nil
-            self:Close()
-        else
-            self:SelectTab(Tab)
-        end
-    end)
-    
-    Cube.MouseEnter:Connect(function()
-        Tween(Cube, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        Tween(Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.2, Enum.EasingStyle.Exponential)
-    end)
-    
-    Cube.MouseLeave:Connect(function()
-        if self.CurrentTab ~= Tab then
-            Tween(Cube, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2, Enum.EasingStyle.Exponential)
-        end
-    end)
-    
-    task.wait()
-    local totalWidth = #self.Tabs * 60
-    self.IconBar.Size = UDim2.new(0, totalWidth, 0, 50)
-    
-    return Tab
-end
-
-function SurfyUI:SelectTab(tab)
-    if self.IsAnimating then return end
-    
-    if self.CurrentTab then
-        Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
-        Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
-    end
-    
-    self.CurrentTab = tab
-    Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3, Enum.EasingStyle.Exponential)
-    Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3, Enum.EasingStyle.Exponential)
-    
-    if self.TabNameLabel then
-        self.TabNameLabel.Text = tab.Name:upper()
-        if self.IsOpen then
-            Tween(self.TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.2)
-            Tween(self.TabNameStroke, {Transparency = 0.4}, 0.2)
-            
-            self.LeftStrokeCover.Visible = true
-            self.RightStrokeCover.Visible = true
-        end
-    end
-    
-    self:RefreshModules()
-    
-    if not self.IsOpen then
-        self:Open()
-    end
-end
-
-function SurfyUI:RefreshModules()
-    for _, child in ipairs(self.ModuleList:GetChildren()) do
-        if child:IsA("Frame") or child:IsA("TextLabel") then
-            child:Destroy()
-        end
-    end
-    
-    if not self.CurrentTab then return end
-    
-    table.sort(self.CurrentTab.Modules, function(a, b)
-        return a.LayoutOrder < b.LayoutOrder
-    end)
-    
-    local lastSection = nil
-    
-    for _, module in ipairs(self.CurrentTab.Modules) do
-        if module.Section and module.Section ~= lastSection then
-            lastSection = module.Section
-            
-            local SectionContainer = Instance.new("Frame")
-            SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 35)
-            SectionContainer.BackgroundTransparency = 1
-            SectionContainer.BorderSizePixel = 0
-            SectionContainer.ZIndex = 9999
-            SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
-            SectionContainer.Parent = self.ModuleList
-            
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = module.Section.Name
-            SectionHeader.TextColor3 = SurfyUI.Theme.Primary
-            SectionHeader.TextSize = 15
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-        end
-        
-        module:Render(self.ModuleList)
-    end
-end
-
-function SurfyUI:CreateSection(tab, name)
-    local section = { Name = name, Tab = tab }
-    table.insert(tab.Sections, section)
-    return section
-end
-
-function SurfyUI:CreateToggle(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Toggle",
-        Enabled = config.Default or false,
-        Callback = config.Callback,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0, 200, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 13
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local function GetKeyName(key)
-            if key == Enum.KeyCode.Unknown then return "NONE"
-            elseif key == Enum.UserInputType.MouseButton1 then return "M1"
-            elseif key == Enum.UserInputType.MouseButton2 then return "M2"
-            else return key.Name:upper() end
-        end
-        
-        local KeybindLabel = Instance.new("TextButton")
-        KeybindLabel.Size = UDim2.new(0, 80, 0, 28)
-        KeybindLabel.Position = UDim2.new(1, -90, 0.5, -14)
-        KeybindLabel.BackgroundColor3 = SurfyUI.Theme.Secondary
-        KeybindLabel.BackgroundTransparency = 0.4
-        KeybindLabel.Text = GetKeyName(self.Key)
-        KeybindLabel.TextColor3 = SurfyUI.Theme.TextDim
-        KeybindLabel.TextSize = 11
-        KeybindLabel.Font = Enum.Font.GothamBold
-        KeybindLabel.ZIndex = 10000
-        KeybindLabel.Parent = Container
-        
-        Round(KeybindLabel, 8)
-        
-        Module.Container = Container
-        Module.KeybindLabel = KeybindLabel
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        KeybindLabel.MouseButton1Click:Connect(function()
-            self.IsBinding = true
-            KeybindLabel.Text = "..."
-            KeybindLabel.TextColor3 = SurfyUI.Theme.Primary
-            
-            local connection
-            connection = UserInputService.InputBegan:Connect(function(input2)
-                if input2.KeyCode ~= Enum.KeyCode.Unknown then
-                    self.Key = input2.KeyCode
-                elseif input2.UserInputType == Enum.UserInputType.MouseButton1 or
-                       input2.UserInputType == Enum.UserInputType.MouseButton2 then
-                    self.Key = input2.UserInputType
-                end
+            local oldNamecall = mt.__namecall
+            mt.__namecall = newcclosure(function(self, ...)
+                local method = getnamecallmethod()
                 
-                KeybindLabel.Text = GetKeyName(self.Key)
-                KeybindLabel.TextColor3 = SurfyUI.Theme.TextDim
-                self.IsBinding = false
-                connection:Disconnect()
-            end)
-        end)
-    end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
-end
-
-function SurfyUI:CreateColorPicker(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Color",
-        Value = config.Default or Color3.fromRGB(0, 230, 255),
-        Callback = config.Callback,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0, 200, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 13
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local ColorBtn = Instance.new("TextButton")
-        ColorBtn.Size = UDim2.new(0, 60, 0, 28)
-        ColorBtn.Position = UDim2.new(1, -70, 0.5, -14)
-        ColorBtn.BackgroundColor3 = self.Value
-        ColorBtn.BackgroundTransparency = 0.1
-        ColorBtn.Text = ""
-        ColorBtn.ZIndex = 10000
-        ColorBtn.Parent = Container
-        
-        Round(ColorBtn, 8)
-        AddStroke(ColorBtn, Color3.new(1, 1, 1), 2, 0.7)
-        
-        local colors = {
-            Color3.fromRGB(255, 50, 50),
-            Color3.fromRGB(255, 150, 50),
-            Color3.fromRGB(255, 255, 50),
-            Color3.fromRGB(50, 255, 50),
-            Color3.fromRGB(50, 255, 255),
-            Color3.fromRGB(50, 150, 255),
-            Color3.fromRGB(150, 50, 255),
-            Color3.fromRGB(255, 255, 255)
-        }
-        
-        local currentIndex = 1
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        ColorBtn.MouseButton1Click:Connect(function()
-            currentIndex = (currentIndex % #colors) + 1
-            self.Value = colors[currentIndex]
-            
-            Tween(ColorBtn, {BackgroundColor3 = self.Value}, 0.3, Enum.EasingStyle.Exponential)
-            
-            if self.Callback then
-                self.Callback(self.Value)
-            end
-        end)
-    end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
-end
-
-return SurfyUIContainer, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local Indicator = Instance.new("Frame")
-        Indicator.Size = UDim2.new(0, 4, 0.65, 0)
-        Indicator.Position = UDim2.new(0, 0, 0.175, 0)
-        Indicator.BackgroundColor3 = SurfyUI.Theme.Primary
-        Indicator.BackgroundTransparency = self.Enabled and 0 or 1
-        Indicator.BorderSizePixel = 0
-        Indicator.ZIndex = 10000
-        Indicator.Parent = Container
-        
-        Round(Indicator, 2)
-        
-        if self.Enabled then
-            AddGradient(Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
-        end
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(1, -30, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
-        NameLabel.TextSize = 14
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        Module.Container = Container
-        Module.Indicator = Indicator
-        Module.NameLabel = NameLabel
-        
-        Container.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                self:Toggle()
-            end
-        end)
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-    end
-    
-    function Module:Toggle()
-        self.Enabled = not self.Enabled
-        
-        if self.Container then
-            Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3, Enum.EasingStyle.Exponential)
-            Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3, Enum.EasingStyle.Exponential)
-            
-            if self.Enabled then
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3, Enum.EasingStyle.Exponential)
-                for _, child in ipairs(self.Indicator:GetChildren()) do
-                    if child:IsA("UIGradient") then child:Destroy() end
-                end
-                AddGradient(self.Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
-            else
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.3, Enum.EasingStyle.Exponential)
-            end
-        end
-        
-        if self.Callback then
-            self.Callback(self.Enabled)
-        end
-    end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
-end
-
-function SurfyUI:CreateToggleWithKeybind(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Toggle",
-        Enabled = config.Default or false,
-        Key = config.DefaultKey or Enum.KeyCode.Unknown,
-        Callback = config.Callback,
-        KeybindCallback = config.KeybindCallback,
-        IsBinding = false,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local Indicator = Instance.new("Frame")
-        Indicator.Size = UDim2.new(0, 4, 0.65, 0)
-        Indicator.Position = UDim2.new(0, 0, 0.175, 0)
-        Indicator.BackgroundColor3 = SurfyUI.Theme.Primary
-        Indicator.BackgroundTransparency = self.Enabled and 0 or 1
-        Indicator.BorderSizePixel = 0
-        Indicator.ZIndex = 10000
-        Indicator.Parent = Container
-        
-        Round(Indicator, 2)
-        
-        if self.Enabled then
-            AddGradient(Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
-        end
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(1, -160, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
-        NameLabel.TextSize = 14
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local function GetKeyName(key)
-            if key == Enum.KeyCode.Unknown then return "NONE"
-            elseif key == Enum.UserInputType.MouseButton1 then return "M1"
-            elseif key == Enum.UserInputType.MouseButton2 then return "M2"
-            elseif key == Enum.UserInputType.MouseButton3 then return "MMB"
-            else return key.Name:upper() end
-        end
-        
-        local KeybindLabel = Instance.new("TextButton")
-        KeybindLabel.Size = UDim2.new(0, 60, 0, 24)
-        KeybindLabel.Position = UDim2.new(1, -70, 0.5, -12)
-        KeybindLabel.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-        KeybindLabel.BackgroundTransparency = 0.5
-        KeybindLabel.Text = GetKeyName(self.Key)
-        KeybindLabel.TextColor3 = SurfyUI.Theme.TextDim
-        KeybindLabel.TextSize = 10
-        KeybindLabel.Font = Enum.Font.GothamBold
-        KeybindLabel.ZIndex = 10000
-        KeybindLabel.Parent = Container
-        
-        Round(KeybindLabel, 6)
-        
-        Module.Container = Container
-        Module.Indicator = Indicator
-        Module.NameLabel = NameLabel
-        Module.KeybindLabel = KeybindLabel
-        
-        Container.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                self:Toggle()
-            end
-        end)
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        KeybindLabel.MouseButton1Click:Connect(function()
-            self.IsBinding = true
-            KeybindLabel.Text = "..."
-            KeybindLabel.TextColor3 = SurfyUI.Theme.Primary
-            
-            local connection
-            connection = UserInputService.InputBegan:Connect(function(input2)
-                if input2.KeyCode ~= Enum.KeyCode.Unknown then
-                    self.Key = input2.KeyCode
-                elseif input2.UserInputType == Enum.UserInputType.MouseButton1 or
-                       input2.UserInputType == Enum.UserInputType.MouseButton2 or
-                       input2.UserInputType == Enum.UserInputType.MouseButton3 then
-                    self.Key = input2.UserInputType
-                end
-                
-                KeybindLabel.Text = GetKeyName(self.Key)
-                KeybindLabel.TextColor3 = SurfyUI.Theme.TextDim
-                self.IsBinding = false
-                connection:Disconnect()
-            end)
-        end)
-        
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if not gameProcessed and not self.IsBinding then
-                if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == self.Key) or
-                   (input.UserInputType == self.Key) then
-                    if self.KeybindCallback then
-                        self.KeybindCallback()
+                if self == remote and method == "FireServer" and rapidFireEnabled and not capturedRemote then
+                    local args = {...}
+                    
+                    -- Check if this remote fires weapons
+                    for i = 1, #args do
+                        local v = args[i]
+                        if v == GRENADE_STR or v == ROCKET_STR then
+                            capturedRemote = remote
+                            print("RAPID FIRE: Remote captured - " .. remote.Name)
+                            
+                            SurfyUI:CreateNotification({
+                                Title = "Rapid Fire",
+                                Description = "Ready! Hold keybind to spam",
+                                Duration = 3
+                            })
+                            break
+                        end
                     end
                 end
-            end
-        end)
-    end
-    
-    function Module:Toggle()
-        self.Enabled = not self.Enabled
-        
-        if self.Container then
-            Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3, Enum.EasingStyle.Exponential)
-            Tween(self.NameLabel, {TextColor3 = self.Enabled and SurfyUI.Theme.Primary or SurfyUI.Theme.Text}, 0.3, Enum.EasingStyle.Exponential)
+                
+                return oldNamecall(self, ...)
+            end)
             
-            if self.Enabled then
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.3, Enum.EasingStyle.Exponential)
-                for _, child in ipairs(self.Indicator:GetChildren()) do
-                    if child:IsA("UIGradient") then child:Destroy() end
-                end
-                AddGradient(self.Indicator, SurfyUI.Theme.PrimaryBright, SurfyUI.Theme.Primary, 90)
+            setreadonly(mt, true)
+            isHooked = true
+        end
+    end
+end
+
+-- Optimized fire function with minimal overhead
+local function fireWeapon()
+    if not capturedRemote or not rapidFireEnabled then return end
+    
+    local args = buildWeaponArgs()
+    if not args then return end
+    
+    local success, err = pcall(function()
+        capturedRemote:FireServer(unpack(args))
+    end)
+    
+    if not success then
+        warn("Fire error:", err)
+    end
+end
+
+-- Single optimized fire loop
+local fireConnection = nil
+local function startFireLoop()
+    if fireConnection then return end
+    
+    fireConnection = RunService.Heartbeat:Connect(function()
+        if not isHoldingFireKey or not rapidFireEnabled then 
+            if fireConnection then
+                fireConnection:Disconnect()
+                fireConnection = nil
+            end
+            return 
+        end
+        
+        fireWeapon()
+        task.wait(rapidFireRate)
+    end)
+end
+
+-- Update character on respawn
+LocalPlayer.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    hrp = newChar:WaitForChild("HumanoidRootPart")
+    currentWeaponType = nil
+    lastWeaponCheck = 0
+end)
+
+-- Setup hook at script load (only runs once)
+task.spawn(function()
+    task.wait(1)
+    pcall(setupHook)
+end)
+
+-- Rapid Fire Toggle with Keybind
+local RapidFireKeybind = SurfyUI:CreateToggleWithKeybind(RapidFireSection, {
+    Title = "Rapid Fire",
+    Default = false,
+    DefaultKey = Enum.UserInputType.MouseButton3,
+    LayoutOrder = 20,
+    Callback = function(Value)
+        rapidFireEnabled = Value
+        
+        if Value then
+            if capturedRemote then
+                SurfyUI:CreateNotification({
+                    Title = "Rapid Fire",
+                    Description = "Ready! Hold keybind to spam",
+                    Duration = 3
+                })
             else
-                Tween(self.Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.3, Enum.EasingStyle.Exponential)
+                SurfyUI:CreateNotification({
+                    Title = "Rapid Fire",
+                    Description = "Shoot weapon once to activate!",
+                    Duration = 4
+                })
             end
+        else
+            isHoldingFireKey = false
+            if fireConnection then
+                fireConnection:Disconnect()
+                fireConnection = nil
+            end
+            
+            SurfyUI:CreateNotification({
+                Title = "Rapid Fire",
+                Description = "Disabled",
+                Duration = 2
+            })
         end
-        
-        if self.Callback then
-            self.Callback(self.Enabled)
+    end,
+    KeybindCallback = function()
+        if rapidFireEnabled and capturedRemote then
+            isHoldingFireKey = true
+            startFireLoop()
+        elseif rapidFireEnabled and not capturedRemote then
+            SurfyUI:CreateNotification({
+                Title = "Rapid Fire",
+                Description = "Shoot weapon first!",
+                Duration = 2
+            })
         end
     end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
+})
+
+-- Track keybind release
+UserInputService.InputEnded:Connect(function(input)
+    if rapidFireEnabled then
+        if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == RapidFireKeybind.Key) or
+           (input.UserInputType == RapidFireKeybind.Key) then
+            isHoldingFireKey = false
+        end
+    end
+end)
+
+-- Fire Rate Slider
+SurfyUI:CreateSlider(RapidFireSection, {
+    Title = "Fire Rate",
+    Default = 0.2,
+    Min = 0.05,
+    Max = 0.5,
+    Rounding = 2,
+    LayoutOrder = 21,
+    Callback = function(Value)
+        rapidFireRate = Value
+    end
+})
+
+-- ===== OPTIMIZED PLAYER ESP SYSTEM =====
+local espMasterEnabled = false
+local outlinesEnabled = false
+local chamsEnabled = false
+local teamBasedColoring = false
+local espMaxDistance = 9999999
+local enemyColor = Color3.fromRGB(255, 50, 50)
+local teamColor = Color3.fromRGB(50, 255, 50)
+
+local espCache = {}
+local chamsCache = {}
+local espUpdateConnection = nil
+
+local function isEnemy(player)
+    return player.Team ~= LocalPlayer.Team
 end
 
-function SurfyUI:CreateSlider(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Slider",
-        Value = config.Default or config.Min or 0,
-        Min = config.Min or 0,
-        Max = config.Max or 100,
-        Rounding = config.Rounding or 0,
-        Callback = config.Callback,
-        IsDragging = false,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:UpdateValue(newValue)
-        self.Value = newValue
-        if self.ValueLabel then
-            self.ValueLabel.Text = tostring(self.Value)
-        end
-        if self.Fill and self.Knob then
-            local fillScale = (self.Value - self.Min) / (self.Max - self.Min)
-            self.Fill.Size = UDim2.new(fillScale, 0, 1, 0)
-            self.Knob.Position = UDim2.new(fillScale, -8, 0.5, -8)
-        end
-        if self.Callback then
-            self.Callback(self.Value)
-        end
+local function getPlayerColor(player)
+    if teamBasedColoring then
+        return isEnemy(player) and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(50, 255, 50)
+    else
+        return isEnemy(player) and enemyColor or teamColor
     end
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 58)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0, 200, 0, 18)
-        NameLabel.Position = UDim2.new(0, 15, 0, 10)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 13
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local ValueLabel = Instance.new("TextLabel")
-        ValueLabel.Size = UDim2.new(0, 60, 0, 18)
-        ValueLabel.Position = UDim2.new(1, -70, 0, 10)
-        ValueLabel.BackgroundTransparency = 1
-        ValueLabel.Text = tostring(self.Value)
-        ValueLabel.TextColor3 = SurfyUI.Theme.Primary
-        ValueLabel.TextSize = 13
-        ValueLabel.Font = Enum.Font.GothamBold
-        ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-        ValueLabel.ZIndex = 10000
-        ValueLabel.Parent = Container
-        
-        local Track = Instance.new("Frame")
-        Track.Size = UDim2.new(1, -30, 0, 6)
-        Track.Position = UDim2.new(0, 15, 1, -20)
-        Track.BackgroundColor3 = SurfyUI.Theme.Secondary
-        Track.BackgroundTransparency = 0.4
-        Track.BorderSizePixel = 0
-        Track.ZIndex = 9999
-        Track.Parent = Container
-        
-        Round(Track, 3)
-        
-        local fillScale = (self.Value - self.Min) / (self.Max - self.Min)
-        local Fill = Instance.new("Frame")
-        Fill.Size = UDim2.new(fillScale, 0, 1, 0)
-        Fill.BackgroundColor3 = SurfyUI.Theme.Primary
-        Fill.BackgroundTransparency = 0.2
-        Fill.BorderSizePixel = 0
-        Fill.ZIndex = 10000
-        Fill.Parent = Track
-        
-        Round(Fill, 3)
-        AddGradient(Fill, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
-        
-        local Knob = Instance.new("TextButton")
-        Knob.Size = UDim2.new(0, 16, 0, 16)
-        Knob.Position = UDim2.new(fillScale, -8, 0.5, -8)
-        Knob.BackgroundColor3 = Color3.new(1, 1, 1)
-        Knob.Text = ""
-        Knob.ZIndex = 10001
-        Knob.Parent = Track
-        
-        Round(Knob, 8)
-        AddStroke(Knob, SurfyUI.Theme.Primary, 2, 0.3)
-        
-        Module.Container = Container
-        Module.ValueLabel = ValueLabel
-        Module.Fill = Fill
-        Module.Knob = Knob
-        Module.Track = Track
-        
-        local function UpdateSlider(input)
-            local relX = (input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X
-            local value = math.clamp(relX, 0, 1)
-            
-            local newValue = math.floor((self.Min + (self.Max - self.Min) * value) * (10 ^ self.Rounding)) / (10 ^ self.Rounding)
-            self:UpdateValue(newValue)
-        end
-        
-        Knob.MouseButton1Down:Connect(function()
-            self.IsDragging = true
-            Tween(Knob, {Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(Knob.Position.X.Scale, -9, 0.5, -9)}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                self.IsDragging = false
-                Tween(Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement and self.IsDragging then
-                UpdateSlider(input)
-            end
-        end)
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-    end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
 end
 
-function SurfyUI:CreateDropdown(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Dropdown",
-        Value = config.Default or config.Options[1],
-        Options = config.Options or {"Option 1"},
-        Callback = config.Callback,
-        IsOpen = false,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.ClipsDescendants = false
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0, 200, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 13
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local DropBtn = Instance.new("TextButton")
-        DropBtn.Size = UDim2.new(0, 140, 0, 32)
-        DropBtn.Position = UDim2.new(1, -150, 0.5, -16)
-        DropBtn.BackgroundColor3 = SurfyUI.Theme.Secondary
-        DropBtn.BackgroundTransparency = 0.4
-        DropBtn.Text = self.Value
-        DropBtn.TextColor3 = SurfyUI.Theme.Text
-        DropBtn.TextSize = 12
-        DropBtn.Font = Enum.Font.GothamMedium
-        DropBtn.TextXAlignment = Enum.TextXAlignment.Center
-        DropBtn.ZIndex = 10000
-        DropBtn.Parent = Container
-        
-        Round(DropBtn, 8)
-        
-        local Arrow = Instance.new("TextLabel")
-        Arrow.Size = UDim2.new(0, 20, 1, 0)
-        Arrow.Position = UDim2.new(1, -20, 0, 0)
-        Arrow.BackgroundTransparency = 1
-        Arrow.Text = "▼"
-        Arrow.TextColor3 = SurfyUI.Theme.TextDim
-        Arrow.TextSize = 10
-        Arrow.Font = Enum.Font.GothamBold
-        Arrow.ZIndex = 10001
-        Arrow.Parent = DropBtn
-        
-        Module.Container = Container
-        Module.DropBtn = DropBtn
-        Module.Arrow = Arrow
-        
-        Container.MouseEnter:Connect(function()
-            if not self.IsOpen then
-                Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-            end
+local function clearPlayerESP(player)
+    if espCache[player] then
+        pcall(function() 
+            espCache[player].Enabled = false
+            espCache[player]:Destroy() 
         end)
-        
-        Container.MouseLeave:Connect(function()
-            if not self.IsOpen then
-                Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-            end
+        espCache[player] = nil
+    end
+    if chamsCache[player] then
+        pcall(function() 
+            chamsCache[player].Enabled = false
+            chamsCache[player]:Destroy() 
         end)
+        chamsCache[player] = nil
+    end
+end
+
+local function clearAllESP()
+    for player in pairs(espCache) do
+        clearPlayerESP(player)
+    end
+    for player in pairs(chamsCache) do
+        clearPlayerESP(player)
+    end
+    espCache = {}
+    chamsCache = {}
+end
+
+local function updateESP()
+    if not espMasterEnabled then return end
+    
+    local currentTime = tick()
+    if currentTime - lastESPCheck < ESP_UPDATE_INTERVAL then return end
+    lastESPCheck = currentTime
+    
+    local localCharacter = LocalPlayer.Character
+    local localHRP = localCharacter and localCharacter:FindFirstChild("HumanoidRootPart")
+    if not localHRP then return end
+    
+    for _, player in ipairs(cachedPlayers) do
+        if player == LocalPlayer then continue end
         
-        DropBtn.MouseButton1Click:Connect(function()
-            self.IsOpen = not self.IsOpen
+        local character = player.Character
+        local hrp = character and character:FindFirstChild("HumanoidRootPart")
+        
+        if not character or not hrp then
+            clearPlayerESP(player)
+            continue
+        end
+        
+        local distance = (hrp.Position - localHRP.Position).Magnitude
+        
+        if distance > espMaxDistance then
+            if espCache[player] then espCache[player].Enabled = false end
+            if chamsCache[player] then chamsCache[player].Enabled = false end
+            continue
+        end
+        
+        if outlinesEnabled then
+            if not espCache[player] or not espCache[player].Parent then
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "SurfyESP"
+                highlight.Adornee = character
+                highlight.FillTransparency = 1
+                highlight.OutlineColor = getPlayerColor(player)
+                highlight.OutlineTransparency = 0
+                highlight.Parent = character
+                espCache[player] = highlight
+            end
+            espCache[player].Enabled = true
+            espCache[player].OutlineColor = getPlayerColor(player)
+        elseif espCache[player] then
+            espCache[player].Enabled = false
+        end
+        
+        if chamsEnabled then
+            if not chamsCache[player] or not chamsCache[player].Parent then
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "SurfyChams"
+                highlight.Adornee = character
+                highlight.FillColor = getPlayerColor(player)
+                highlight.FillTransparency = 0.4
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.OutlineTransparency = 0.5
+                highlight.Parent = character
+                chamsCache[player] = highlight
+            end
+            chamsCache[player].Enabled = true
+            chamsCache[player].FillColor = getPlayerColor(player)
+        elseif chamsCache[player] then
+            chamsCache[player].Enabled = false
+        end
+    end
+end
+
+-- ===== ESP CONTROLS =====
+SurfyUI:CreateToggle(PlayerESPSection, {
+    Title = "Player ESP Toggle",
+    Default = false,
+    LayoutOrder = 30,
+    Callback = function(Value)
+        espMasterEnabled = Value
+        
+        if Value then
+            if not espUpdateConnection then
+                espUpdateConnection = RunService.Heartbeat:Connect(updateESP)
+            end
+        else
+            if espUpdateConnection then
+                espUpdateConnection:Disconnect()
+                espUpdateConnection = nil
+            end
+            clearAllESP()
+        end
+        
+        SurfyUI:CreateNotification({
+            Title = "Player ESP",
+            Description = Value and "Enabled" or "Disabled",
+            Duration = 2
+        })
+    end
+})
+
+SurfyUI:CreateToggle(PlayerESPSection, {
+    Title = "Outline ESP",
+    Default = false,
+    LayoutOrder = 31,
+    Callback = function(Value)
+        outlinesEnabled = Value
+        if not Value then
+            for _, highlight in pairs(espCache) do
+                highlight.Enabled = false
+            end
+        end
+    end
+})
+
+SurfyUI:CreateToggle(PlayerESPSection, {
+    Title = "Chams ESP",
+    Default = false,
+    LayoutOrder = 32,
+    Callback = function(Value)
+        chamsEnabled = Value
+        if not Value then
+            for _, highlight in pairs(chamsCache) do
+                highlight.Enabled = false
+            end
+        end
+    end
+})
+
+SurfyUI:CreateToggle(PlayerESPSection, {
+    Title = "Team Based Coloring",
+    Default = false,
+    LayoutOrder = 33,
+    Callback = function(Value)
+        teamBasedColoring = Value
+    end
+})
+
+SurfyUI:CreateColorPicker(PlayerESPSection, {
+    Title = "Enemy ESP Color",
+    Default = Color3.fromRGB(255, 50, 50),
+    LayoutOrder = 34,
+    Callback = function(Value)
+        enemyColor = Value
+    end
+})
+
+SurfyUI:CreateColorPicker(PlayerESPSection, {
+    Title = "Team ESP Color",
+    Default = Color3.fromRGB(50, 255, 50),
+    LayoutOrder = 35,
+    Callback = function(Value)
+        teamColor = Value
+    end
+})
+
+-- ===== OPTIMIZED BHOP SYSTEM =====
+local bhopEnabled = false
+local bhopMode = "Exploit Bhop"
+local legitBhopConnection = nil
+
+local function enableExploitBhop(enabled)
+    local success, err = pcall(function()
+        if RepStorage:FindFirstChild("VIPSettings") and RepStorage.VIPSettings:FindFirstChild("SpeedDemon") then
+            RepStorage.VIPSettings.SpeedDemon.Value = enabled
+        end
+    end)
+    return success
+end
+
+local function enableLegitBhop(enabled)
+    if legitBhopConnection then
+        legitBhopConnection:Disconnect()
+        legitBhopConnection = nil
+    end
+    
+    if not enabled then return end
+    
+    local lastJumpTime = 0
+    local jumpCooldown = 0.05
+    
+    legitBhopConnection = RunService.Heartbeat:Connect(function()
+        if not bhopEnabled or bhopMode ~= "Legit Bhop" then return end
+        if not LocalPlayer.Character then return end
+        
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not humanoid or not hrp then return end
+        
+        local isSpaceHeld = UserInputService:IsKeyDown(Enum.KeyCode.Space)
+        local currentTime = tick()
+        
+        if isSpaceHeld and (currentTime - lastJumpTime) >= jumpCooldown then
+            local state = humanoid:GetState()
             
-            if self.IsOpen then
-                local OptionsFrame = Instance.new("Frame")
-                OptionsFrame.Name = "Options"
-                OptionsFrame.Size = UDim2.new(0, 140, 0, 0)
-                OptionsFrame.Position = UDim2.new(1, -150, 1, 8)
-                OptionsFrame.BackgroundColor3 = SurfyUI.Theme.Surface
-                OptionsFrame.BackgroundTransparency = 0.15
-                OptionsFrame.BorderSizePixel = 0
-                OptionsFrame.ZIndex = 15000
-                OptionsFrame.Parent = Container
-                
-                Round(OptionsFrame, 8)
-                AddStroke(OptionsFrame, SurfyUI.Theme.Primary, 1.5, 0.4)
-                
-                local OptLayout = Instance.new("UIListLayout")
-                OptLayout.Padding = UDim.new(0, 4)
-                OptLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-                OptLayout.Parent = OptionsFrame
-                
-                local OptPadding = Instance.new("UIPadding")
-                OptPadding.PaddingTop = UDim.new(0, 6)
-                OptPadding.PaddingBottom = UDim.new(0, 6)
-                OptPadding.PaddingLeft = UDim.new(0, 6)
-                OptPadding.PaddingRight = UDim.new(0, 6)
-                OptPadding.Parent = OptionsFrame
-                
-                for _, option in ipairs(self.Options) do
-                    local OptBtn = Instance.new("TextButton")
-                    OptBtn.Size = UDim2.new(1, -12, 0, 30)
-                    OptBtn.BackgroundColor3 = SurfyUI.Theme.SurfaceLight
-                    OptBtn.BackgroundTransparency = 1
-                    OptBtn.Text = option
-                    OptBtn.TextColor3 = (self.Value == option) and SurfyUI.Theme.Primary or SurfyUI.Theme.Text
-                    OptBtn.TextSize = 12
-                    OptBtn.Font = Enum.Font.GothamMedium
-                    OptBtn.TextXAlignment = Enum.TextXAlignment.Center
-                    OptBtn.ZIndex = 15001
-                    OptBtn.Parent = OptionsFrame
-                    
-                    Round(OptBtn, 6)
-                    
-                    OptBtn.MouseEnter:Connect(function()
-                        Tween(OptBtn, {BackgroundTransparency = 0.5}, 0.2, Enum.EasingStyle.Exponential)
-                    end)
-                    
-                    OptBtn.MouseLeave:Connect(function()
-                        Tween(OptBtn, {BackgroundTransparency = 1}, 0.2, Enum.EasingStyle.Exponential)
-                    end)
-                    
-                    OptBtn.MouseButton1Click:Connect(function()
-                        self.Value = option
-                        DropBtn.Text = option
-                        OptionsFrame:Destroy()
-                        self.IsOpen = false
-                        Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
-                        
-                        if self.Callback then
-                            self.Callback(option)
-                        end
-                    end)
-                end
-                
-                local targetHeight = (#self.Options * 34) + 12
-                Tween(OptionsFrame, {Size = UDim2.new(0, 140, 0, targetHeight)}, 0.3, Enum.EasingStyle.Exponential)
-                Tween(Arrow, {Rotation = 180}, 0.2, Enum.EasingStyle.Exponential)
+            if state == Enum.HumanoidStateType.Landed or 
+               state == Enum.HumanoidStateType.Running or
+               state == Enum.HumanoidStateType.RunningNoPhysics then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                lastJumpTime = currentTime
+            end
+        end
+    end)
+end
+
+SurfyUI:CreateToggle(BhopSection, {
+    Title = "Bhop Toggle",
+    Default = false,
+    LayoutOrder = 40,
+    Callback = function(Value)
+        bhopEnabled = Value
+        
+        if Value then
+            if bhopMode == "Exploit Bhop" then
+                local success = enableExploitBhop(true)
+                enableLegitBhop(false)
+                SurfyUI:CreateNotification({
+                    Title = "Bhop",
+                    Description = success and "Exploit Bhop Enabled" or "Failed to enable",
+                    Duration = 2
+                })
             else
-                if Container:FindFirstChild("Options") then
-                    Container.Options:Destroy()
-                end
-                Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
+                enableExploitBhop(false)
+                enableLegitBhop(true)
+                SurfyUI:CreateNotification({
+                    Title = "Bhop",
+                    Description = "Legit Bhop Enabled",
+                    Duration = 2
+                })
             end
-        end)
+        else
+            enableExploitBhop(false)
+            enableLegitBhop(false)
+            SurfyUI:CreateNotification({
+                Title = "Bhop",
+                Description = "Disabled",
+                Duration = 2
+            })
+        end
     end
-    
-    table.insert(section.Tab.Modules, Module)
-    return Module
-end
+})
 
-function SurfyUI:CreateButton(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Button",
-        Callback = config.Callback,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("TextButton")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Text = ""
-        Container.Parent = parent
+SurfyUI:CreateDropdown(BhopSection, {
+    Title = "Bhop Mode",
+    Options = {"Exploit Bhop", "Legit Bhop"},
+    Default = "Exploit Bhop",
+    LayoutOrder = 41,
+    Callback = function(Value)
+        bhopMode = Value
         
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(1, -30, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 14
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Center
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        Module.Container = Container
-        Module.NameLabel = NameLabel
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight, BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Primary}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground, BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Text}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseButton1Click:Connect(function()
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.Primary}, 0.1, Enum.EasingStyle.Exponential)
-            Tween(NameLabel, {TextColor3 = Color3.new(1, 1, 1)}, 0.1, Enum.EasingStyle.Exponential)
+        if bhopEnabled then
+            enableExploitBhop(false)
+            enableLegitBhop(false)
             
             task.wait(0.1)
             
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Text}, 0.2, Enum.EasingStyle.Exponential)
-            
-            if self.Callback then
-                self.Callback()
+            if Value == "Exploit Bhop" then
+                local success = enableExploitBhop(true)
+                SurfyUI:CreateNotification({
+                    Title = "Bhop Mode",
+                    Description = success and "Switched to Exploit Bhop" or "Failed to switch",
+                    Duration = 2
+                })
+            else
+                enableLegitBhop(true)
+                SurfyUI:CreateNotification({
+                    Title = "Bhop Mode",
+                    Description = "Switched to Legit Bhop",
+                    Duration = 2
+                })
             end
-        end)
+        end
+    end
+})
+
+-- ===== ANTI FEATURES =====
+local noFallDamageEnabled = false
+local fallDamageHook = nil
+
+SurfyUI:CreateToggle(AntiFeaturesSection, {
+    Title = "No Fall Damage",
+    Default = false,
+    LayoutOrder = 50,
+    Callback = function(Value)
+        noFallDamageEnabled = Value
+        
+        local folder = RepStorage:FindFirstChild("Folder")
+        if folder then
+            local spaceFolder = folder:FindFirstChild(" ")
+            if spaceFolder then
+                local fallDamageRemote = spaceFolder:FindFirstChild("FallDamage")
+                if fallDamageRemote then
+                    if Value then
+                        if not fallDamageHook then
+                            local mt = getrawmetatable(fallDamageRemote)
+                            local oldNamecall = mt.__namecall
+                            setreadonly(mt, false)
+                            
+                            fallDamageHook = newcclosure(function(self, ...)
+                                if noFallDamageEnabled and self == fallDamageRemote then
+                                    return nil
+                                end
+                                return oldNamecall(self, ...)
+                            end)
+                            
+                            mt.__namecall = fallDamageHook
+                            setreadonly(mt, true)
+                        end
+                        SurfyUI:CreateNotification({
+                            Title = "No Fall Damage",
+                            Description = "Enabled",
+                            Duration = 2
+                        })
+                    else
+                        if fallDamageHook then
+                            local mt = getrawmetatable(fallDamageRemote)
+                            local oldNamecall = mt.__namecall
+                            setreadonly(mt, false)
+                            mt.__namecall = oldNamecall
+                            setreadonly(mt, true)
+                            fallDamageHook = nil
+                        end
+                        SurfyUI:CreateNotification({
+                            Title = "No Fall Damage",
+                            Description = "Disabled",
+                            Duration = 2
+                        })
+                    end
+                end
+            end
+        end
+    end
+})
+
+-- ===== OPTIMIZED MAP VOTE SPAM =====
+local voteSpamEnabled = false
+local voteSpamLoop = nil
+local mapVotes = {"Map1", "Map2", "Map3", "Map4"}
+local currentVoteIndex = 1
+
+SurfyUI:CreateToggle(VoteSpamSection, {
+    Title = "Spam Vote Maps",
+    Default = false,
+    LayoutOrder = 60,
+    Callback = function(Value)
+        voteSpamEnabled = Value
+        
+        if Value then
+            voteSpamLoop = task.spawn(function()
+                while voteSpamEnabled do
+                    pcall(function()
+                        local events = RepStorage:FindFirstChild("Events")
+                        if events then
+                            local voteMap = events:FindFirstChild("VoteMap")
+                            if voteMap then
+                                local args = {mapVotes[currentVoteIndex]}
+                                voteMap:FireServer(unpack(args))
+                            end
+                        end
+                    end)
+                    
+                    currentVoteIndex = currentVoteIndex + 1
+                    if currentVoteIndex > #mapVotes then
+                        currentVoteIndex = 1
+                    end
+                    
+                    task.wait(0.5)
+                end
+            end)
+            
+            SurfyUI:CreateNotification({
+                Title = "Vote Spam",
+                Description = "Started spamming map votes",
+                Duration = 2
+            })
+        else
+            voteSpamEnabled = false
+            if voteSpamLoop then
+                task.cancel(voteSpamLoop)
+                voteSpamLoop = nil
+            end
+            
+            SurfyUI:CreateNotification({
+                Title = "Vote Spam",
+                Description = "Stopped spamming",
+                Duration = 2
+            })
+        end
+    end
+})
+
+-- ===== SETTINGS TAB =====
+local UIToggleKeybind = SurfyUI:CreateKeybind(KeybindSection, {
+    Title = "Toggle UI",
+    Default = Enum.KeyCode.RightShift,
+    LayoutOrder = 70,
+    Callback = function() end
+})
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and not UIToggleKeybind.IsBinding then
+        if (input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode == UIToggleKeybind.Key) or
+           (input.UserInputType == UIToggleKeybind.Key) then
+            Window:Toggle()
+        end
+    end
+end)
+
+-- ===== OPTIMIZED PLAYER CONNECTIONS =====
+local function setupPlayerESP(player)
+    local function characterAdded()
+        clearPlayerESP(player)
+        task.wait(0.5)
+        if espMasterEnabled then
+            updateESP()
+        end
     end
     
-    table.insert(section.Tab.Modules, Module)
-    return Module
-end
-
-function SurfyUI:CreateKeybind(section, config)
-    config = config or {}
-    
-    local Module = {
-        Name = config.Title or "Keybind",
-        Key = config.Default or Enum.KeyCode.Unknown,
-        Callback = config.Callback,
-        IsBinding = false,
-        LayoutOrder = config.LayoutOrder or 999,
-        Section = section
-    }
-    
-    function Module:Render(parent)
-        local Container = Instance.new("Frame")
-        Container.Size = UDim2.new(1, 0, 0, 48)
-        Container.BackgroundColor3 = SurfyUI.Theme.ModuleBackground
-        Container.BackgroundTransparency = 0.3
-        Container.BorderSizePixel = 0
-        Container.ZIndex = 9999
-        Container.LayoutOrder = self.LayoutOrder
-        Container.Parent = parent
-        
-        Round(Container, 10)
-        AddStroke(Container, SurfyUI.Theme.Surface, 1, 0.7)
-        
-        local NameLabel = Instance.new("TextLabel")
-        NameLabel.Size = UDim2.new(0, 200, 1, 0)
-        NameLabel.Position = UDim2.new(0, 15, 0, 0)
-        NameLabel.BackgroundTransparency = 1
-        NameLabel.Text = self.Name
-        NameLabel.TextColor3 = SurfyUI.Theme.Text
-        NameLabel.TextSize = 13
-        NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
-        NameLabel.ZIndex = 10000
-        NameLabel.Parent = Container
-        
-        local ColorBtn = Instance.new("TextButton")
-        ColorBtn.Size = UDim2.new(0, 60, 0, 28)
-        ColorBtn.Position = UDim2.new(1, -70, 0.5, -14)
-        ColorBtn.BackgroundColor3 = self.Value
-        ColorBtn.BackgroundTransparency = 0.1
-        ColorBtn.Text = ""
-        ColorBtn.ZIndex = 10000
-        ColorBtn.Parent = Container
-        
-        Round(ColorBtn, 8)
-        AddStroke(ColorBtn, Color3.new(1, 1, 1), 2, 0.7)
-        
-        local colors = {
-            Color3.fromRGB(255, 50, 50),
-            Color3.fromRGB(255, 150, 50),
-            Color3.fromRGB(255, 255, 50),
-            Color3.fromRGB(50, 255, 50),
-            Color3.fromRGB(50, 255, 255),
-            Color3.fromRGB(50, 150, 255),
-            Color3.fromRGB(150, 50, 255),
-            Color3.fromRGB(255, 255, 255)
-        }
-        
-        local currentIndex = 1
-        
-        Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
-        end)
-        
-        ColorBtn.MouseButton1Click:Connect(function()
-            currentIndex = (currentIndex % #colors) + 1
-            self.Value = colors[currentIndex]
-            
-            Tween(ColorBtn, {BackgroundColor3 = self.Value}, 0.3, Enum.EasingStyle.Exponential)
-            
-            if self.Callback then
-                self.Callback(self.Value)
-            end
-        end)
+    local function characterRemoving()
+        clearPlayerESP(player)
     end
     
-    table.insert(section.Tab.Modules, Module)
-    return Module
+    player.CharacterAdded:Connect(characterAdded)
+    player.CharacterRemoving:Connect(characterRemoving)
+    
+    if player.Character then
+        characterAdded()
+    end
 end
 
-return SurfyUI
+for _, player in ipairs(cachedPlayers) do
+    if player ~= LocalPlayer then
+        setupPlayerESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    updatePlayerCache()
+    setupPlayerESP(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    updatePlayerCache()
+    clearPlayerESP(player)
+end)
+
+-- Performance cleanup on script termination
+game:GetService("ScriptContext").DescendantRemoving:Connect(function(descendant)
+    if descendant == script then
+        if hitboxLoop then hitboxLoop:Disconnect() end
+        if legitBhopConnection then legitBhopConnection:Disconnect() end
+        if espUpdateConnection then espUpdateConnection:Disconnect() end
+        if fireConnection then fireConnection:Disconnect() end
+        if voteSpamEnabled and voteSpamLoop then
+            task.cancel(voteSpamLoop)
+        end
+        
+        resetAllHitboxes()
+        clearAllESP()
+        
+        if fovCircle then
+            fovCircle:Remove()
+        end
+        
+        enableExploitBhop(false)
+        
+        if noFallDamageEnabled and fallDamageHook then
+            local folder = RepStorage:FindFirstChild("Folder")
+            if folder then
+                local spaceFolder = folder:FindFirstChild(" ")
+                if spaceFolder then
+                    local fallDamageRemote = spaceFolder:FindFirstChild("FallDamage")
+                    if fallDamageRemote then
+                        local mt = getrawmetatable(fallDamageRemote)
+                        local oldNamecall = mt.__namecall
+                        setreadonly(mt, false)
+                        mt.__namecall = oldNamecall
+                        setreadonly(mt, true)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+SurfyUI:CreateNotification({
+    Title = "Surfy TC2",
+    Description = "Surfy TC2 v3.0\nPress RightShift to toggle UI\nRapid Fire: Grenade & Rocket Launcher",
+    Duration = 5
+})
+
+print("Surfy TC2 v3.0 - Loaded successfully!")
+print("Rapid Fire supports: Grenade Launcher & Rocket Launcher")
