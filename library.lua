@@ -250,7 +250,7 @@ function SurfyUI:CreateWindow(config)
     local TabNameContainer = Instance.new("Frame")
     TabNameContainer.Name = "TabNameContainer"
     TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
-    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -570 - Window.IconOffset)
+    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -720 - Window.IconOffset)
     TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
@@ -343,7 +343,7 @@ function SurfyUI:CreateWindow(config)
         -- Smooth drawer animation
         Tween(Drawer, {
             Size = UDim2.new(0, 600, 0, 400), 
-            Position = UDim2.new(0.5, -300, 1, -545 - self.IconOffset)
+            Position = UDim2.new(0.5, -300, 1, -695 - self.IconOffset)
         }, 0.5, Enum.EasingStyle.Exponential)
         
         -- Smooth line fade in and expand from center
