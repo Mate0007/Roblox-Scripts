@@ -1491,3 +1491,4 @@ function SurfyUI:CreateKeybind(section, config)
 end
 
 return SurfyUI
+
