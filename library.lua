@@ -250,7 +250,7 @@ function SurfyUI:CreateWindow(config)
     local TabNameContainer = Instance.new("Frame")
     TabNameContainer.Name = "TabNameContainer"
     TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
-    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -500 - Window.IconOffset)
+    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -540 - Window.IconOffset)
     TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
