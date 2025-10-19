@@ -245,11 +245,11 @@ function SurfyUI:CreateWindow(config)
     
     AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
     
-    -- Tab Name Container with background
+    -- Tab Name Container with background (MOVED UP 40px)
     local TabNameContainer = Instance.new("Frame")
     TabNameContainer.Name = "TabNameContainer"
     TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
-    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -460 - Window.IconOffset)
+    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -500 - Window.IconOffset)
     TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
@@ -286,7 +286,7 @@ function SurfyUI:CreateWindow(config)
     Drawer.Parent = ScreenGui
     
     Round(Drawer, 16)
-    AddStroke(Drawer, SurfyUI.Theme.Primary, 2, 0.4)
+    local DrawerStroke = AddStroke(Drawer, SurfyUI.Theme.Primary, 2, 0.4)
     
     local DrawerOverlay = Instance.new("Frame")
     DrawerOverlay.Size = UDim2.new(1, 0, 1, 0)
@@ -323,6 +323,7 @@ function SurfyUI:CreateWindow(config)
     Window.IconBar = IconBar
     Window.IconLayout = IconLayout
     Window.Drawer = Drawer
+    Window.DrawerStroke = DrawerStroke
     Window.ModuleList = ModuleList
     Window.ConnectionLine = ConnectionLine
     Window.TabNameContainer = TabNameContainer
@@ -334,6 +335,9 @@ function SurfyUI:CreateWindow(config)
         
         Drawer.Visible = true
         ConnectionLine.Visible = true
+        
+        -- Make stroke visible at start
+        self.DrawerStroke.Transparency = 0.4
         
         -- Smooth drawer animation
         Tween(Drawer, {
@@ -386,7 +390,11 @@ function SurfyUI:CreateWindow(config)
             Position = closePos
         }, 0.4, Enum.EasingStyle.Exponential)
         
-        task.wait(0.4)
+        -- Hide outline when drawer is almost closed (after 0.25s of 0.4s animation)
+        task.wait(0.25)
+        Tween(self.DrawerStroke, {Transparency = 1}, 0.15, Enum.EasingStyle.Exponential)
+        
+        task.wait(0.15)
         Drawer.Visible = false
     end
     
@@ -412,7 +420,7 @@ function SurfyUI:CreateWindow(config)
         IconBar.Position = UDim2.new(0.5, 0, 1, -65 - yOffset)
         ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232 - yOffset)
         Drawer.Position = UDim2.new(0.5, -300, 1, -65 - yOffset)
-        TabNameContainer.Position = UDim2.new(0.5, -120, 1, -460 - yOffset)
+        TabNameContainer.Position = UDim2.new(0.5, -120, 1, -500 - yOffset)
         
         if self.IsOpen then
             Drawer.Position = UDim2.new(0.5, -300, 1, -475 - yOffset)
