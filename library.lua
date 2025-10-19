@@ -203,7 +203,9 @@ function SurfyUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         IsOpen = false,
-        IconOffset = config.IconOffset or 0
+        IconOffset = config.IconOffset or 0,
+        IsAnimating = false,
+        ToggleKeybind = config.ToggleKeybind or Enum.KeyCode.RightShift
     }
     setmetatable(Window, SurfyUI)
     
@@ -231,11 +233,11 @@ function SurfyUI:CreateWindow(config)
     IconLayout.Padding = UDim.new(0, 10)
     IconLayout.Parent = IconBar
     
-    -- Connection line between icons and drawer
+    -- Connection line between icons and drawer (MOVED DOWN 15PX MORE - Change the -100 value to move it further)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -85 - Window.IconOffset)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -100 - Window.IconOffset) -- Change -100 to move line up/down
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
@@ -246,7 +248,7 @@ function SurfyUI:CreateWindow(config)
     
     AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
     
-    -- Tab Name Container with background
+    -- Tab Name Container with background (Higher ZIndex so it's on top)
     local TabNameContainer = Instance.new("Frame")
     TabNameContainer.Name = "TabNameContainer"
     TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
@@ -254,11 +256,11 @@ function SurfyUI:CreateWindow(config)
     TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
-    TabNameContainer.ZIndex = 9999
+    TabNameContainer.ZIndex = 10100
     TabNameContainer.Parent = ScreenGui
     
     Round(TabNameContainer, 12)
-    AddStroke(TabNameContainer, SurfyUI.Theme.Primary, 2, 1)
+    local TabNameStroke = AddStroke(TabNameContainer, SurfyUI.Theme.Primary, 2, 1)
     
     local TabNameLabel = Instance.new("TextLabel")
     TabNameLabel.Name = "TabNameLabel"
@@ -271,7 +273,7 @@ function SurfyUI:CreateWindow(config)
     TabNameLabel.Font = Enum.Font.GothamBold
     TabNameLabel.TextXAlignment = Enum.TextXAlignment.Center
     TabNameLabel.TextTransparency = 1
-    TabNameLabel.ZIndex = 10000
+    TabNameLabel.ZIndex = 10101
     TabNameLabel.Parent = TabNameContainer
     
     local Drawer = Instance.new("Frame")
@@ -307,7 +309,7 @@ function SurfyUI:CreateWindow(config)
     LeftStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
     LeftStrokeCover.BackgroundTransparency = 0.25
     LeftStrokeCover.BorderSizePixel = 0
-    LeftStrokeCover.ZIndex = 9999
+    LeftStrokeCover.ZIndex = 10099
     LeftStrokeCover.Visible = false
     LeftStrokeCover.Parent = Drawer
     
@@ -318,7 +320,7 @@ function SurfyUI:CreateWindow(config)
     RightStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
     RightStrokeCover.BackgroundTransparency = 0.25
     RightStrokeCover.BorderSizePixel = 0
-    RightStrokeCover.ZIndex = 9999
+    RightStrokeCover.ZIndex = 10099
     RightStrokeCover.Visible = false
     RightStrokeCover.Parent = Drawer
     
@@ -352,11 +354,13 @@ function SurfyUI:CreateWindow(config)
     Window.ConnectionLine = ConnectionLine
     Window.TabNameContainer = TabNameContainer
     Window.TabNameLabel = TabNameLabel
+    Window.TabNameStroke = TabNameStroke
     Window.LeftStrokeCover = LeftStrokeCover
     Window.RightStrokeCover = RightStrokeCover
     
     function Window:Open()
-        if self.IsOpen then return end
+        if self.IsOpen or self.IsAnimating then return end
+        self.IsAnimating = true
         self.IsOpen = true
         
         Drawer.Visible = true
@@ -365,18 +369,23 @@ function SurfyUI:CreateWindow(config)
         -- Reset stroke visibility
         self.DrawerStroke.Transparency = 0.4
         
-        -- Show tab name immediately with synced animation
+        -- Show tab name synchronized with drawer
         if self.CurrentTab then
             TabNameLabel.Text = self.CurrentTab.Name:upper()
-            TabNameContainer.BackgroundTransparency = 1
             
-            -- Start tab name animation synchronized with drawer
+            -- Start from bottom position
+            TabNameContainer.Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset)
+            TabNameContainer.BackgroundTransparency = 1
+            self.TabNameStroke.Transparency = 1
+            TabNameLabel.TextTransparency = 1
+            
+            -- Animate tab name sliding up with drawer
             Tween(TabNameContainer, {
                 Position = UDim2.new(0.5, -120, 1, -520 - self.IconOffset),
                 BackgroundTransparency = 0.2
             }, 0.5, Enum.EasingStyle.Exponential)
             
-            Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.5)
+            Tween(self.TabNameStroke, {Transparency = 0.4}, 0.5)
             Tween(TabNameLabel, {TextTransparency = 0}, 0.5, Enum.EasingStyle.Exponential)
             
             -- Show stroke covers
@@ -397,23 +406,28 @@ function SurfyUI:CreateWindow(config)
             Size = UDim2.new(0, 80, 0, 1), 
             BackgroundTransparency = 0.3
         }, 0.5, Enum.EasingStyle.Exponential)
+        
+        task.delay(0.5, function()
+            self.IsAnimating = false
+        end)
     end
     
     function Window:Close()
-        if not self.IsOpen then return end
+        if not self.IsOpen or self.IsAnimating then return end
+        self.IsAnimating = true
         self.IsOpen = false
         
         -- Hide stroke covers
         LeftStrokeCover.Visible = false
         RightStrokeCover.Visible = false
         
-        -- Hide tab name synchronized with drawer
+        -- Hide tab name synchronized with drawer sliding down
         Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer, {
             Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
             BackgroundTransparency = 1
         }, 0.4, Enum.EasingStyle.Exponential)
-        Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.4)
+        Tween(self.TabNameStroke, {Transparency = 1}, 0.4)
         
         -- Fast line fade out
         Tween(ConnectionLine, {
@@ -438,9 +452,12 @@ function SurfyUI:CreateWindow(config)
         
         task.wait(0.4)
         Drawer.Visible = false
+        self.IsAnimating = false
     end
     
     function Window:Toggle()
+        if self.IsAnimating then return end
+        
         if self.IsOpen then
             if self.CurrentTab then
                 Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
@@ -460,7 +477,7 @@ function SurfyUI:CreateWindow(config)
     function Window:SetIconBarOffset(yOffset)
         self.IconOffset = yOffset
         IconBar.Position = UDim2.new(0.5, 0, 1, -65 - yOffset)
-        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -85 - yOffset)
+        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -100 - yOffset)
         Drawer.Position = UDim2.new(0.5, -300, 1, -65 - yOffset)
         
         if self.IsOpen then
@@ -470,6 +487,13 @@ function SurfyUI:CreateWindow(config)
             TabNameContainer.Position = UDim2.new(0.5, -120, 1, -65 - yOffset)
         end
     end
+    
+    -- Keybind listener
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == Window.ToggleKeybind then
+            Window:Toggle()
+        end
+    end)
     
     return Window
 end
@@ -501,6 +525,8 @@ function SurfyUI:CreateTab(name)
     Tab.Icon = Icon
     
     Cube.MouseButton1Click:Connect(function()
+        if self.IsAnimating then return end
+        
         if self.CurrentTab == Tab then
             Tween(Cube, {BackgroundTransparency = 0.3}, 0.2)
             Tween(Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
@@ -531,6 +557,8 @@ function SurfyUI:CreateTab(name)
 end
 
 function SurfyUI:SelectTab(tab)
+    if self.IsAnimating then return end
+    
     if self.CurrentTab then
         Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
         Tween(self.CurrentTab.Icon, {ImageColor3 = SurfyUI.Theme.TextDim}, 0.2)
@@ -546,7 +574,7 @@ function SurfyUI:SelectTab(tab)
         if self.IsOpen then
             Tween(self.TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
             Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.2)
-            Tween(self.TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.2)
+            Tween(self.TabNameStroke, {Transparency = 0.4}, 0.2)
             
             -- Show stroke covers
             self.LeftStrokeCover.Visible = true
@@ -673,6 +701,14 @@ function SurfyUI:CreateToggle(section, config)
                 self:Toggle()
             end
         end)
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
+        end)
     end
     
     function Module:Toggle()
@@ -787,6 +823,14 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 self:Toggle()
             end
+        end)
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
         end)
         
         KeybindLabel.MouseButton1Click:Connect(function()
@@ -972,6 +1016,14 @@ function SurfyUI:CreateSlider(section, config)
                 UpdateSlider(input)
             end
         end)
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
+        end)
     end
     
     table.insert(section.Tab.Modules, Module)
@@ -1046,6 +1098,18 @@ function SurfyUI:CreateDropdown(section, config)
         Module.Container = Container
         Module.DropBtn = DropBtn
         Module.Arrow = Arrow
+        
+        Container.MouseEnter:Connect(function()
+            if not self.IsOpen then
+                Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+            end
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            if not self.IsOpen then
+                Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
+            end
+        end)
         
         DropBtn.MouseButton1Click:Connect(function()
             self.IsOpen = not self.IsOpen
@@ -1168,12 +1232,12 @@ function SurfyUI:CreateButton(section, config)
         Module.NameLabel = NameLabel
         
         Container.MouseEnter:Connect(function()
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.SurfaceLight, BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
             Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Primary}, 0.2, Enum.EasingStyle.Exponential)
         end)
         
         Container.MouseLeave:Connect(function()
-            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(Container, {BackgroundColor3 = SurfyUI.Theme.ModuleBackground, BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
             Tween(NameLabel, {TextColor3 = SurfyUI.Theme.Text}, 0.2, Enum.EasingStyle.Exponential)
         end)
         
@@ -1256,6 +1320,14 @@ function SurfyUI:CreateKeybind(section, config)
         
         Module.Container = Container
         Module.KeybindLabel = KeybindLabel
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
+        end)
         
         KeybindLabel.MouseButton1Click:Connect(function()
             self.IsBinding = true
@@ -1343,6 +1415,14 @@ function SurfyUI:CreateColorPicker(section, config)
         }
         
         local currentIndex = 1
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.1}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundTransparency = 0.3}, 0.2, Enum.EasingStyle.Exponential)
+        end)
         
         ColorBtn.MouseButton1Click:Connect(function()
             currentIndex = (currentIndex % #colors) + 1
