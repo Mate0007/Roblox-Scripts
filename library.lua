@@ -235,7 +235,7 @@ function SurfyUI:CreateWindow(config)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232 - Window.IconOffset)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -77 - Window.IconOffset) -- Position between icons and drawer
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
@@ -246,11 +246,11 @@ function SurfyUI:CreateWindow(config)
     
     AddGradient(ConnectionLine, SurfyUI.Theme.Primary, SurfyUI.Theme.PrimaryBright, 0)
     
-    -- Tab Name Container with background (moved 40px higher)
+    -- Tab Name Container with background
     local TabNameContainer = Instance.new("Frame")
     TabNameContainer.Name = "TabNameContainer"
     TabNameContainer.Size = UDim2.new(0, 240, 0, 48)
-    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -720 - Window.IconOffset)
+    TabNameContainer.Position = UDim2.new(0.5, -120, 1, -520 - Window.IconOffset)
     TabNameContainer.BackgroundColor3 = SurfyUI.Theme.Surface
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
@@ -299,6 +299,29 @@ function SurfyUI:CreateWindow(config)
     Round(DrawerOverlay, 16)
     AddGradient(DrawerOverlay, SurfyUI.Theme.Primary, SurfyUI.Theme.Background, 180)
     
+    -- Create gaps in the drawer stroke for the tab name
+    local LeftStrokeCover = Instance.new("Frame")
+    LeftStrokeCover.Name = "LeftStrokeCover"
+    LeftStrokeCover.Size = UDim2.new(0, 120, 0, 4)
+    LeftStrokeCover.Position = UDim2.new(0.5, -120, 0, -2)
+    LeftStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
+    LeftStrokeCover.BackgroundTransparency = 0.25
+    LeftStrokeCover.BorderSizePixel = 0
+    LeftStrokeCover.ZIndex = 9999
+    LeftStrokeCover.Visible = false
+    LeftStrokeCover.Parent = Drawer
+    
+    local RightStrokeCover = Instance.new("Frame")
+    RightStrokeCover.Name = "RightStrokeCover"
+    RightStrokeCover.Size = UDim2.new(0, 120, 0, 4)
+    RightStrokeCover.Position = UDim2.new(0.5, 0, 0, -2)
+    RightStrokeCover.BackgroundColor3 = SurfyUI.Theme.Background
+    RightStrokeCover.BackgroundTransparency = 0.25
+    RightStrokeCover.BorderSizePixel = 0
+    RightStrokeCover.ZIndex = 9999
+    RightStrokeCover.Visible = false
+    RightStrokeCover.Parent = Drawer
+    
     local ModuleList = Instance.new("ScrollingFrame")
     ModuleList.Name = "ModuleList"
     ModuleList.Size = UDim2.new(1, -40, 1, -20)
@@ -329,6 +352,8 @@ function SurfyUI:CreateWindow(config)
     Window.ConnectionLine = ConnectionLine
     Window.TabNameContainer = TabNameContainer
     Window.TabNameLabel = TabNameLabel
+    Window.LeftStrokeCover = LeftStrokeCover
+    Window.RightStrokeCover = RightStrokeCover
     
     function Window:Open()
         if self.IsOpen then return end
@@ -340,10 +365,23 @@ function SurfyUI:CreateWindow(config)
         -- Reset stroke visibility
         self.DrawerStroke.Transparency = 0.4
         
+        -- Show tab name immediately
+        if self.CurrentTab then
+            TabNameLabel.Text = self.CurrentTab.Name:upper()
+            TabNameContainer.BackgroundTransparency = 0.2
+            
+            Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.2)
+            Tween(TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
+            
+            -- Show stroke covers
+            LeftStrokeCover.Visible = true
+            RightStrokeCover.Visible = true
+        end
+        
         -- Smooth drawer animation
         Tween(Drawer, {
             Size = UDim2.new(0, 600, 0, 400), 
-            Position = UDim2.new(0.5, -300, 1, -695 - self.IconOffset)
+            Position = UDim2.new(0.5, -300, 1, -480 - self.IconOffset)
         }, 0.5, Enum.EasingStyle.Exponential)
         
         -- Smooth line fade in and expand from center
@@ -353,22 +391,15 @@ function SurfyUI:CreateWindow(config)
             Size = UDim2.new(0, 80, 0, 1), 
             BackgroundTransparency = 0.3
         }, 0.5, Enum.EasingStyle.Exponential)
-        
-        -- Wait for drawer to fully open before showing tab name
-        task.wait(0.5)
-        
-        if self.CurrentTab then
-            TabNameLabel.Text = self.CurrentTab.Name:upper()
-            TabNameContainer.BackgroundTransparency = 0.2
-            
-            Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.3)
-            Tween(TabNameLabel, {TextTransparency = 0}, 0.3, Enum.EasingStyle.Exponential)
-        end
     end
     
     function Window:Close()
         if not self.IsOpen then return end
         self.IsOpen = false
+        
+        -- Hide stroke covers
+        LeftStrokeCover.Visible = false
+        RightStrokeCover.Visible = false
         
         -- Hide tab name first
         Tween(TabNameLabel, {TextTransparency = 1}, 0.2, Enum.EasingStyle.Exponential)
@@ -420,12 +451,12 @@ function SurfyUI:CreateWindow(config)
     function Window:SetIconBarOffset(yOffset)
         self.IconOffset = yOffset
         IconBar.Position = UDim2.new(0.5, 0, 1, -65 - yOffset)
-        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232 - yOffset)
+        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -77 - yOffset)
         Drawer.Position = UDim2.new(0.5, -300, 1, -65 - yOffset)
-        TabNameContainer.Position = UDim2.new(0.5, -120, 1, -500 - yOffset)
+        TabNameContainer.Position = UDim2.new(0.5, -120, 1, -520 - yOffset)
         
         if self.IsOpen then
-            Drawer.Position = UDim2.new(0.5, -300, 1, -475 - yOffset)
+            Drawer.Position = UDim2.new(0.5, -300, 1, -480 - yOffset)
         end
     end
     
@@ -502,9 +533,13 @@ function SurfyUI:SelectTab(tab)
     if self.TabNameLabel then
         self.TabNameLabel.Text = tab.Name:upper()
         if self.IsOpen then
-            Tween(self.TabNameLabel, {TextTransparency = 0}, 0.3, Enum.EasingStyle.Exponential)
-            Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.3)
-            Tween(self.TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.3)
+            Tween(self.TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.2)
+            Tween(self.TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.2)
+            
+            -- Show stroke covers
+            self.LeftStrokeCover.Visible = true
+            self.RightStrokeCover.Visible = true
         end
     end
     
