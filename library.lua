@@ -173,14 +173,7 @@ function SurfyUI:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         IsOpen = false,
-        IconOffset = config.IconOffset or 20,
-        IconPaths = config.IconPaths or {
-            Combat = "rbxassetid://7733992358",
-            Visuals = "rbxassetid://7733920644",
-            Movement = "rbxassetid://7734000129",
-            Misc = "rbxassetid://7734053495",
-            Settings = "rbxassetid://7734053495"
-        }
+        IconOffset = config.IconOffset or 0
     }
     setmetatable(Window, SurfyUI)
     
@@ -196,7 +189,7 @@ function SurfyUI:CreateWindow(config)
     local IconBar = Instance.new("Frame")
     IconBar.Name = "IconBar"
     IconBar.Size = UDim2.new(0, 0, 0, 50)
-    IconBar.Position = UDim2.new(0.5, 0, 1, -65)
+    IconBar.Position = UDim2.new(0.5, 0, 1, -65 - Window.IconOffset)
     IconBar.AnchorPoint = Vector2.new(0.5, 0)
     IconBar.BackgroundTransparency = 1
     IconBar.ZIndex = 10000
@@ -212,7 +205,7 @@ function SurfyUI:CreateWindow(config)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -232 - Window.IconOffset)
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = SurfyUI.Theme.Primary
     ConnectionLine.BackgroundTransparency = 0.3
@@ -227,7 +220,7 @@ function SurfyUI:CreateWindow(config)
     local TabNameLabel = Instance.new("TextLabel")
     TabNameLabel.Name = "TabNameLabel"
     TabNameLabel.Size = UDim2.new(0, 400, 0, 50)
-    TabNameLabel.Position = UDim2.new(0.5, -200, 1, -540)
+    TabNameLabel.Position = UDim2.new(0.5, -200, 1, -540 - Window.IconOffset)
     TabNameLabel.BackgroundTransparency = 1
     TabNameLabel.Text = ""
     TabNameLabel.TextColor3 = SurfyUI.Theme.Primary
@@ -243,7 +236,7 @@ function SurfyUI:CreateWindow(config)
     local Drawer = Instance.new("Frame")
     Drawer.Name = "Drawer"
     Drawer.Size = UDim2.new(0, 600, 0, 0)
-    Drawer.Position = UDim2.new(0.5, -300, 1, -65)
+    Drawer.Position = UDim2.new(0.5, -300, 1, -65 - Window.IconOffset)
     Drawer.BackgroundColor3 = SurfyUI.Theme.Background
     Drawer.BackgroundTransparency = 0.05
     Drawer.BorderSizePixel = 0
@@ -301,7 +294,7 @@ function SurfyUI:CreateWindow(config)
         Drawer.Visible = true
         ConnectionLine.Visible = true
         
-        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475)}, 0.4, Enum.EasingStyle.Back)
+        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 400), Position = UDim2.new(0.5, -300, 1, -475 - self.IconOffset)}, 0.4, Enum.EasingStyle.Back)
         
         -- Fade in and expand line from center
         ConnectionLine.BackgroundTransparency = 1
@@ -319,7 +312,7 @@ function SurfyUI:CreateWindow(config)
         if not self.IsOpen then return end
         self.IsOpen = false
         
-        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65)}, 0.3, Enum.EasingStyle.Quint)
+        Tween(Drawer, {Size = UDim2.new(0, 600, 0, 0), Position = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)}, 0.3, Enum.EasingStyle.Quint)
         
         -- Fade out and shrink line to center (faster)
         Tween(ConnectionLine, {Size = UDim2.new(0, 0, 0, 1), BackgroundTransparency = 1}, 0.15, Enum.EasingStyle.Quint)
@@ -400,7 +393,7 @@ function SurfyUI:CreateTab(name)
     Icon.Position = UDim2.new(0.5, -12, 0.5, -12)
     Icon.BackgroundTransparency = 1
     Icon.ImageColor3 = SurfyUI.Theme.TextDim
-    Icon.Image = self.IconPaths[name] or self.IconPaths.Misc
+    Icon.Image = "rbxassetid://7733992358" -- Default icon
     Icon.ZIndex = 10001
     Icon.Parent = Cube
     
