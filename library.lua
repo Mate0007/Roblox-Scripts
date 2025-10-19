@@ -50,6 +50,7 @@ local function AddStroke(obj, color, thickness, transparency)
     stroke.Thickness = thickness or 1
     stroke.Transparency = transparency or 0.5
     stroke.Parent = obj
+    return stroke
 end
 
 -- Lucide Icon Loader
