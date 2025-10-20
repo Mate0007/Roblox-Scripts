@@ -1,4 +1,4 @@
--- Surfy TC2 - Bottom Drawer UI (Enhanced Version) - Part 1
+-- Surfy TC2 - Bottom Drawer UI (Enhanced Version) - FIXED SLIDER ISSUE
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -847,9 +847,6 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
     return Module
 end
 
--- CONTINUED IN PART 2...
--- CONTINUED FROM PART 1...
-
 function SurfyUI:CreateSlider(section, config)
     config = config or {}
     
@@ -862,7 +859,9 @@ function SurfyUI:CreateSlider(section, config)
         Callback = config.Callback,
         IsDragging = false,
         LayoutOrder = config.LayoutOrder or 999,
-        Section = section
+        Section = section,
+        -- FIX: Track mouse position separately
+        LastMousePosition = nil
     }
     
     function Module:Render(parent)
@@ -917,7 +916,7 @@ function SurfyUI:CreateSlider(section, config)
         local normalizedValue = (self.Value - self.Min) / (self.Max - self.Min)
         
         local Fill = Instance.new("Frame")
-        Fill.Size = UDim2.new(normalizedValue, 0, 1, 0) -- Set initial size based on current value
+        Fill.Size = UDim2.new(normalizedValue, 0, 1, 0)
         Fill.BackgroundColor3 = SurfyUI.Theme.Primary
         Fill.BackgroundTransparency = 0.2
         Fill.BorderSizePixel = 0
@@ -929,7 +928,7 @@ function SurfyUI:CreateSlider(section, config)
         
         local Knob = Instance.new("TextButton")
         Knob.Size = UDim2.new(0, 16, 0, 16)
-        Knob.Position = UDim2.new(normalizedValue, -8, 0.5, -8) -- Set initial position based on current value
+        Knob.Position = UDim2.new(normalizedValue, -8, 0.5, -8)
         Knob.BackgroundColor3 = Color3.new(1, 1, 1)
         Knob.Text = ""
         Knob.ZIndex = 10001
@@ -944,20 +943,44 @@ function SurfyUI:CreateSlider(section, config)
         Module.Knob = Knob
         Module.Track = Track
         
+        -- FIXED: Completely rewritten UpdateSlider function
         local function UpdateSlider(input)
-            local relX = (input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X
-            local value = math.clamp(relX, 0, 1)
+            if not input then return end
             
-            self.Value = math.floor((self.Min + (self.Max - self.Min) * value) * (10 ^ self.Rounding)) / (10 ^ self.Rounding)
-            ValueLabel.Text = tostring(self.Value)
+            local trackAbsolutePos = Track.AbsolutePosition
+            local trackAbsoluteSize = Track.AbsoluteSize
             
-            Tween(Fill, {Size = UDim2.new(value, 0, 1, 0)}, 0.1, Enum.EasingStyle.Exponential)
-            Tween(Knob, {Position = UDim2.new(value, -8, 0.5, -8)}, 0.1, Enum.EasingStyle.Exponential)
+            if trackAbsoluteSize.X <= 0 then return end
             
-            if self.Callback then
-                self.Callback(self.Value)
+            local mouseX = input.Position.X
+            local relX = (mouseX - trackAbsolutePos.X) / trackAbsoluteSize.X
+            local clampedX = math.clamp(relX, 0, 1)
+            
+            local newValue = math.floor((self.Min + (self.Max - self.Min) * clampedX) * (10 ^ self.Rounding)) / (10 ^ self.Rounding)
+            
+            -- Only update if value actually changed
+            if newValue ~= self.Value then
+                self.Value = newValue
+                ValueLabel.Text = tostring(self.Value)
+                
+                Tween(Fill, {Size = UDim2.new(clampedX, 0, 1, 0)}, 0.1, Enum.EasingStyle.Exponential)
+                Tween(Knob, {Position = UDim2.new(clampedX, -8, 0.5, -8)}, 0.1, Enum.EasingStyle.Exponential)
+                
+                if self.Callback then
+                    self.Callback(self.Value)
+                end
             end
         end
+        
+        -- FIXED: Track click support with proper input handling
+        local function onTrackInput(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = true
+                UpdateSlider(input)
+            end
+        end
+        
+        Track.InputBegan:Connect(onTrackInput)
         
         Knob.MouseButton1Down:Connect(function()
             self.IsDragging = true
@@ -967,7 +990,9 @@ function SurfyUI:CreateSlider(section, config)
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 self.IsDragging = false
-                Tween(Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+                if Knob then
+                    Tween(Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+                end
             end
         end)
         
@@ -976,19 +1001,11 @@ function SurfyUI:CreateSlider(section, config)
                 UpdateSlider(input)
             end
         end)
-        
-        -- FIXED: Track click support
-        Track.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                self.IsDragging = true
-                UpdateSlider(input)
-            end
-        end)
     end
     
     function Module:SetValue(value)
         self.Value = math.clamp(value, self.Min, self.Max)
-        if self.ValueLabel then
+        if self.ValueLabel and self.Fill and self.Knob then
             self.ValueLabel.Text = tostring(self.Value)
             local normalized = (self.Value - self.Min) / (self.Max - self.Min)
             Tween(self.Fill, {Size = UDim2.new(normalized, 0, 1, 0)}, 0.2, Enum.EasingStyle.Exponential)
