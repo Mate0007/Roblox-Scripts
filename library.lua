@@ -97,8 +97,6 @@ local function CreateIcon(parent, iconName)
         -- Try to load as Lucide icon
         local svgData = LoadLucideIcon(iconName)
         if svgData then
-            -- For SVG, we'll use a TextLabel with a placeholder since Roblox doesn't support SVG directly
-            -- In production, you'd convert SVG to image or use a different method
             icon.Image = presetPaths.Misc -- Fallback to misc icon
         else
             icon.Image = presetPaths.Misc -- Default fallback
@@ -370,8 +368,13 @@ function SurfyUI:CreateWindow(config)
             TabNameLabel.Text = self.CurrentTab.Name:upper()
             TabNameContainer.BackgroundTransparency = 1
             
-            -- Start tab name animation synchronized with drawer
-            Tween(TabNameContainer, {
+            -- PERFECTLY SYNCED ANIMATION - TAB NAME AND DRAWER MOVE TOGETHER
+            local drawerAnimation = Tween(Drawer, {
+                Size = UDim2.new(0, 600, 0, 400), 
+                Position = UDim2.new(0.5, -300, 1, -480 - self.IconOffset)
+            }, 0.5, Enum.EasingStyle.Exponential)
+            
+            local tabNameAnimation = Tween(TabNameContainer, {
                 Position = UDim2.new(0.5, -120, 1, -520 - self.IconOffset),
                 BackgroundTransparency = 0.2
             }, 0.5, Enum.EasingStyle.Exponential)
@@ -383,12 +386,6 @@ function SurfyUI:CreateWindow(config)
             LeftStrokeCover.Visible = true
             RightStrokeCover.Visible = true
         end
-        
-        -- Smooth drawer animation
-        Tween(Drawer, {
-            Size = UDim2.new(0, 600, 0, 400), 
-            Position = UDim2.new(0.5, -300, 1, -480 - self.IconOffset)
-        }, 0.5, Enum.EasingStyle.Exponential)
         
         -- Smooth line fade in and expand from center
         ConnectionLine.BackgroundTransparency = 1
@@ -407,13 +404,20 @@ function SurfyUI:CreateWindow(config)
         LeftStrokeCover.Visible = false
         RightStrokeCover.Visible = false
         
-        -- Hide tab name synchronized with drawer
+        -- PERFECTLY SYNCED CLOSE ANIMATION - TAB NAME AND DRAWER MOVE TOGETHER
         Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer, {
             Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
             BackgroundTransparency = 1
         }, 0.4, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.4)
+        
+        -- Smooth drawer close (stays at bottom position)
+        local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
+        Tween(Drawer, {
+            Size = UDim2.new(0, 600, 0, 0), 
+            Position = closePos
+        }, 0.4, Enum.EasingStyle.Exponential)
         
         -- Fast line fade out
         Tween(ConnectionLine, {
@@ -423,13 +427,6 @@ function SurfyUI:CreateWindow(config)
         
         task.wait(0.1)
         ConnectionLine.Visible = false
-        
-        -- Smooth drawer close (stays at bottom position)
-        local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
-        Tween(Drawer, {
-            Size = UDim2.new(0, 600, 0, 0), 
-            Position = closePos
-        }, 0.4, Enum.EasingStyle.Exponential)
         
         -- Hide drawer outline near the end of animation
         task.delay(0.3, function()
@@ -704,10 +701,11 @@ end
 function SurfyUI:CreateToggleWithKeybind(section, config)
     config = config or {}
     
+    -- FIXED: Default keybind is now RightShift
     local Module = {
         Name = config.Title or "Toggle",
         Enabled = config.Default or false,
-        Key = config.DefaultKey or Enum.KeyCode.Unknown,
+        Key = config.DefaultKey or Enum.KeyCode.RightShift, -- Fixed default key
         Callback = config.Callback,
         KeybindCallback = config.KeybindCallback,
         IsBinding = false,
@@ -849,6 +847,9 @@ function SurfyUI:CreateToggleWithKeybind(section, config)
     return Module
 end
 
+-- CONTINUED IN PART 2...
+-- CONTINUED FROM PART 1...
+
 function SurfyUI:CreateSlider(section, config)
     config = config or {}
     
@@ -912,8 +913,11 @@ function SurfyUI:CreateSlider(section, config)
         
         Round(Track, 3)
         
+        -- FIXED: Initialize slider position based on current value
+        local normalizedValue = (self.Value - self.Min) / (self.Max - self.Min)
+        
         local Fill = Instance.new("Frame")
-        Fill.Size = UDim2.new((self.Value - self.Min) / (self.Max - self.Min), 0, 1, 0)
+        Fill.Size = UDim2.new(normalizedValue, 0, 1, 0) -- Set initial size based on current value
         Fill.BackgroundColor3 = SurfyUI.Theme.Primary
         Fill.BackgroundTransparency = 0.2
         Fill.BorderSizePixel = 0
@@ -925,7 +929,7 @@ function SurfyUI:CreateSlider(section, config)
         
         local Knob = Instance.new("TextButton")
         Knob.Size = UDim2.new(0, 16, 0, 16)
-        Knob.Position = UDim2.new(Fill.Size.X.Scale, -8, 0.5, -8)
+        Knob.Position = UDim2.new(normalizedValue, -8, 0.5, -8) -- Set initial position based on current value
         Knob.BackgroundColor3 = Color3.new(1, 1, 1)
         Knob.Text = ""
         Knob.ZIndex = 10001
@@ -938,6 +942,7 @@ function SurfyUI:CreateSlider(section, config)
         Module.ValueLabel = ValueLabel
         Module.Fill = Fill
         Module.Knob = Knob
+        Module.Track = Track
         
         local function UpdateSlider(input)
             local relX = (input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X
@@ -968,6 +973,14 @@ function SurfyUI:CreateSlider(section, config)
         
         UserInputService.InputChanged:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement and self.IsDragging then
+                UpdateSlider(input)
+            end
+        end)
+        
+        -- FIXED: Track click support
+        Track.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = true
                 UpdateSlider(input)
             end
         end)
