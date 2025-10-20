@@ -1,4 +1,4 @@
--- Surfy TC2 - Bottom Drawer UI (Enhanced Version)
+-- Surfy TC2 - Bottom Drawer UI (Enhanced Version) - Part 1
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -539,7 +539,6 @@ function SurfyUI:SelectTab(tab)
     self.CurrentTab = tab
     Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3, Enum.EasingStyle.Exponential)
     Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3, Enum.EasingStyle.Exponential)
-    
     -- Update tab name label
     if self.TabNameLabel then
         self.TabNameLabel.Text = tab.Name:upper()
@@ -972,6 +971,19 @@ function SurfyUI:CreateSlider(section, config)
                 UpdateSlider(input)
             end
         end)
+    end
+    
+    function Module:SetValue(value)
+        self.Value = math.clamp(value, self.Min, self.Max)
+        if self.ValueLabel then
+            self.ValueLabel.Text = tostring(self.Value)
+            local normalized = (self.Value - self.Min) / (self.Max - self.Min)
+            Tween(self.Fill, {Size = UDim2.new(normalized, 0, 1, 0)}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(self.Knob, {Position = UDim2.new(normalized, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+        end
+        if self.Callback then
+            self.Callback(self.Value)
+        end
     end
     
     table.insert(section.Tab.Modules, Module)
