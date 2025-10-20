@@ -1,4 +1,4 @@
--- Surfy TC2 - Bottom Drawer UI (Enhanced Version) - Part 1
+-- Surfy TC2 - Bottom Drawer UI (Enhanced Version)
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -539,6 +539,7 @@ function SurfyUI:SelectTab(tab)
     self.CurrentTab = tab
     Tween(tab.Cube, {BackgroundTransparency = 0}, 0.3, Enum.EasingStyle.Exponential)
     Tween(tab.Icon, {ImageColor3 = SurfyUI.Theme.Primary}, 0.3, Enum.EasingStyle.Exponential)
+    
     -- Update tab name label
     if self.TabNameLabel then
         self.TabNameLabel.Text = tab.Name:upper()
@@ -938,20 +939,42 @@ function SurfyUI:CreateSlider(section, config)
         Module.ValueLabel = ValueLabel
         Module.Fill = Fill
         Module.Knob = Knob
+        Module.Track = Track
         
-        local function UpdateSlider(input)
-            local relX = (input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X
-            local value = math.clamp(relX, 0, 1)
+        local function UpdateSlider(value)
+            local clampedValue = math.clamp(value, self.Min, self.Max)
+            local normalizedValue = (clampedValue - self.Min) / (self.Max - self.Min)
             
-            self.Value = math.floor((self.Min + (self.Max - self.Min) * value) * (10 ^ self.Rounding)) / (10 ^ self.Rounding)
-            ValueLabel.Text = tostring(self.Value)
+            self.Value = math.floor(clampedValue * (10 ^ self.Rounding)) / (10 ^ self.Rounding)
             
-            Tween(Fill, {Size = UDim2.new(value, 0, 1, 0)}, 0.1, Enum.EasingStyle.Exponential)
-            Tween(Knob, {Position = UDim2.new(value, -8, 0.5, -8)}, 0.1, Enum.EasingStyle.Exponential)
+            if self.ValueLabel then
+                self.ValueLabel.Text = tostring(self.Value)
+            end
+            
+            if self.Fill then
+                Tween(self.Fill, {Size = UDim2.new(normalizedValue, 0, 1, 0)}, 0.1, Enum.EasingStyle.Exponential)
+            end
+            
+            if self.Knob then
+                Tween(self.Knob, {Position = UDim2.new(normalizedValue, -8, 0.5, -8)}, 0.1, Enum.EasingStyle.Exponential)
+            end
             
             if self.Callback then
                 self.Callback(self.Value)
             end
+        end
+        
+        local function UpdateSliderFromInput(input)
+            if not self.Track then return end
+            
+            local trackAbsolutePosition = self.Track.AbsolutePosition.X
+            local trackAbsoluteSize = self.Track.AbsoluteSize.X
+            local mouseX = input.Position.X
+            
+            local relativeX = (mouseX - trackAbsolutePosition) / trackAbsoluteSize
+            local value = self.Min + (self.Max - self.Min) * math.clamp(relativeX, 0, 1)
+            
+            UpdateSlider(value)
         end
         
         Knob.MouseButton1Down:Connect(function()
@@ -959,30 +982,36 @@ function SurfyUI:CreateSlider(section, config)
             Tween(Knob, {Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(Knob.Position.X.Scale, -9, 0.5, -9)}, 0.2, Enum.EasingStyle.Exponential)
         end)
         
+        Track.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = true
+                UpdateSliderFromInput(input)
+            end
+        end)
+        
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
                 self.IsDragging = false
-                Tween(Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+                if self.Knob then
+                    Tween(self.Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(self.Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+                end
             end
         end)
         
         UserInputService.InputChanged:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseMovement and self.IsDragging then
-                UpdateSlider(input)
+                UpdateSliderFromInput(input)
             end
         end)
-    end
-    
-    function Module:SetValue(value)
-        self.Value = math.clamp(value, self.Min, self.Max)
-        if self.ValueLabel then
-            self.ValueLabel.Text = tostring(self.Value)
-            local normalized = (self.Value - self.Min) / (self.Max - self.Min)
-            Tween(self.Fill, {Size = UDim2.new(normalized, 0, 1, 0)}, 0.2, Enum.EasingStyle.Exponential)
-            Tween(self.Knob, {Position = UDim2.new(normalized, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+        
+        -- Public method to set value programmatically
+        function Module:SetValue(value)
+            UpdateSlider(value)
         end
-        if self.Callback then
-            self.Callback(self.Value)
+        
+        -- Public method to get current value
+        function Module:GetValue()
+            return self.Value
         end
     end
     
