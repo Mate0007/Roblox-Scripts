@@ -1,4 +1,4 @@
--- Surfy UI Library v2.0 
+-- Surfy UI Library v2.0 - PART 1
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
@@ -60,7 +60,6 @@ local function FetchLucideIcon(iconName)
         return IconCache[iconName]
     end
     
-    -- Try to fetch from unpkg CDN
     local success, result = pcall(function()
         local url = "https://unpkg.com/lucide-static@latest/icons/" .. iconName .. ".svg"
         return HttpService:GetAsync(url)
@@ -87,24 +86,19 @@ local function CreateIconFromSVG(parent, iconName, size, color)
     iconContainer.ZIndex = 10001
     iconContainer.Parent = parent
     
-    -- Fetch the SVG
     local svgData = FetchLucideIcon(iconName)
     
     if svgData then
-        -- Create a simple visual representation (since Roblox can't render SVG directly)
-        -- We'll use a placeholder for now - in production you'd want to convert SVG to ImageLabel
         local icon = Instance.new("ImageLabel")
         icon.Size = UDim2.new(1, 0, 1, 0)
         icon.BackgroundTransparency = 1
         icon.ImageColor3 = color
         icon.ZIndex = 10001
-        -- Use a fallback image since we can't directly render SVG in Roblox
-        icon.Image = "rbxassetid://7743878358" -- Generic icon fallback
+        icon.Image = "rbxassetid://7743878358"
         icon.Parent = iconContainer
         
         return iconContainer, icon
     else
-        -- Fallback icon
         local icon = Instance.new("ImageLabel")
         icon.Size = UDim2.new(1, 0, 1, 0)
         icon.BackgroundTransparency = 1
@@ -217,7 +211,7 @@ function Library:CreateWindow(config)
         IsOpen = false,
         IsAnimating = false,
         IconOffset = config.IconOffset or 0,
-        ConnectionLineYOffset = 0  -- New property to adjust connection line position
+        ConnectionLineYOffset = 0
     }
     setmetatable(Window, {__index = Library})
     
@@ -245,10 +239,11 @@ function Library:CreateWindow(config)
     IconLayout.Padding = UDim.new(0, 10)
     IconLayout.Parent = IconBar
     
+    -- MOVED DOWN - Change the -435 value to move it up/down (lower number = higher position, higher number = lower position)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 2)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -435 - Window.IconOffset + Window.ConnectionLineYOffset)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -180 - Window.IconOffset + Window.ConnectionLineYOffset)
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = Library.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
@@ -347,7 +342,7 @@ function Library:CreateWindow(config)
     ModuleList.Parent = Drawer
     
     local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 12)
+    ListLayout.Padding = UDim.new(0, 8)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     ListLayout.Parent = ModuleList
     
@@ -383,15 +378,15 @@ function Library:CreateWindow(config)
             Tween(Drawer, {
                 Size = UDim2.new(0, 600, 0, 400), 
                 Position = UDim2.new(0.5, -300, 1, -480 - self.IconOffset)
-            }, 0.5, Enum.EasingStyle.Exponential)
+            }, 0.7, Enum.EasingStyle.Quart)
             
             Tween(TabNameContainer, {
                 Position = UDim2.new(0.5, -120, 1, -520 - self.IconOffset),
                 BackgroundTransparency = 0.2
-            }, 0.5, Enum.EasingStyle.Exponential)
+            }, 0.7, Enum.EasingStyle.Quart)
             
-            Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.5)
-            Tween(TabNameLabel, {TextTransparency = 0}, 0.5, Enum.EasingStyle.Exponential)
+            Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.7)
+            Tween(TabNameLabel, {TextTransparency = 0}, 0.7, Enum.EasingStyle.Quart)
             
             LeftStrokeCover.Visible = true
             RightStrokeCover.Visible = true
@@ -402,9 +397,9 @@ function Library:CreateWindow(config)
         Tween(ConnectionLine, {
             Size = UDim2.new(0, 80, 0, 2), 
             BackgroundTransparency = 0.3
-        }, 0.5, Enum.EasingStyle.Exponential)
+        }, 0.7, Enum.EasingStyle.Quart)
         
-        task.wait(0.5)
+        task.wait(0.7)
         self.IsAnimating = false
     end
     
@@ -416,34 +411,32 @@ function Library:CreateWindow(config)
         LeftStrokeCover.Visible = false
         RightStrokeCover.Visible = false
         
-        Tween(TabNameLabel, {TextTransparency = 1}, 0.3, Enum.EasingStyle.Exponential)
+        Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Quart)
         Tween(TabNameContainer, {
             Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
             BackgroundTransparency = 1
-        }, 0.3, Enum.EasingStyle.Exponential)
-        Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.3)
+        }, 0.5, Enum.EasingStyle.Quart)
+        Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.4)
         
         Tween(ConnectionLine, {
             Size = UDim2.new(0, 0, 0, 2), 
             BackgroundTransparency = 1
-        }, 0.2, Enum.EasingStyle.Exponential)
+        }, 0.4, Enum.EasingStyle.Quart)
         
-        task.wait(0.1)
+        task.wait(0.2)
         ConnectionLine.Visible = false
         
-        Tween(self.DrawerStroke, {Transparency = 1}, 0.1, Enum.EasingStyle.Exponential)
+        Tween(self.DrawerStroke, {Transparency = 1}, 0.2, Enum.EasingStyle.Quart)
         
-        -- Hide drawer earlier in the animation
-        local closePos = UDim2.new(0.5, -300, 1, -100 - self.IconOffset)
+        local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
         Tween(Drawer, {
             Size = UDim2.new(0, 600, 0, 0), 
             Position = closePos
-        }, 0.3, Enum.EasingStyle.Exponential)
+        }, 0.55, Enum.EasingStyle.Quart)
         
-        task.wait(0.2)
+        task.wait(0.55)
         Drawer.Visible = false
         
-        task.wait(0.1)
         self.IsAnimating = false
     end
     
@@ -466,10 +459,12 @@ function Library:CreateWindow(config)
         end
     end
     
-    -- Method to adjust connection line position
+    -- TO MOVE THE CONNECTION LINE: Change the number in line that says "1, -180"
+    -- LOWER number = line goes UP (example: -300)
+    -- HIGHER number = line goes DOWN (example: -100)
     function Window:SetConnectionLineOffset(yOffset)
         self.ConnectionLineYOffset = yOffset
-        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -435 - self.IconOffset + self.ConnectionLineYOffset)
+        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -180 - self.IconOffset + self.ConnectionLineYOffset)
     end
     
     return Window
@@ -590,6 +585,7 @@ function Library:RefreshModules()
     end)
     
     local lastSection = nil
+    local isFirstSection = true
     
     for _, module in ipairs(self.CurrentTab.Modules) do
         if module.Section and module.Section ~= lastSection then
@@ -597,31 +593,31 @@ function Library:RefreshModules()
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 60)
+            SectionContainer.Size = UDim2.new(1, 0, 0, isFirstSection and 30 or 40)
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
             SectionContainer.Parent = self.ModuleList
             
-            -- Divider line FIRST (positioned at top)
-            local Divider = Instance.new("Frame")
-            Divider.Size = UDim2.new(0.85, 0, 0, 3)
-            Divider.Position = UDim2.new(0.5, 0, 0, 5)
-            Divider.AnchorPoint = Vector2.new(0.5, 0)
-            Divider.BackgroundColor3 = Library.Theme.Primary
-            Divider.BackgroundTransparency = 0.6
-            Divider.BorderSizePixel = 0
-            Divider.ZIndex = 9999
-            Divider.Parent = SectionContainer
+            if not isFirstSection then
+                local Divider = Instance.new("Frame")
+                Divider.Size = UDim2.new(0.85, 0, 0, 3)
+                Divider.Position = UDim2.new(0.5, 0, 0, 0)
+                Divider.AnchorPoint = Vector2.new(0.5, 0)
+                Divider.BackgroundColor3 = Library.Theme.Primary
+                Divider.BackgroundTransparency = 0.6
+                Divider.BorderSizePixel = 0
+                Divider.ZIndex = 9999
+                Divider.Parent = SectionContainer
+                
+                Round(Divider, 1.5)
+                AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
+            end
             
-            Round(Divider, 1.5)
-            AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
-            
-            -- Section header AFTER divider (positioned below)
             local SectionHeader = Instance.new("TextLabel")
             SectionHeader.Size = UDim2.new(1, -20, 0, 25)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 20)
+            SectionHeader.Position = UDim2.new(0, 10, 0, isFirstSection and 3 or 12)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = module.Section.Name
             SectionHeader.TextColor3 = Library.Theme.Primary
@@ -631,11 +627,15 @@ function Library:RefreshModules()
             SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
             SectionHeader.ZIndex = 10000
             SectionHeader.Parent = SectionContainer
+            
+            isFirstSection = false
         end
         
         module:Render(self.ModuleList)
     end
 end
+
+-- Surfy UI Library v2.0 - PART 2
 
 -- Add Section
 function Library:AddSection(tab, name)
