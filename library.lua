@@ -243,7 +243,7 @@ function Library:CreateWindow(config)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 2)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -80 - Window.IconOffset + Window.ConnectionLineYOffset)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -120 - Window.IconOffset + Window.ConnectionLineYOffset)
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = Library.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
