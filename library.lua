@@ -246,7 +246,7 @@ function Library:CreateWindow(config)
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
     ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -85 - Window.IconOffset)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -105 - Window.IconOffset)
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = Library.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
@@ -265,6 +265,7 @@ function Library:CreateWindow(config)
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
     TabNameContainer.ZIndex = 9999
+    TabNameContainer.Visible = false
     TabNameContainer.Parent = ScreenGui
     
     Round(TabNameContainer, 12)
@@ -370,6 +371,7 @@ function Library:CreateWindow(config)
         
         Drawer.Visible = true
         ConnectionLine.Visible = true
+        TabNameContainer.Visible = true
         
         self.DrawerStroke.Transparency = 0.4
         
@@ -436,6 +438,7 @@ function Library:CreateWindow(config)
         
         task.wait(0.4)
         Drawer.Visible = false
+        TabNameContainer.Visible = false
     end
     
     function Window:Toggle()
@@ -539,6 +542,7 @@ function Library:SelectTab(tab)
     if self.TabNameLabel then
         self.TabNameLabel.Text = tab.Name:upper()
         if self.IsOpen then
+            self.TabNameContainer.Visible = true
             Tween(self.TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
             Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.2)
             Tween(self.TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.2)
@@ -572,6 +576,22 @@ function Library:RefreshModules()
     
     for _, module in ipairs(self.CurrentTab.Modules) do
         if module.Section and module.Section ~= lastSection then
+            if lastSection ~= nil then
+                local Divider = Instance.new("Frame")
+                Divider.Name = "SectionDivider"
+                Divider.Size = UDim2.new(0, 280, 0, 1)
+                Divider.Position = UDim2.new(0, 160, 0, 0)
+                Divider.AnchorPoint = Vector2.new(0.5, 0)
+                Divider.BackgroundColor3 = Library.Theme.Primary
+                Divider.BackgroundTransparency = 0.7
+                Divider.BorderSizePixel = 0
+                Divider.ZIndex = 9999
+                Divider.LayoutOrder = module.LayoutOrder - 0.6
+                Divider.Parent = self.ModuleList
+                
+                AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
+            end
+            
             lastSection = module.Section
             
             local SectionContainer = Instance.new("Frame")
@@ -971,15 +991,20 @@ function Library:AddDropdown(section, config)
             self.IsOpen = not self.IsOpen
             
             if self.IsOpen then
-                local OptionsFrame = Instance.new("Frame")
+                local ScreenGui = parent.Parent.Parent
+                
+                local OptionsFrame = Instance.new("ScrollingFrame")
                 OptionsFrame.Name = "Options"
                 OptionsFrame.Size = UDim2.new(0, 140, 0, 0)
-                OptionsFrame.Position = UDim2.new(1, -150, 1, 8)
+                OptionsFrame.Position = Container.AbsolutePosition + Vector2.new(Container.AbsoluteSize.X - 150, 56)
                 OptionsFrame.BackgroundColor3 = Library.Theme.Surface
                 OptionsFrame.BackgroundTransparency = 0.15
                 OptionsFrame.BorderSizePixel = 0
-                OptionsFrame.ZIndex = 15000
-                OptionsFrame.Parent = Container
+                OptionsFrame.ZIndex = 20000
+                OptionsFrame.ScrollBarThickness = 4
+                OptionsFrame.ScrollBarImageColor3 = Library.Theme.Primary
+                OptionsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+                OptionsFrame.Parent = ScreenGui
                 
                 Round(OptionsFrame, 8)
                 AddStroke(OptionsFrame, Library.Theme.Primary, 1.5, 0.4)
@@ -1006,7 +1031,7 @@ function Library:AddDropdown(section, config)
                     OptBtn.TextSize = 12
                     OptBtn.Font = Enum.Font.GothamMedium
                     OptBtn.TextXAlignment = Enum.TextXAlignment.Center
-                    OptBtn.ZIndex = 15001
+                    OptBtn.ZIndex = 20001
                     OptBtn.Parent = OptionsFrame
                     
                     Round(OptBtn, 6)
@@ -1032,12 +1057,49 @@ function Library:AddDropdown(section, config)
                     end)
                 end
                 
-                local targetHeight = (#self.Options * 34) + 12
+                OptLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    OptionsFrame.CanvasSize = UDim2.new(0, 0, 0, OptLayout.AbsoluteContentSize.Y + 12)
+                end)
+                
+                local maxHeight = 200
+                local targetHeight = math.min((#self.Options * 34) + 12, maxHeight)
                 Tween(OptionsFrame, {Size = UDim2.new(0, 140, 0, targetHeight)}, 0.3, Enum.EasingStyle.Exponential)
                 Tween(Arrow, {Rotation = 180}, 0.2, Enum.EasingStyle.Exponential)
+                
+                local function UpdatePosition()
+                    OptionsFrame.Position = UDim2.new(0, Container.AbsolutePosition.X + Container.AbsoluteSize.X - 150, 0, Container.AbsolutePosition.Y + 56)
+                end
+                
+                Container:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePosition)
+                
+                local closeConnection
+                closeConnection = UserInputService.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                        local mousePos = UserInputService:GetMouseLocation()
+                        local optionsPos = OptionsFrame.AbsolutePosition
+                        local optionsSize = OptionsFrame.AbsoluteSize
+                        local dropBtnPos = DropBtn.AbsolutePosition
+                        local dropBtnSize = DropBtn.AbsoluteSize
+                        
+                        local inOptions = mousePos.X >= optionsPos.X and mousePos.X <= optionsPos.X + optionsSize.X and
+                                         mousePos.Y >= optionsPos.Y and mousePos.Y <= optionsPos.Y + optionsSize.Y
+                        
+                        local inDropBtn = mousePos.X >= dropBtnPos.X and mousePos.X <= dropBtnPos.X + dropBtnSize.X and
+                                         mousePos.Y >= dropBtnPos.Y and mousePos.Y <= dropBtnPos.Y + dropBtnSize.Y
+                        
+                        if not inOptions and not inDropBtn then
+                            if OptionsFrame and OptionsFrame.Parent then
+                                OptionsFrame:Destroy()
+                            end
+                            self.IsOpen = false
+                            Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
+                            closeConnection:Disconnect()
+                        end
+                    end
+                end)
             else
-                if Container:FindFirstChild("Options") then
-                    Container.Options:Destroy()
+                if parent.Parent.Parent:FindFirstChild("Options") then
+                    parent.Parent.Parent:FindFirstChild("Options"):Destroy()
                 end
                 Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
             end
@@ -1091,7 +1153,7 @@ function Library:AddButton(section, config)
         NameLabel.TextColor3 = Library.Theme.Text
         NameLabel.TextSize = 14
         NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
         NameLabel.ZIndex = 10000
         NameLabel.Parent = Container
         
