@@ -1,4 +1,4 @@
--- Surfy UI Library v2.0 - With Real Lucide Icon Integration
+-- Surfy UI Library v2.0 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
