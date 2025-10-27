@@ -416,6 +416,9 @@ function Library:CreateWindow(config)
         LeftStrokeCover.Visible = false
         RightStrokeCover.Visible = false
         
+        -- Fade out stroke early
+        Tween(self.DrawerStroke, {Transparency = 1}, 0.15, Enum.EasingStyle.Exponential)
+        
         Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer, {
             Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
@@ -423,6 +426,7 @@ function Library:CreateWindow(config)
         }, 0.4, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.4)
         
+        -- Close drawer to exact position of IconBar
         local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
         Tween(Drawer, {
             Size = UDim2.new(0, 600, 0, 0), 
@@ -437,11 +441,7 @@ function Library:CreateWindow(config)
         task.wait(0.1)
         ConnectionLine.Visible = false
         
-        task.delay(0.3, function()
-            Tween(self.DrawerStroke, {Transparency = 1}, 0.1, Enum.EasingStyle.Exponential)
-        end)
-        
-        task.wait(0.4)
+        task.wait(0.3)
         Drawer.Visible = false
         self.IsAnimating = false
     end
@@ -596,30 +596,17 @@ function Library:RefreshModules()
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 50)
+            SectionContainer.Size = UDim2.new(1, 0, 0, 55)
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
             SectionContainer.Parent = self.ModuleList
             
-            local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 0, 25)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 5)
-            SectionHeader.BackgroundTransparency = 1
-            SectionHeader.Text = module.Section.Name
-            SectionHeader.TextColor3 = Library.Theme.Primary
-            SectionHeader.TextSize = 15
-            SectionHeader.Font = Enum.Font.GothamBold
-            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
-            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
-            SectionHeader.ZIndex = 10000
-            SectionHeader.Parent = SectionContainer
-            
-            -- Divider line (thicker and centered)
+            -- Divider line at top (thicker and centered)
             local Divider = Instance.new("Frame")
             Divider.Size = UDim2.new(0.85, 0, 0, 3)
-            Divider.Position = UDim2.new(0.5, 0, 1, -8)
+            Divider.Position = UDim2.new(0.5, 0, 0, 8)
             Divider.AnchorPoint = Vector2.new(0.5, 0)
             Divider.BackgroundColor3 = Library.Theme.Primary
             Divider.BackgroundTransparency = 0.6
@@ -629,6 +616,19 @@ function Library:RefreshModules()
             
             Round(Divider, 1.5)
             AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
+            
+            local SectionHeader = Instance.new("TextLabel")
+            SectionHeader.Size = UDim2.new(1, -20, 0, 30)
+            SectionHeader.Position = UDim2.new(0, 10, 0, 20)
+            SectionHeader.BackgroundTransparency = 1
+            SectionHeader.Text = module.Section.Name
+            SectionHeader.TextColor3 = Library.Theme.Primary
+            SectionHeader.TextSize = 15
+            SectionHeader.Font = Enum.Font.GothamBold
+            SectionHeader.TextXAlignment = Enum.TextXAlignment.Left
+            SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
+            SectionHeader.ZIndex = 10000
+            SectionHeader.Parent = SectionContainer
         end
         
         module:Render(self.ModuleList)
@@ -681,6 +681,527 @@ function Library:AddToggle(section, config)
         Container.Size = UDim2.new(1, 0, 0, 48)
         Container.BackgroundColor3 = Library.Theme.ModuleBackground
         Container.BackgroundTransparency = 0.3
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, Library.Theme.Surface, 1, 0.7)
+        
+        local Indicator = Instance.new("Frame")
+        Indicator.Size = UDim2.new(0, 4, 0.65, 0)
+        Indicator.Position = UDim2.new(0, 0, 0.175, 0)
+        Indicator.BackgroundColor3 = Library.Theme.Primary
+        Indicator.BackgroundTransparency = self.Enabled and 0 or 1
+        Indicator.BorderSizePixel = 0
+        Indicator.ZIndex = 10000
+        Indicator.Parent = Container
+        
+        Round(Indicator, 2)
+        
+        if self.Enabled then
+            AddGradient(Indicator, Library.Theme.PrimaryBright, Library.Theme.Primary, 90)
+        end
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(1, -30, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = self.Enabled and Library.Theme.Primary or Library.Theme.Text
+        NameLabel.TextSize = 14
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        Module.Container = Container
+        Module.Indicator = Indicator
+        Module.NameLabel = NameLabel
+        
+        Container.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self:Toggle()
+            end
+        end)
+    end
+    
+    function Module:Toggle()
+        self.Enabled = not self.Enabled
+        
+        if self.Container then
+            Tween(self.Indicator, {BackgroundTransparency = self.Enabled and 0 or 1}, 0.3, Enum.EasingStyle.Exponential)
+            Tween(self.NameLabel, {TextColor3 = self.Enabled and Library.Theme.Primary or Library.Theme.Text}, 0.3, Enum.EasingStyle.Exponential)
+            
+            if self.Enabled then
+                Tween(self.Container, {BackgroundColor3 = Library.Theme.SurfaceLight}, 0.3, Enum.EasingStyle.Exponential)
+                for _, child in ipairs(self.Indicator:GetChildren()) do
+                    if child:IsA("UIGradient") then child:Destroy() end
+                end
+                AddGradient(self.Indicator, Library.Theme.PrimaryBright, Library.Theme.Primary, 90)
+            else
+                Tween(self.Container, {BackgroundColor3 = Library.Theme.ModuleBackground}, 0.3, Enum.EasingStyle.Exponential)
+            end
+        end
+        
+        if self.Callback then
+            self.Callback(self.Enabled)
+        end
+    end
+    
+    function Module:SetValue(value)
+        self.Enabled = value
+        if self.Container then
+            self:Toggle()
+            self:Toggle()
+        end
+    end
+    
+    table.insert(section.Tab.Modules, Module)
+    return Module
+end
+
+-- Add Slider
+function Library:AddSlider(section, config)
+    config = config or {}
+    
+    local Module = {
+        Name = config.Name or "Slider",
+        Value = config.Default or config.Min or 0,
+        Min = config.Min or 0,
+        Max = config.Max or 100,
+        Increment = config.Increment or 1,
+        Callback = config.Callback,
+        IsDragging = false,
+        LayoutOrder = config.LayoutOrder or (#section.Tab.Modules + 1) * 10,
+        Section = section
+    }
+    
+    function Module:Render(parent)
+        local Container = Instance.new("Frame")
+        Container.Size = UDim2.new(1, 0, 0, 58)
+        Container.BackgroundColor3 = Library.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.3
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, Library.Theme.Surface, 1, 0.7)
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(0, 200, 0, 18)
+        NameLabel.Position = UDim2.new(0, 15, 0, 10)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = Library.Theme.Text
+        NameLabel.TextSize = 13
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        local ValueLabel = Instance.new("TextLabel")
+        ValueLabel.Size = UDim2.new(0, 60, 0, 18)
+        ValueLabel.Position = UDim2.new(1, -70, 0, 10)
+        ValueLabel.BackgroundTransparency = 1
+        ValueLabel.Text = tostring(self.Value)
+        ValueLabel.TextColor3 = Library.Theme.Primary
+        ValueLabel.TextSize = 13
+        ValueLabel.Font = Enum.Font.GothamBold
+        ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+        ValueLabel.ZIndex = 10000
+        ValueLabel.Parent = Container
+        
+        local Track = Instance.new("Frame")
+        Track.Size = UDim2.new(1, -30, 0, 6)
+        Track.Position = UDim2.new(0, 15, 1, -20)
+        Track.BackgroundColor3 = Library.Theme.Secondary
+        Track.BackgroundTransparency = 0.4
+        Track.BorderSizePixel = 0
+        Track.ZIndex = 9999
+        Track.Parent = Container
+        
+        Round(Track, 3)
+        
+        local normalizedValue = (self.Value - self.Min) / (self.Max - self.Min)
+        
+        local Fill = Instance.new("Frame")
+        Fill.Size = UDim2.new(normalizedValue, 0, 1, 0)
+        Fill.BackgroundColor3 = Library.Theme.Primary
+        Fill.BackgroundTransparency = 0.2
+        Fill.BorderSizePixel = 0
+        Fill.ZIndex = 10000
+        Fill.Parent = Track
+        
+        Round(Fill, 3)
+        AddGradient(Fill, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
+        
+        local Knob = Instance.new("TextButton")
+        Knob.Size = UDim2.new(0, 16, 0, 16)
+        Knob.Position = UDim2.new(normalizedValue, -8, 0.5, -8)
+        Knob.BackgroundColor3 = Color3.new(1, 1, 1)
+        Knob.Text = ""
+        Knob.ZIndex = 10001
+        Knob.Parent = Track
+        
+        Round(Knob, 8)
+        AddStroke(Knob, Library.Theme.Primary, 2, 0.3)
+        
+        Module.Container = Container
+        Module.ValueLabel = ValueLabel
+        Module.Fill = Fill
+        Module.Knob = Knob
+        Module.Track = Track
+        
+        local function UpdateSlider(input)
+            if not input then return end
+            
+            local trackAbsolutePos = Track.AbsolutePosition
+            local trackAbsoluteSize = Track.AbsoluteSize
+            
+            if trackAbsoluteSize.X <= 0 then return end
+            
+            local mouseX = input.Position.X
+            local relX = (mouseX - trackAbsolutePos.X) / trackAbsoluteSize.X
+            local clampedX = math.clamp(relX, 0, 1)
+            
+            local rawValue = self.Min + (self.Max - self.Min) * clampedX
+            local newValue = math.floor(rawValue / self.Increment) * self.Increment
+            
+            if newValue ~= self.Value then
+                self.Value = newValue
+                ValueLabel.Text = tostring(self.Value)
+                
+                Tween(Fill, {Size = UDim2.new(clampedX, 0, 1, 0)}, 0.1, Enum.EasingStyle.Exponential)
+                Tween(Knob, {Position = UDim2.new(clampedX, -8, 0.5, -8)}, 0.1, Enum.EasingStyle.Exponential)
+                
+                if self.Callback then
+                    self.Callback(self.Value)
+                end
+            end
+        end
+        
+        local function onTrackInput(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = true
+                UpdateSlider(input)
+            end
+        end
+        
+        Track.InputBegan:Connect(onTrackInput)
+        
+        Knob.MouseButton1Down:Connect(function()
+            self.IsDragging = true
+            Tween(Knob, {Size = UDim2.new(0, 18, 0, 18), Position = UDim2.new(Knob.Position.X.Scale, -9, 0.5, -9)}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.IsDragging = false
+                if Knob then
+                    Tween(Knob, {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(Knob.Position.X.Scale, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+                end
+            end
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and self.IsDragging then
+                UpdateSlider(input)
+            end
+        end)
+    end
+    
+    function Module:SetValue(value)
+        self.Value = math.clamp(value, self.Min, self.Max)
+        if self.ValueLabel and self.Fill and self.Knob then
+            self.ValueLabel.Text = tostring(self.Value)
+            local normalized = (self.Value - self.Min) / (self.Max - self.Min)
+            Tween(self.Fill, {Size = UDim2.new(normalized, 0, 1, 0)}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(self.Knob, {Position = UDim2.new(normalized, -8, 0.5, -8)}, 0.2, Enum.EasingStyle.Exponential)
+        end
+        if self.Callback then
+            self.Callback(self.Value)
+        end
+    end
+    
+    table.insert(section.Tab.Modules, Module)
+    return Module
+end
+
+-- Add Dropdown
+function Library:AddDropdown(section, config)
+    config = config or {}
+    
+    local Module = {
+        Name = config.Name or "Dropdown",
+        Value = config.Default or (config.Options and config.Options[1]) or "None",
+        Options = config.Options or {"Option 1"},
+        Callback = config.Callback,
+        IsOpen = false,
+        LayoutOrder = config.LayoutOrder or (#section.Tab.Modules + 1) * 10,
+        Section = section
+    }
+    
+    function Module:Render(parent)
+        local Container = Instance.new("Frame")
+        Container.Size = UDim2.new(1, 0, 0, 48)
+        Container.BackgroundColor3 = Library.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.3
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.ClipsDescendants = false
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, Library.Theme.Surface, 1, 0.7)
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(0, 200, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = Library.Theme.Text
+        NameLabel.TextSize = 13
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        local DropBtn = Instance.new("TextButton")
+        DropBtn.Size = UDim2.new(0, 140, 0, 32)
+        DropBtn.Position = UDim2.new(1, -150, 0.5, -16)
+        DropBtn.BackgroundColor3 = Library.Theme.Secondary
+        DropBtn.BackgroundTransparency = 0.4
+        DropBtn.Text = self.Value
+        DropBtn.TextColor3 = Library.Theme.Text
+        DropBtn.TextSize = 12
+        DropBtn.Font = Enum.Font.GothamMedium
+        DropBtn.TextXAlignment = Enum.TextXAlignment.Center
+        DropBtn.ZIndex = 10000
+        DropBtn.Parent = Container
+        
+        Round(DropBtn, 8)
+        
+        local Arrow = Instance.new("TextLabel")
+        Arrow.Size = UDim2.new(0, 20, 1, 0)
+        Arrow.Position = UDim2.new(1, -20, 0, 0)
+        Arrow.BackgroundTransparency = 1
+        Arrow.Text = "▼"
+        Arrow.TextColor3 = Library.Theme.TextDim
+        Arrow.TextSize = 10
+        Arrow.Font = Enum.Font.GothamBold
+        Arrow.ZIndex = 10001
+        Arrow.Parent = DropBtn
+        
+        Module.Container = Container
+        Module.DropBtn = DropBtn
+        Module.Arrow = Arrow
+        
+        DropBtn.MouseButton1Click:Connect(function()
+            self.IsOpen = not self.IsOpen
+            
+            if self.IsOpen then
+                local OptionsFrame = Instance.new("Frame")
+                OptionsFrame.Name = "Options"
+                OptionsFrame.Size = UDim2.new(0, 140, 0, 0)
+                OptionsFrame.Position = UDim2.new(1, -150, 1, 8)
+                OptionsFrame.BackgroundColor3 = Library.Theme.Surface
+                OptionsFrame.BackgroundTransparency = 0.15
+                OptionsFrame.BorderSizePixel = 0
+                OptionsFrame.ZIndex = 15000
+                OptionsFrame.Parent = Container
+                
+                Round(OptionsFrame, 8)
+                AddStroke(OptionsFrame, Library.Theme.Primary, 1.5, 0.4)
+                
+                local OptLayout = Instance.new("UIListLayout")
+                OptLayout.Padding = UDim.new(0, 4)
+                OptLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                OptLayout.Parent = OptionsFrame
+                
+                local OptPadding = Instance.new("UIPadding")
+                OptPadding.PaddingTop = UDim.new(0, 6)
+                OptPadding.PaddingBottom = UDim.new(0, 6)
+                OptPadding.PaddingLeft = UDim.new(0, 6)
+                OptPadding.PaddingRight = UDim.new(0, 6)
+                OptPadding.Parent = OptionsFrame
+                
+                for _, option in ipairs(self.Options) do
+                    local OptBtn = Instance.new("TextButton")
+                    OptBtn.Size = UDim2.new(1, -12, 0, 30)
+                    OptBtn.BackgroundColor3 = Library.Theme.SurfaceLight
+                    OptBtn.BackgroundTransparency = 1
+                    OptBtn.Text = option
+                    OptBtn.TextColor3 = (self.Value == option) and Library.Theme.Primary or Library.Theme.Text
+                    OptBtn.TextSize = 12
+                    OptBtn.Font = Enum.Font.GothamMedium
+                    OptBtn.TextXAlignment = Enum.TextXAlignment.Center
+                    OptBtn.ZIndex = 15001
+                    OptBtn.Parent = OptionsFrame
+                    
+                    Round(OptBtn, 6)
+                    
+                    OptBtn.MouseEnter:Connect(function()
+                        Tween(OptBtn, {BackgroundTransparency = 0.5}, 0.2, Enum.EasingStyle.Exponential)
+                    end)
+                    
+                    OptBtn.MouseLeave:Connect(function()
+                        Tween(OptBtn, {BackgroundTransparency = 1}, 0.2, Enum.EasingStyle.Exponential)
+                    end)
+                    
+                    OptBtn.MouseButton1Click:Connect(function()
+                        self.Value = option
+                        DropBtn.Text = option
+                        OptionsFrame:Destroy()
+                        self.IsOpen = false
+                        Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
+                        
+                        if self.Callback then
+                            self.Callback(option)
+                        end
+                    end)
+                end
+                
+                local targetHeight = (#self.Options * 34) + 12
+                Tween(OptionsFrame, {Size = UDim2.new(0, 140, 0, targetHeight)}, 0.3, Enum.EasingStyle.Exponential)
+                Tween(Arrow, {Rotation = 180}, 0.2, Enum.EasingStyle.Exponential)
+            else
+                if Container:FindFirstChild("Options") then
+                    Container.Options:Destroy()
+                end
+                Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
+            end
+        end)
+    end
+    
+    function Module:SetValue(value)
+        self.Value = value
+        if self.DropBtn then
+            self.DropBtn.Text = value
+        end
+        if self.Callback then
+            self.Callback(value)
+        end
+    end
+    
+    table.insert(section.Tab.Modules, Module)
+    return Module
+end
+
+-- Add Button
+function Library:AddButton(section, config)
+    config = config or {}
+    
+    local Module = {
+        Name = config.Name or "Button",
+        Callback = config.Callback,
+        LayoutOrder = config.LayoutOrder or (#section.Tab.Modules + 1) * 10,
+        Section = section
+    }
+    
+    function Module:Render(parent)
+        local Container = Instance.new("TextButton")
+        Container.Size = UDim2.new(1, 0, 0, 48)
+        Container.BackgroundColor3 = Library.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.3
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Text = ""
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, Library.Theme.Surface, 1, 0.7)
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(1, -30, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = Library.Theme.Text
+        NameLabel.TextSize = 14
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Center
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        Module.Container = Container
+        Module.NameLabel = NameLabel
+        
+        Container.MouseEnter:Connect(function()
+            Tween(Container, {BackgroundColor3 = Library.Theme.SurfaceLight}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(NameLabel, {TextColor3 = Library.Theme.Primary}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseLeave:Connect(function()
+            Tween(Container, {BackgroundColor3 = Library.Theme.ModuleBackground}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(NameLabel, {TextColor3 = Library.Theme.Text}, 0.2, Enum.EasingStyle.Exponential)
+        end)
+        
+        Container.MouseButton1Click:Connect(function()
+            Tween(Container, {BackgroundColor3 = Library.Theme.Primary}, 0.1, Enum.EasingStyle.Exponential)
+            Tween(NameLabel, {TextColor3 = Color3.new(1, 1, 1)}, 0.1, Enum.EasingStyle.Exponential)
+            
+            task.wait(0.1)
+            
+            Tween(Container, {BackgroundColor3 = Library.Theme.ModuleBackground}, 0.2, Enum.EasingStyle.Exponential)
+            Tween(NameLabel, {TextColor3 = Library.Theme.Text}, 0.2, Enum.EasingStyle.Exponential)
+            
+            if self.Callback then
+                self.Callback()
+            end
+        end)
+    end
+    
+    table.insert(section.Tab.Modules, Module)
+    return Module
+end
+
+-- Add Keybind
+function Library:AddKeybind(section, config)
+    config = config or {}
+    
+    local Module = {
+        Name = config.Name or "Keybind",
+        Key = config.Default or Enum.KeyCode.RightShift,
+        Callback = config.Callback,
+        IsBinding = false,
+        LayoutOrder = config.LayoutOrder or (#section.Tab.Modules + 1) * 10,
+        Section = section
+    }
+    
+    function Module:Render(parent)
+        local Container = Instance.new("Frame")
+        Container.Size = UDim2.new(1, 0, 0, 48)
+        Container.BackgroundColor3 = Library.Theme.ModuleBackground
+        Container.BackgroundTransparency = 0.3
+        Container.BorderSizePixel = 0
+        Container.ZIndex = 9999
+        Container.LayoutOrder = self.LayoutOrder
+        Container.Parent = parent
+        
+        Round(Container, 10)
+        AddStroke(Container, Library.Theme.Surface, 1, 0.7)
+        
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(0, 200, 1, 0)
+        NameLabel.Position = UDim2.new(0, 15, 0, 0)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.Text = self.Name
+        NameLabel.TextColor3 = Library.Theme.Text
+        NameLabel.TextSize = 13
+        NameLabel.Font = Enum.Font.GothamBold
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.ZIndex = 10000
+        NameLabel.Parent = Container
+        
+        local function GetKeyName(key)
+            if key == Enum.KeyCode.Unknown then return "NONE"
+            elseif key == Enum.UserInContainer.BackgroundTransparency = 0.3
         Container.BorderSizePixel = 0
         Container.ZIndex = 9999
         Container.LayoutOrder = self.LayoutOrder
