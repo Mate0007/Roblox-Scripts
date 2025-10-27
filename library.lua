@@ -215,7 +215,9 @@ function Library:CreateWindow(config)
         Tabs = {},
         CurrentTab = nil,
         IsOpen = false,
-        IconOffset = config.IconOffset or 0
+        IsAnimating = false,
+        IconOffset = config.IconOffset or 0,
+        ConnectionLineYOffset = 0  -- New property to adjust connection line position
     }
     setmetatable(Window, {__index = Library})
     
@@ -245,8 +247,8 @@ function Library:CreateWindow(config)
     
     local ConnectionLine = Instance.new("Frame")
     ConnectionLine.Name = "ConnectionLine"
-    ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
-    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -105 - Window.IconOffset)
+    ConnectionLine.Size = UDim2.new(0, 0, 0, 2)
+    ConnectionLine.Position = UDim2.new(0.5, 0, 1, -435 - Window.IconOffset + Window.ConnectionLineYOffset)
     ConnectionLine.AnchorPoint = Vector2.new(0.5, 0.5)
     ConnectionLine.BackgroundColor3 = Library.Theme.Primary
     ConnectionLine.BackgroundTransparency = 1
@@ -265,7 +267,6 @@ function Library:CreateWindow(config)
     TabNameContainer.BackgroundTransparency = 1
     TabNameContainer.BorderSizePixel = 0
     TabNameContainer.ZIndex = 9999
-    TabNameContainer.Visible = false
     TabNameContainer.Parent = ScreenGui
     
     Round(TabNameContainer, 12)
@@ -366,12 +367,12 @@ function Library:CreateWindow(config)
     Window.RightStrokeCover = RightStrokeCover
     
     function Window:Open()
-        if self.IsOpen then return end
+        if self.IsOpen or self.IsAnimating then return end
+        self.IsAnimating = true
         self.IsOpen = true
         
         Drawer.Visible = true
         ConnectionLine.Visible = true
-        TabNameContainer.Visible = true
         
         self.DrawerStroke.Transparency = 0.4
         
@@ -397,15 +398,19 @@ function Library:CreateWindow(config)
         end
         
         ConnectionLine.BackgroundTransparency = 1
-        ConnectionLine.Size = UDim2.new(0, 0, 0, 1)
+        ConnectionLine.Size = UDim2.new(0, 0, 0, 2)
         Tween(ConnectionLine, {
-            Size = UDim2.new(0, 80, 0, 1), 
+            Size = UDim2.new(0, 80, 0, 2), 
             BackgroundTransparency = 0.3
         }, 0.5, Enum.EasingStyle.Exponential)
+        
+        task.wait(0.5)
+        self.IsAnimating = false
     end
     
     function Window:Close()
-        if not self.IsOpen then return end
+        if not self.IsOpen or self.IsAnimating then return end
+        self.IsAnimating = true
         self.IsOpen = false
         
         LeftStrokeCover.Visible = false
@@ -425,7 +430,7 @@ function Library:CreateWindow(config)
         }, 0.4, Enum.EasingStyle.Exponential)
         
         Tween(ConnectionLine, {
-            Size = UDim2.new(0, 0, 0, 1), 
+            Size = UDim2.new(0, 0, 0, 2), 
             BackgroundTransparency = 1
         }, 0.2, Enum.EasingStyle.Exponential)
         
@@ -438,10 +443,12 @@ function Library:CreateWindow(config)
         
         task.wait(0.4)
         Drawer.Visible = false
-        TabNameContainer.Visible = false
+        self.IsAnimating = false
     end
     
     function Window:Toggle()
+        if self.IsAnimating then return end
+        
         if self.IsOpen then
             if self.CurrentTab then
                 Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
@@ -456,6 +463,12 @@ function Library:CreateWindow(config)
                 self:Open()
             end
         end
+    end
+    
+    -- Method to adjust connection line position
+    function Window:SetConnectionLineOffset(yOffset)
+        self.ConnectionLineYOffset = yOffset
+        ConnectionLine.Position = UDim2.new(0.5, 0, 1, -435 - self.IconOffset + self.ConnectionLineYOffset)
     end
     
     return Window
@@ -493,6 +506,8 @@ function Library:AddTab(config)
     Tab.IconContainer = IconContainer
     
     Cube.MouseButton1Click:Connect(function()
+        if self.IsAnimating then return end
+        
         if self.CurrentTab == Tab then
             Tween(Cube, {BackgroundTransparency = 0.3}, 0.2)
             Tween(Icon, {ImageColor3 = Library.Theme.TextDim}, 0.2)
@@ -530,6 +545,8 @@ function Library:AddTab(config)
 end
 
 function Library:SelectTab(tab)
+    if self.IsAnimating then return end
+    
     if self.CurrentTab then
         Tween(self.CurrentTab.Cube, {BackgroundTransparency = 0.3}, 0.2)
         Tween(self.CurrentTab.Icon, {ImageColor3 = Library.Theme.TextDim}, 0.2)
@@ -542,7 +559,6 @@ function Library:SelectTab(tab)
     if self.TabNameLabel then
         self.TabNameLabel.Text = tab.Name:upper()
         if self.IsOpen then
-            self.TabNameContainer.Visible = true
             Tween(self.TabNameLabel, {TextTransparency = 0}, 0.2, Enum.EasingStyle.Exponential)
             Tween(self.TabNameContainer, {BackgroundTransparency = 0.2}, 0.2)
             Tween(self.TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 0.4}, 0.2)
@@ -576,27 +592,11 @@ function Library:RefreshModules()
     
     for _, module in ipairs(self.CurrentTab.Modules) do
         if module.Section and module.Section ~= lastSection then
-            if lastSection ~= nil then
-                local Divider = Instance.new("Frame")
-                Divider.Name = "SectionDivider"
-                Divider.Size = UDim2.new(0, 280, 0, 1)
-                Divider.Position = UDim2.new(0, 160, 0, 0)
-                Divider.AnchorPoint = Vector2.new(0.5, 0)
-                Divider.BackgroundColor3 = Library.Theme.Primary
-                Divider.BackgroundTransparency = 0.7
-                Divider.BorderSizePixel = 0
-                Divider.ZIndex = 9999
-                Divider.LayoutOrder = module.LayoutOrder - 0.6
-                Divider.Parent = self.ModuleList
-                
-                AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
-            end
-            
             lastSection = module.Section
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 35)
+            SectionContainer.Size = UDim2.new(1, 0, 0, 50)
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
@@ -604,8 +604,8 @@ function Library:RefreshModules()
             SectionContainer.Parent = self.ModuleList
             
             local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 1, 0)
-            SectionHeader.Position = UDim2.new(0, 10, 0, 0)
+            SectionHeader.Size = UDim2.new(1, -20, 0, 25)
+            SectionHeader.Position = UDim2.new(0, 10, 0, 5)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = module.Section.Name
             SectionHeader.TextColor3 = Library.Theme.Primary
@@ -615,6 +615,20 @@ function Library:RefreshModules()
             SectionHeader.TextYAlignment = Enum.TextYAlignment.Center
             SectionHeader.ZIndex = 10000
             SectionHeader.Parent = SectionContainer
+            
+            -- Divider line (thicker and centered)
+            local Divider = Instance.new("Frame")
+            Divider.Size = UDim2.new(0.85, 0, 0, 3)
+            Divider.Position = UDim2.new(0.5, 0, 1, -8)
+            Divider.AnchorPoint = Vector2.new(0.5, 0)
+            Divider.BackgroundColor3 = Library.Theme.Primary
+            Divider.BackgroundTransparency = 0.6
+            Divider.BorderSizePixel = 0
+            Divider.ZIndex = 9999
+            Divider.Parent = SectionContainer
+            
+            Round(Divider, 1.5)
+            AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
         end
         
         module:Render(self.ModuleList)
@@ -991,20 +1005,15 @@ function Library:AddDropdown(section, config)
             self.IsOpen = not self.IsOpen
             
             if self.IsOpen then
-                local ScreenGui = parent.Parent.Parent
-                
-                local OptionsFrame = Instance.new("ScrollingFrame")
+                local OptionsFrame = Instance.new("Frame")
                 OptionsFrame.Name = "Options"
                 OptionsFrame.Size = UDim2.new(0, 140, 0, 0)
-                OptionsFrame.Position = Container.AbsolutePosition + Vector2.new(Container.AbsoluteSize.X - 150, 56)
+                OptionsFrame.Position = UDim2.new(1, -150, 1, 8)
                 OptionsFrame.BackgroundColor3 = Library.Theme.Surface
                 OptionsFrame.BackgroundTransparency = 0.15
                 OptionsFrame.BorderSizePixel = 0
-                OptionsFrame.ZIndex = 20000
-                OptionsFrame.ScrollBarThickness = 4
-                OptionsFrame.ScrollBarImageColor3 = Library.Theme.Primary
-                OptionsFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-                OptionsFrame.Parent = ScreenGui
+                OptionsFrame.ZIndex = 15000
+                OptionsFrame.Parent = Container
                 
                 Round(OptionsFrame, 8)
                 AddStroke(OptionsFrame, Library.Theme.Primary, 1.5, 0.4)
@@ -1031,7 +1040,7 @@ function Library:AddDropdown(section, config)
                     OptBtn.TextSize = 12
                     OptBtn.Font = Enum.Font.GothamMedium
                     OptBtn.TextXAlignment = Enum.TextXAlignment.Center
-                    OptBtn.ZIndex = 20001
+                    OptBtn.ZIndex = 15001
                     OptBtn.Parent = OptionsFrame
                     
                     Round(OptBtn, 6)
@@ -1057,49 +1066,12 @@ function Library:AddDropdown(section, config)
                     end)
                 end
                 
-                OptLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    OptionsFrame.CanvasSize = UDim2.new(0, 0, 0, OptLayout.AbsoluteContentSize.Y + 12)
-                end)
-                
-                local maxHeight = 200
-                local targetHeight = math.min((#self.Options * 34) + 12, maxHeight)
+                local targetHeight = (#self.Options * 34) + 12
                 Tween(OptionsFrame, {Size = UDim2.new(0, 140, 0, targetHeight)}, 0.3, Enum.EasingStyle.Exponential)
                 Tween(Arrow, {Rotation = 180}, 0.2, Enum.EasingStyle.Exponential)
-                
-                local function UpdatePosition()
-                    OptionsFrame.Position = UDim2.new(0, Container.AbsolutePosition.X + Container.AbsoluteSize.X - 150, 0, Container.AbsolutePosition.Y + 56)
-                end
-                
-                Container:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePosition)
-                
-                local closeConnection
-                closeConnection = UserInputService.InputBegan:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        local mousePos = UserInputService:GetMouseLocation()
-                        local optionsPos = OptionsFrame.AbsolutePosition
-                        local optionsSize = OptionsFrame.AbsoluteSize
-                        local dropBtnPos = DropBtn.AbsolutePosition
-                        local dropBtnSize = DropBtn.AbsoluteSize
-                        
-                        local inOptions = mousePos.X >= optionsPos.X and mousePos.X <= optionsPos.X + optionsSize.X and
-                                         mousePos.Y >= optionsPos.Y and mousePos.Y <= optionsPos.Y + optionsSize.Y
-                        
-                        local inDropBtn = mousePos.X >= dropBtnPos.X and mousePos.X <= dropBtnPos.X + dropBtnSize.X and
-                                         mousePos.Y >= dropBtnPos.Y and mousePos.Y <= dropBtnPos.Y + dropBtnSize.Y
-                        
-                        if not inOptions and not inDropBtn then
-                            if OptionsFrame and OptionsFrame.Parent then
-                                OptionsFrame:Destroy()
-                            end
-                            self.IsOpen = false
-                            Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
-                            closeConnection:Disconnect()
-                        end
-                    end
-                end)
             else
-                if parent.Parent.Parent:FindFirstChild("Options") then
-                    parent.Parent.Parent:FindFirstChild("Options"):Destroy()
+                if Container:FindFirstChild("Options") then
+                    Container.Options:Destroy()
                 end
                 Tween(Arrow, {Rotation = 0}, 0.2, Enum.EasingStyle.Exponential)
             end
@@ -1153,7 +1125,7 @@ function Library:AddButton(section, config)
         NameLabel.TextColor3 = Library.Theme.Text
         NameLabel.TextSize = 14
         NameLabel.Font = Enum.Font.GothamBold
-        NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        NameLabel.TextXAlignment = Enum.TextXAlignment.Center
         NameLabel.ZIndex = 10000
         NameLabel.Parent = Container
         
