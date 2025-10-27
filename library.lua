@@ -416,22 +416,12 @@ function Library:CreateWindow(config)
         LeftStrokeCover.Visible = false
         RightStrokeCover.Visible = false
         
-        -- Fade out stroke early
-        Tween(self.DrawerStroke, {Transparency = 1}, 0.15, Enum.EasingStyle.Exponential)
-        
-        Tween(TabNameLabel, {TextTransparency = 1}, 0.4, Enum.EasingStyle.Exponential)
+        Tween(TabNameLabel, {TextTransparency = 1}, 0.3, Enum.EasingStyle.Exponential)
         Tween(TabNameContainer, {
             Position = UDim2.new(0.5, -120, 1, -65 - self.IconOffset),
             BackgroundTransparency = 1
-        }, 0.4, Enum.EasingStyle.Exponential)
-        Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.4)
-        
-        -- Close drawer to exact position of IconBar
-        local closePos = UDim2.new(0.5, -300, 1, -65 - self.IconOffset)
-        Tween(Drawer, {
-            Size = UDim2.new(0, 600, 0, 0), 
-            Position = closePos
-        }, 0.4, Enum.EasingStyle.Exponential)
+        }, 0.3, Enum.EasingStyle.Exponential)
+        Tween(TabNameContainer:FindFirstChildOfClass("UIStroke"), {Transparency = 1}, 0.3)
         
         Tween(ConnectionLine, {
             Size = UDim2.new(0, 0, 0, 2), 
@@ -441,8 +431,19 @@ function Library:CreateWindow(config)
         task.wait(0.1)
         ConnectionLine.Visible = false
         
-        task.wait(0.3)
+        Tween(self.DrawerStroke, {Transparency = 1}, 0.1, Enum.EasingStyle.Exponential)
+        
+        -- Hide drawer earlier in the animation
+        local closePos = UDim2.new(0.5, -300, 1, -100 - self.IconOffset)
+        Tween(Drawer, {
+            Size = UDim2.new(0, 600, 0, 0), 
+            Position = closePos
+        }, 0.3, Enum.EasingStyle.Exponential)
+        
+        task.wait(0.2)
         Drawer.Visible = false
+        
+        task.wait(0.1)
         self.IsAnimating = false
     end
     
@@ -596,17 +597,17 @@ function Library:RefreshModules()
             
             local SectionContainer = Instance.new("Frame")
             SectionContainer.Name = "Section_" .. module.Section.Name
-            SectionContainer.Size = UDim2.new(1, 0, 0, 55)
+            SectionContainer.Size = UDim2.new(1, 0, 0, 60)
             SectionContainer.BackgroundTransparency = 1
             SectionContainer.BorderSizePixel = 0
             SectionContainer.ZIndex = 9999
             SectionContainer.LayoutOrder = module.LayoutOrder - 0.5
             SectionContainer.Parent = self.ModuleList
             
-            -- Divider line at top (thicker and centered)
+            -- Divider line FIRST (positioned at top)
             local Divider = Instance.new("Frame")
             Divider.Size = UDim2.new(0.85, 0, 0, 3)
-            Divider.Position = UDim2.new(0.5, 0, 0, 8)
+            Divider.Position = UDim2.new(0.5, 0, 0, 5)
             Divider.AnchorPoint = Vector2.new(0.5, 0)
             Divider.BackgroundColor3 = Library.Theme.Primary
             Divider.BackgroundTransparency = 0.6
@@ -617,8 +618,9 @@ function Library:RefreshModules()
             Round(Divider, 1.5)
             AddGradient(Divider, Library.Theme.Primary, Library.Theme.PrimaryBright, 0)
             
+            -- Section header AFTER divider (positioned below)
             local SectionHeader = Instance.new("TextLabel")
-            SectionHeader.Size = UDim2.new(1, -20, 0, 30)
+            SectionHeader.Size = UDim2.new(1, -20, 0, 25)
             SectionHeader.Position = UDim2.new(0, 10, 0, 20)
             SectionHeader.BackgroundTransparency = 1
             SectionHeader.Text = module.Section.Name
