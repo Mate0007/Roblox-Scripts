@@ -124,7 +124,14 @@ function lib:Window(text, preset, closebind)
     CloseBind = closebind or Enum.KeyCode.RightControl
     PresetColor = preset or Color3.fromRGB(44, 120, 224)
     fs = false
+    
+    -- Store the main window reference for keybind updates
+    local MainWindow = nil
+    local keybindConnection = nil
+
     local Main = Instance.new("Frame")
+    MainWindow = Main
+    
     local TabHold = Instance.new("Frame")
     local TabHoldLayout = Instance.new("UIListLayout")
     local Title = Instance.new("TextLabel")
@@ -352,50 +359,58 @@ function lib:Window(text, preset, closebind)
         end)
     end
 
-    -- Fixed keybind functionality
-    local keybindConnection
-    keybindConnection = UserInputService.InputBegan:Connect(
-        function(io, p)
-            if io.KeyCode == CloseBind and not p then
-                if uitoggled == false then
-                    uitoggled = true
-                    if isMobile then 
-                        if mobileToggleButton then
-                            mobileToggleButton.Text = "Open" 
+    -- Keybind functionality with proper updating
+    local function UpdateKeybindConnection()
+        if keybindConnection then
+            keybindConnection:Disconnect()
+        end
+        
+        keybindConnection = UserInputService.InputBegan:Connect(
+            function(io, p)
+                if io.KeyCode == CloseBind and not p then
+                    if uitoggled == false then
+                        uitoggled = true
+                        if isMobile then 
+                            if mobileToggleButton then
+                                mobileToggleButton.Text = "Open" 
+                            end
                         end
-                    end
-                
-                    Main:TweenSize(
-                        UDim2.new(0, 0, 0, 0), 
-                        Enum.EasingDirection.In, 
-                        Enum.EasingStyle.Back, 
-                        .5, 
-                        true, 
-                        function()
-                            ui.Enabled = false
-                        end
-                    )
                     
-                else
-                    uitoggled = false
-                    ui.Enabled = true
-                    if isMobile then 
-                        if mobileToggleButton then
-                            mobileToggleButton.Text = "Close" 
+                        Main:TweenSize(
+                            UDim2.new(0, 0, 0, 0), 
+                            Enum.EasingDirection.In, 
+                            Enum.EasingStyle.Back, 
+                            .5, 
+                            true, 
+                            function()
+                                ui.Enabled = false
+                            end
+                        )
+                        
+                    else
+                        uitoggled = false
+                        ui.Enabled = true
+                        if isMobile then 
+                            if mobileToggleButton then
+                                mobileToggleButton.Text = "Close" 
+                            end
                         end
+                    
+                        Main:TweenSize(
+                            UDim2.new(0, 560, 0, 329),
+                            Enum.EasingDirection.Out,
+                            Enum.EasingStyle.Back,
+                            .6,
+                            true
+                        )
                     end
-                
-                    Main:TweenSize(
-                        UDim2.new(0, 560, 0, 329),
-                        Enum.EasingDirection.Out,
-                        Enum.EasingStyle.Back,
-                        .6,
-                        true
-                    )
                 end
             end
-        end
-    )
+        )
+    end
+
+    -- Initialize the keybind connection
+    UpdateKeybindConnection()
 
     -- Clean up connection when UI is destroyed
     Main.Destroying:Connect(function()
@@ -617,7 +632,94 @@ function lib:Window(text, preset, closebind)
 
     function lib:SetToggleKey(key)
         CloseBind = key
+        UpdateKeybindConnection()
         lib:Notification("Keybind Updated", "UI toggle key has been set to: " .. key.Name, "Okay")
+    end
+
+    function lib:GetToggleKey()
+        return CloseBind
+    end
+
+    function lib:PresetMainSettings(tab)
+        -- Config Label
+        tab:Label("Config Settings")
+        
+        -- Create New Config Textbox
+        local newConfigName = ""
+        tab:Textbox("Create New Config", true, function(text)
+            newConfigName = text
+        end)
+        
+        -- Save New Config Button
+        tab:Button("Save New Config", function()
+            if newConfigName and newConfigName ~= "" then
+                SaveConfig(newConfigName)
+                lib:Notification("Config Created", "New config '" .. newConfigName .. "' has been created and saved.", "Okay")
+                -- Refresh the dropdown
+                if refreshDropdown then
+                    refreshDropdown()
+                end
+            else
+                lib:Notification("Error", "Please enter a config name first.", "Okay")
+            end
+        end)
+        
+        -- Configs Dropdown
+        local configList = {"default"}
+        local refreshDropdown = nil
+        
+        local dropdown = tab:Dropdown("Select Config", configList, function(selected)
+            CurrentConfig = selected
+        end)
+        
+        refreshDropdown = function()
+            configList = {}
+            for configName, _ in pairs(Configs) do
+                table.insert(configList, configName)
+            end
+            if #configList == 0 then
+                table.insert(configList, "default")
+            end
+            -- Note: In a real implementation, you'd need to refresh the dropdown UI elements
+        end
+        
+        -- Load Config Button
+        tab:Button("Load Selected Config", function()
+            if CurrentConfig then
+                if LoadConfig(CurrentConfig) then
+                    lib:Notification("Config Loaded", "Configuration '" .. CurrentConfig .. "' loaded successfully.", "Okay")
+                else
+                    lib:Notification("Error", "Failed to load config '" .. CurrentConfig .. "'", "Okay")
+                end
+            else
+                lib:Notification("Error", "Please select a config first.", "Okay")
+            end
+        end)
+        
+        -- Save Config Button
+        tab:Button("Save Current Config", function()
+            if CurrentConfig then
+                SaveConfig(CurrentConfig)
+                lib:Notification("Config Saved", "Configuration '" .. CurrentConfig .. "' saved successfully.", "Okay")
+            else
+                lib:Notification("Error", "Please select a config first.", "Okay")
+            end
+        end)
+        
+        -- UI Keybind Section
+        tab:Label("UI Keybind Settings")
+        
+        local currentKeyText = "Current: " .. lib:GetToggleKey().Name
+        tab:Label(currentKeyText)
+        
+        -- Keybind changer
+        tab:Bind("Change UI Toggle Key", lib:GetToggleKey(), function()
+            -- This will be triggered when the bind is pressed
+            lib:Notification("Keybind Updated", "UI toggle key has been updated to: " .. lib:GetToggleKey().Name, "Okay")
+        end)
+        
+        -- Refresh the config list initially
+        refreshDropdown()
     end
 
     local tabhold = {}
@@ -1947,7 +2049,10 @@ function lib:Window(text, preset, closebind)
                     if inputwait.KeyCode.Name ~= "Unknown" then
                         BindText.Text = inputwait.KeyCode.Name
                         Key = inputwait.KeyCode.Name
+                        -- Update the UI toggle key
+                        lib:SetToggleKey(inputwait.KeyCode)
                         binding = false
+                        pcall(callback)
                     else
                         binding = false
                     end
