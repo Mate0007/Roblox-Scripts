@@ -203,7 +203,7 @@ function lib:Window(text, preset, closebind)
     TabHoldLayout.Name = "TabHoldLayout"
     TabHoldLayout.Parent = TabHold
     TabHoldLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabHoldLayout.Padding = UDim.new(0, 11)
+    TabHoldLayout.Padding = UDim.new(0, 16) -- Increased spacing between tabs
 
     Title.Name = "Title"
     Title.Parent = Main
@@ -237,9 +237,17 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- New opening animation with scale
-    Main.Size = UDim2.new(0, 0, 0, 0)
-    Main:TweenSize(UDim2.new(0, 560, 0, 329), Enum.EasingDirection.Out, Enum.EasingStyle.Back, .6, true)
+    -- New smooth fade-in animation
+    Main.BackgroundTransparency = 1
+    Main.Size = UDim2.new(0, 560, 0, 329)
+    
+    -- Fade in all elements simultaneously
+    local fadeInTween = TweenService:Create(
+        Main,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0}
+    )
+    fadeInTween:Play()
 
     MakeDraggable(DragFrame, Main)
 
@@ -285,31 +293,28 @@ function lib:Window(text, preset, closebind)
             end
         end
         
-        -- New closing animation
-        Main:TweenSize(
-            UDim2.new(0, 0, 0, 0), 
-            Enum.EasingDirection.In, 
-            Enum.EasingStyle.Back, 
-            .5, 
-            true, 
-            function()
-                ui.Enabled = false
-            end
-        )
+        -- New smooth fade-out animation
+        TweenService:Create(
+            Main,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        ):Play()
+        
+        wait(0.5)
+        ui.Enabled = false
+        Main.BackgroundTransparency = 0 -- Reset for next open
     end)
 
     CloseBtn.MouseButton1Click:Connect(function()
-        -- New closing animation
-        Main:TweenSize(
-            UDim2.new(0, 0, 0, 0), 
-            Enum.EasingDirection.In, 
-            Enum.EasingStyle.Back, 
-            .5, 
-            true, 
-            function()
-                ui:Destroy()
-            end
-        )
+        -- New smooth fade-out animation
+        TweenService:Create(
+            Main,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 1}
+        ):Play()
+        
+        wait(0.5)
+        ui:Destroy()
     end)
 
     if isMobile then
@@ -335,26 +340,28 @@ function lib:Window(text, preset, closebind)
                 uitoggled = false
                 ui.Enabled = true
                 mobileToggleButton.Text = "Close"
-                Main:TweenSize(
-                    UDim2.new(0, 560, 0, 329),
-                    Enum.EasingDirection.Out,
-                    Enum.EasingStyle.Back,
-                    .6,
-                    true
-                )
+                
+                -- Smooth fade in
+                Main.BackgroundTransparency = 1
+                TweenService:Create(
+                    Main,
+                    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0}
+                ):Play()
             else
                 uitoggled = true
-                Main:TweenSize(
-                    UDim2.new(0, 0, 0, 0), 
-                    Enum.EasingDirection.In, 
-                    Enum.EasingStyle.Back, 
-                    .5, 
-                    true, 
-                    function()
-                        ui.Enabled = false
-                    end
-                )
                 mobileToggleButton.Text = "Open"
+                
+                -- Smooth fade out
+                TweenService:Create(
+                    Main,
+                    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 1}
+                ):Play()
+                
+                wait(0.5)
+                ui.Enabled = false
+                Main.BackgroundTransparency = 0 -- Reset for next open
             end
         end)
     end
@@ -376,16 +383,16 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        Main:TweenSize(
-                            UDim2.new(0, 0, 0, 0), 
-                            Enum.EasingDirection.In, 
-                            Enum.EasingStyle.Back, 
-                            .5, 
-                            true, 
-                            function()
-                                ui.Enabled = false
-                            end
-                        )
+                        -- Smooth fade out
+                        TweenService:Create(
+                            Main,
+                            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 1}
+                        ):Play()
+                        
+                        wait(0.5)
+                        ui.Enabled = false
+                        Main.BackgroundTransparency = 0 -- Reset for next open
                         
                     else
                         uitoggled = false
@@ -396,13 +403,13 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        Main:TweenSize(
-                            UDim2.new(0, 560, 0, 329),
-                            Enum.EasingDirection.Out,
-                            Enum.EasingStyle.Back,
-                            .6,
-                            true
-                        )
+                        -- Smooth fade in
+                        Main.BackgroundTransparency = 1
+                        TweenService:Create(
+                            Main,
+                            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 0}
+                        ):Play()
                     end
                 end
             end
@@ -644,17 +651,19 @@ function lib:Window(text, preset, closebind)
         -- Config Label
         tab:Label("Config Settings")
         
-        -- Create New Config Textbox
+        -- Create New Config Textbox with real-time tracking
         local newConfigName = ""
+        local configInputValue = ""
         tab:Textbox("Create New Config", true, function(text)
             newConfigName = text
+            configInputValue = text -- Track the input value
         end)
         
         -- Save New Config Button
         tab:Button("Save New Config", function()
-            if newConfigName and newConfigName ~= "" then
-                SaveConfig(newConfigName)
-                lib:Notification("Config Created", "New config '" .. newConfigName .. "' has been created and saved.", "Okay")
+            if configInputValue and configInputValue ~= "" then
+                SaveConfig(configInputValue)
+                lib:Notification("Config Created", "New config '" .. configInputValue .. "' has been created and saved.", "Okay")
                 -- Refresh the dropdown
                 if refreshDropdown then
                     refreshDropdown()
@@ -733,7 +742,7 @@ function lib:Window(text, preset, closebind)
         TabBtn.Parent = TabHold
         TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabBtn.BackgroundTransparency = 1.000
-        TabBtn.Size = UDim2.new(0, 107, 0, 21)
+        TabBtn.Size = UDim2.new(0, 107, 0, 28) -- Increased height for bigger text
         TabBtn.Font = Enum.Font.SourceSans
         TabBtn.Text = ""
         TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -743,11 +752,11 @@ function lib:Window(text, preset, closebind)
         TabTitle.Parent = TabBtn
         TabTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabTitle.BackgroundTransparency = 1.000
-        TabTitle.Size = UDim2.new(0, 107, 0, 21)
+        TabTitle.Size = UDim2.new(0, 107, 0, 28) -- Increased height for bigger text
         TabTitle.Font = Enum.Font.Gotham
         TabTitle.Text = text
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
-        TabTitle.TextSize = 14.000
+        TabTitle.TextSize = 16.000 -- Increased text size
         TabTitle.TextXAlignment = Enum.TextXAlignment.Left
 
         TabBtnIndicator.Name = "TabBtnIndicator"
@@ -790,7 +799,7 @@ function lib:Window(text, preset, closebind)
 
         if fs == false then
             fs = true
-            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 7.5, 0, 2)
+            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 8.5, 0, 2) -- Adjusted for bigger text
             TabTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             Tab.Visible = true
         end
@@ -813,7 +822,7 @@ function lib:Window(text, preset, closebind)
                             true
                         )
                         TabBtnIndicator:TweenSize(
-                            UDim2.new(0, string.len(text) * 7.5, 0, 2),
+                            UDim2.new(0, string.len(text) * 8.5, 0, 2), -- Adjusted for bigger text
                             Enum.EasingDirection.Out,
                             Enum.EasingStyle.Quart,
                             .2,
@@ -1974,6 +1983,11 @@ function lib:Window(text, preset, closebind)
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
 
+            -- Real-time tracking of input
+            TextBox:GetPropertyChangedSignal("Text"):Connect(function()
+                configInputValue = TextBox.Text
+            end)
+
             TextBox.FocusLost:Connect(
                 function(ep)
                     if ep then
@@ -2076,4 +2090,3 @@ function lib:Window(text, preset, closebind)
     return tabhold
 end
 return lib
-
