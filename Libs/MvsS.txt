@@ -7,6 +7,31 @@ local Mouse = LocalPlayer:GetMouse()
 local PresetColor = Color3.fromRGB(44, 120, 224)
 local CloseBind = Enum.KeyCode.RightControl
 
+-- Config saving system
+local Configs = {}
+local CurrentConfig = "default"
+
+local function SaveConfig(name)
+    Configs[name] = {
+        PresetColor = PresetColor,
+        -- Add other settings here as needed
+    }
+    print("Config saved:", name)
+end
+
+local function LoadConfig(name)
+    if Configs[name] then
+        local config = Configs[name]
+        PresetColor = config.PresetColor
+        lib:ChangePresetColor(PresetColor)
+        print("Config loaded:", name)
+        return true
+    else
+        print("Config not found:", name)
+        return false
+    end
+end
+
 local ui = Instance.new("ScreenGui")
 ui.Name = "ui"
 ui.Parent = game.CoreGui
@@ -100,7 +125,8 @@ function lib:Window(text, preset, closebind)
     local Title = Instance.new("TextLabel")
     local TabFolder = Instance.new("Folder")
     local DragFrame = Instance.new("Frame")
-    local SeparatorLine = Instance.new("Frame") -- New separator line
+    local SeparatorLine = Instance.new("Frame")
+    local TitleSeparator = Instance.new("Frame")
 
     Main.Name = "Main"
     Main.Parent = ui
@@ -112,7 +138,6 @@ function lib:Window(text, preset, closebind)
     Main.ClipsDescendants = true
     Main.Visible = true
 
-    -- Apply smooth corners
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
     MainCorner.Parent = Main
@@ -121,7 +146,7 @@ function lib:Window(text, preset, closebind)
     TabHold.Parent = Main
     TabHold.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     TabHold.BackgroundTransparency = 1.000
-    TabHold.Position = UDim2.new(0.0339285731, 0, 0.117335425, 0) -- Adjusted for title movement
+    TabHold.Position = UDim2.new(0.0339285731, 0, 0.167335425, 0)
     TabHold.Size = UDim2.new(0, 107, 0, 254)
 
     TabHoldLayout.Name = "TabHoldLayout"
@@ -133,33 +158,38 @@ function lib:Window(text, preset, closebind)
     Title.Parent = Main
     Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Title.BackgroundTransparency = 1.000
-    Title.Position = UDim2.new(0.0339285731, 0, 0.0264263314, 0) -- Moved up
-    Title.Size = UDim2.new(0, 200, 0, 23)
+    Title.Position = UDim2.new(0.0339285731, 0, 0.0364263314, 0)
+    Title.Size = UDim2.new(0, 200, 0, 30)
     Title.Font = Enum.Font.GothamSemibold
     Title.Text = text
     Title.TextColor3 = Color3.fromRGB(68, 68, 68)
-    Title.TextSize = 12.000
+    Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Separator line between tabs and content
+    TitleSeparator.Name = "TitleSeparator"
+    TitleSeparator.Parent = Main
+    TitleSeparator.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    TitleSeparator.BorderSizePixel = 0
+    TitleSeparator.Position = UDim2.new(0.0339285731, 0, 0.137, 0)
+    TitleSeparator.Size = UDim2.new(0, 520, 0, 1)
+
     SeparatorLine.Name = "SeparatorLine"
     SeparatorLine.Parent = Main
     SeparatorLine.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     SeparatorLine.BorderSizePixel = 0
-    SeparatorLine.Position = UDim2.new(0.25, 0, 0.147, 0) -- Positioned to the left of content
+    SeparatorLine.Position = UDim2.new(0.28, 0, 0.167, 0)
     SeparatorLine.Size = UDim2.new(0, 1, 0, 254)
 
     DragFrame.Name = "DragFrame"
     DragFrame.Parent = Main
     DragFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     DragFrame.BackgroundTransparency = 1.000
-    DragFrame.Size = UDim2.new(0, 560, 0, 41)
+    DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    Main:TweenSize(UDim2.new(0, 560, 0, 319), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .6, true)
+    Main:TweenSize(UDim2.new(0, 560, 0, 329), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .6, true)
 
     MakeDraggable(DragFrame, Main)
 
-    -- Mobile support: Create toggle button
     if isMobile then
         mobileToggleButton = Instance.new("TextButton")
         mobileToggleButton.Name = "MobileToggle"
@@ -167,7 +197,7 @@ function lib:Window(text, preset, closebind)
         mobileToggleButton.BackgroundColor3 = Color3.fromRGB(44, 120, 224)
         mobileToggleButton.BackgroundTransparency = 0.3
         mobileToggleButton.Size = UDim2.new(0, 80, 0, 40)
-        mobileToggleButton.Position = UDim2.new(0, 10, 0, 10) -- Top left but not fully corner
+        mobileToggleButton.Position = UDim2.new(0, 10, 0, 10)
         mobileToggleButton.Font = Enum.Font.GothamSemibold
         mobileToggleButton.Text = "Open"
         mobileToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -184,7 +214,7 @@ function lib:Window(text, preset, closebind)
                 ui.Enabled = true
                 mobileToggleButton.Text = "Close"
                 Main:TweenSize(
-                    UDim2.new(0, 560, 0, 319),
+                    UDim2.new(0, 560, 0, 329),
                     Enum.EasingDirection.Out,
                     Enum.EasingStyle.Quart,
                     .6,
@@ -231,7 +261,7 @@ function lib:Window(text, preset, closebind)
                     if isMobile then mobileToggleButton.Text = "Close" end
                 
                     Main:TweenSize(
-                        UDim2.new(0, 560, 0, 319),
+                        UDim2.new(0, 560, 0, 329),
                         Enum.EasingDirection.Out,
                         Enum.EasingStyle.Quart,
                         .6,
@@ -247,7 +277,6 @@ function lib:Window(text, preset, closebind)
 
     function lib:ChangePresetColor(toch)
         PresetColor = toch
-        -- Update all elements that use the preset color
         for _, tab in pairs(TabFolder:GetChildren()) do
             for _, element in pairs(tab:GetDescendants()) do
                 if element:IsA("Frame") and element.Name == "FrameToggle3" then
@@ -257,6 +286,8 @@ function lib:Window(text, preset, closebind)
                 elseif element:IsA("ImageLabel") and element.Name == "SlideCircle" then
                     element.ImageColor3 = toch
                 elseif element:IsA("Frame") and element.Name == "TabBtnIndicator" then
+                    element.BackgroundColor3 = toch
+                elseif element:IsA("Frame") and element.Name == "FrameRainbowToggle3" then
                     element.BackgroundColor3 = toch
                 end
             end
@@ -275,9 +306,9 @@ function lib:Window(text, preset, closebind)
         NotificationHold.Name = "NotificationHold"
         NotificationHold.Parent = Main
         NotificationHold.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        NotificationHold.BackgroundTransparency = 1.000
+        NotificationHold.BackgroundTransparency = 1
         NotificationHold.BorderSizePixel = 0
-        NotificationHold.Size = UDim2.new(0, 560, 0, 319)
+        NotificationHold.Size = UDim2.new(0, 560, 0, 329)
         NotificationHold.AutoButtonColor = false
         NotificationHold.Font = Enum.Font.SourceSans
         NotificationHold.Text = ""
@@ -286,10 +317,9 @@ function lib:Window(text, preset, closebind)
 
         TweenService:Create(
             NotificationHold,
-            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
             {BackgroundTransparency = 0.7}
         ):Play()
-        wait(0.4)
 
         NotificationFrame.Name = "NotificationFrame"
         NotificationFrame.Parent = NotificationHold
@@ -297,20 +327,19 @@ function lib:Window(text, preset, closebind)
         NotificationFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         NotificationFrame.BorderSizePixel = 0
         NotificationFrame.ClipsDescendants = true
-        NotificationFrame.Position = UDim2.new(0.5, 0, 0.498432577, 0)
+        NotificationFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        NotificationFrame.Size = UDim2.new(0, 164, 0, 193)
+        NotificationFrame.BackgroundTransparency = 1
 
-        -- Smooth corners for notification
         local NotificationCorner = Instance.new("UICorner")
         NotificationCorner.CornerRadius = UDim.new(0, 8)
         NotificationCorner.Parent = NotificationFrame
 
-        NotificationFrame:TweenSize(
-            UDim2.new(0, 164, 0, 193),
-            Enum.EasingDirection.Out,
-            Enum.EasingStyle.Quart,
-            .6,
-            true
-        )
+        TweenService:Create(
+            NotificationFrame,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0}
+        ):Play()
 
         OkayBtn.Name = "OkayBtn"
         OkayBtn.Parent = NotificationFrame
@@ -322,8 +351,9 @@ function lib:Window(text, preset, closebind)
         OkayBtn.Text = ""
         OkayBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         OkayBtn.TextSize = 14.000
+        OkayBtn.BackgroundTransparency = 1
 
-        OkayBtnCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+        OkayBtnCorner.CornerRadius = UDim.new(0, 6)
         OkayBtnCorner.Name = "OkayBtnCorner"
         OkayBtnCorner.Parent = OkayBtn
 
@@ -365,6 +395,12 @@ function lib:Window(text, preset, closebind)
         NotificationDesc.TextXAlignment = Enum.TextXAlignment.Left
         NotificationDesc.TextYAlignment = Enum.TextYAlignment.Top
 
+        TweenService:Create(
+            OkayBtn,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundTransparency = 0}
+        ):Play()
+
         OkayBtn.MouseEnter:Connect(
             function()
                 TweenService:Create(
@@ -387,28 +423,35 @@ function lib:Window(text, preset, closebind)
 
         OkayBtn.MouseButton1Click:Connect(
             function()
-                NotificationFrame:TweenSize(
-                    UDim2.new(0, 0, 0, 0),
-                    Enum.EasingDirection.Out,
-                    Enum.EasingStyle.Quart,
-                    .6,
-                    true
-                )
-
-                wait(0.4)
-
+                TweenService:Create(
+                    NotificationFrame,
+                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 1}
+                ):Play()
                 TweenService:Create(
                     NotificationHold,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                     {BackgroundTransparency = 1}
                 ):Play()
 
-                wait(.3)
-
+                wait(.2)
                 NotificationHold:Destroy()
             end
         )
     end
+
+    function lib:SaveConfig(name)
+        SaveConfig(name)
+    end
+
+    function lib:LoadConfig(name)
+        return LoadConfig(name)
+    end
+
+    function lib:GetConfigs()
+        return Configs
+    end
+
     local tabhold = {}
     function tabhold:Tab(text)
         local TabBtn = Instance.new("TextButton")
@@ -464,7 +507,7 @@ function lib:Window(text, preset, closebind)
         Tab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Tab.BackgroundTransparency = 1.000
         Tab.BorderSizePixel = 0
-        Tab.Position = UDim2.new(0.31400001, 0, 0.147, 0)
+        Tab.Position = UDim2.new(0.31400001, 0, 0.167, 0)
         Tab.Size = UDim2.new(0, 373, 0, 254)
         Tab.CanvasSize = UDim2.new(0, 0, 0, 0)
         Tab.ScrollBarThickness = 3
@@ -477,7 +520,7 @@ function lib:Window(text, preset, closebind)
 
         if fs == false then
             fs = true
-            TabBtnIndicator.Size = UDim2.new(0, 13, 0, 2)
+            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 7.5, 0, 2)
             TabTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             Tab.Visible = true
         end
@@ -500,7 +543,7 @@ function lib:Window(text, preset, closebind)
                             true
                         )
                         TabBtnIndicator:TweenSize(
-                            UDim2.new(0, 13, 0, 2),
+                            UDim2.new(0, string.len(text) * 7.5, 0, 2),
                             Enum.EasingDirection.Out,
                             Enum.EasingStyle.Quart,
                             .2,
@@ -536,7 +579,7 @@ function lib:Window(text, preset, closebind)
             Button.TextColor3 = Color3.fromRGB(0, 0, 0)
             Button.TextSize = 14.000
 
-            ButtonCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            ButtonCorner.CornerRadius = UDim.new(0, 6)
             ButtonCorner.Name = "ButtonCorner"
             ButtonCorner.Parent = Button
 
@@ -606,7 +649,7 @@ function lib:Window(text, preset, closebind)
             Toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
             Toggle.TextSize = 14.000
 
-            ToggleCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            ToggleCorner.CornerRadius = UDim.new(0, 6)
             ToggleCorner.Name = "ToggleCorner"
             ToggleCorner.Parent = Toggle
 
@@ -628,7 +671,7 @@ function lib:Window(text, preset, closebind)
             FrameToggle1.Position = UDim2.new(0.859504104, 0, 0.285714298, 0)
             FrameToggle1.Size = UDim2.new(0, 37, 0, 18)
 
-            FrameToggle1Corner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameToggle1Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle1Corner.Name = "FrameToggle1Corner"
             FrameToggle1Corner.Parent = FrameToggle1
 
@@ -638,7 +681,7 @@ function lib:Window(text, preset, closebind)
             FrameToggle2.Position = UDim2.new(0.0489999987, 0, 0.0930000022, 0)
             FrameToggle2.Size = UDim2.new(0, 33, 0, 14)
 
-            FrameToggle2Corner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameToggle2Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle2Corner.Name = "FrameToggle2Corner"
             FrameToggle2Corner.Parent = FrameToggle2
 
@@ -648,7 +691,7 @@ function lib:Window(text, preset, closebind)
             FrameToggle3.BackgroundTransparency = 1.000
             FrameToggle3.Size = UDim2.new(0, 37, 0, 18)
 
-            FrameToggle3Corner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameToggle3Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle3Corner.Name = "FrameToggle3Corner"
             FrameToggle3Corner.Parent = FrameToggle3
 
@@ -658,7 +701,7 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
             FrameToggleCircle.Size = UDim2.new(0, 10, 0, 10)
 
-            FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5) -- Smoother corners
+            FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
             FrameToggleCircleCorner.Parent = FrameToggleCircle
 
@@ -803,7 +846,7 @@ function lib:Window(text, preset, closebind)
             Slider.TextColor3 = Color3.fromRGB(0, 0, 0)
             Slider.TextSize = 14.000
 
-            SliderCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            SliderCorner.CornerRadius = UDim.new(0, 6)
             SliderCorner.Name = "SliderCorner"
             SliderCorner.Parent = Slider
 
@@ -838,7 +881,6 @@ function lib:Window(text, preset, closebind)
             SlideFrame.Position = UDim2.new(0.0342647657, 0, 0.686091602, 0)
             SlideFrame.Size = UDim2.new(0, 335, 0, 3)
 
-            -- Smooth corners for slider track
             local SlideFrameCorner = Instance.new("UICorner")
             SlideFrameCorner.CornerRadius = UDim.new(1, 0)
             SlideFrameCorner.Parent = SlideFrame
@@ -849,7 +891,6 @@ function lib:Window(text, preset, closebind)
             CurrentValueFrame.BorderSizePixel = 0
             CurrentValueFrame.Size = UDim2.new((start or 0) / max, 0, 0, 3)
 
-            -- Smooth corners for value fill
             local CurrentValueCorner = Instance.new("UICorner")
             CurrentValueCorner.CornerRadius = UDim.new(1, 0)
             CurrentValueCorner.Parent = CurrentValueFrame
@@ -936,7 +977,7 @@ function lib:Window(text, preset, closebind)
             Dropdown.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Dropdown.Size = UDim2.new(0, 363, 0, 42)
 
-            DropdownCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            DropdownCorner.CornerRadius = UDim.new(0, 6)
             DropdownCorner.Name = "DropdownCorner"
             DropdownCorner.Parent = Dropdown
 
@@ -1042,7 +1083,7 @@ function lib:Window(text, preset, closebind)
                 Item.TextColor3 = Color3.fromRGB(255, 255, 255)
                 Item.TextSize = 15.000
 
-                ItemCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+                ItemCorner.CornerRadius = UDim.new(0, 6)
                 ItemCorner.Name = "ItemCorner"
                 ItemCorner.Parent = Item
 
@@ -1139,7 +1180,7 @@ function lib:Window(text, preset, closebind)
             Colorpicker.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Colorpicker.Size = UDim2.new(0, 363, 0, 42)
 
-            ColorpickerCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            ColorpickerCorner.CornerRadius = UDim.new(0, 6)
             ColorpickerCorner.Name = "ColorpickerCorner"
             ColorpickerCorner.Parent = Colorpicker
 
@@ -1161,7 +1202,7 @@ function lib:Window(text, preset, closebind)
             BoxColor.Position = UDim2.new(1.60427809, 0, 0.214285716, 0)
             BoxColor.Size = UDim2.new(0, 41, 0, 23)
 
-            BoxColorCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            BoxColorCorner.CornerRadius = UDim.new(0, 6)
             BoxColorCorner.Name = "BoxColorCorner"
             BoxColorCorner.Parent = BoxColor
 
@@ -1176,7 +1217,7 @@ function lib:Window(text, preset, closebind)
             ConfirmBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
             ConfirmBtn.TextSize = 14.000
 
-            ConfirmBtnCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            ConfirmBtnCorner.CornerRadius = UDim.new(0, 6)
             ConfirmBtnCorner.Name = "ConfirmBtnCorner"
             ConfirmBtnCorner.Parent = ConfirmBtn
 
@@ -1212,7 +1253,7 @@ function lib:Window(text, preset, closebind)
             RainbowToggle.TextColor3 = Color3.fromRGB(0, 0, 0)
             RainbowToggle.TextSize = 14.000
 
-            RainbowToggleCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            RainbowToggleCorner.CornerRadius = UDim.new(0, 6)
             RainbowToggleCorner.Name = "RainbowToggleCorner"
             RainbowToggleCorner.Parent = RainbowToggle
 
@@ -1233,7 +1274,7 @@ function lib:Window(text, preset, closebind)
             FrameRainbowToggle1.Position = UDim2.new(0.649999976, 0, 0.186000004, 0)
             FrameRainbowToggle1.Size = UDim2.new(0, 37, 0, 18)
 
-            FrameRainbowToggle1Corner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameRainbowToggle1Corner.CornerRadius = UDim.new(0, 6)
             FrameRainbowToggle1Corner.Name = "FrameRainbowToggle1Corner"
             FrameRainbowToggle1Corner.Parent = FrameRainbowToggle1
 
@@ -1243,7 +1284,7 @@ function lib:Window(text, preset, closebind)
             FrameRainbowToggle2.Position = UDim2.new(0.0489999987, 0, 0.112999998, 0)
             FrameRainbowToggle2.Size = UDim2.new(0, 33, 0, 14)
 
-            FrameRainbowToggle2_2.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameRainbowToggle2_2.CornerRadius = UDim.new(0, 6)
             FrameRainbowToggle2_2.Name = "FrameRainbowToggle2"
             FrameRainbowToggle2_2.Parent = FrameRainbowToggle2
 
@@ -1253,7 +1294,7 @@ function lib:Window(text, preset, closebind)
             FrameRainbowToggle3.BackgroundTransparency = 1.000
             FrameRainbowToggle3.Size = UDim2.new(0, 37, 0, 18)
 
-            FrameToggle3.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            FrameToggle3.CornerRadius = UDim.new(0, 6)
             FrameToggle3.Name = "FrameToggle3"
             FrameToggle3.Parent = FrameRainbowToggle3
 
@@ -1263,7 +1304,7 @@ function lib:Window(text, preset, closebind)
             FrameRainbowToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
             FrameRainbowToggleCircle.Size = UDim2.new(0, 10, 0, 10)
 
-            FrameRainbowToggleCircleCorner.CornerRadius = UDim.new(0, 5) -- Smoother corners
+            FrameRainbowToggleCircleCorner.CornerRadius = UDim.new(0, 5)
             FrameRainbowToggleCircleCorner.Name = "FrameRainbowToggleCircleCorner"
             FrameRainbowToggleCircleCorner.Parent = FrameRainbowToggleCircle
 
@@ -1271,11 +1312,11 @@ function lib:Window(text, preset, closebind)
             Color.Parent = ColorpickerTitle
             Color.BackgroundColor3 = preset or Color3.fromRGB(255, 0, 4)
             Color.Position = UDim2.new(0, 0, 0, 42)
-            Color.Size = UDim2.new(0, 194, 0, 100) -- Increased height
+            Color.Size = UDim2.new(0, 194, 0, 100)
             Color.ZIndex = 10
             Color.Image = "rbxassetid://4155801252"
 
-            ColorCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            ColorCorner.CornerRadius = UDim.new(0, 6)
             ColorCorner.Name = "ColorCorner"
             ColorCorner.Parent = Color
 
@@ -1294,10 +1335,10 @@ function lib:Window(text, preset, closebind)
             Hue.Parent = ColorpickerTitle
             Hue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             Hue.Position = UDim2.new(0, 202, 0, 42)
-            Hue.Size = UDim2.new(0, 25, 0, 100) -- Increased height
+            Hue.Size = UDim2.new(0, 25, 0, 100)
             Hue.ZIndex = 10
 
-            HueCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            HueCorner.CornerRadius = UDim.new(0, 6)
             HueCorner.Name = "HueCorner"
             HueCorner.Parent = Hue
 
@@ -1339,7 +1380,7 @@ function lib:Window(text, preset, closebind)
                         ColorSelection.Visible = true
                         HueSelection.Visible = true
                         Colorpicker:TweenSize(
-                            UDim2.new(0, 363, 0, 182), -- Increased height for more space
+                            UDim2.new(0, 363, 0, 182),
                             Enum.EasingDirection.Out,
                             Enum.EasingStyle.Quart,
                             .2,
@@ -1595,7 +1636,7 @@ function lib:Window(text, preset, closebind)
             Label.TextColor3 = Color3.fromRGB(0, 0, 0)
             Label.TextSize = 14.000
 
-            LabelCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            LabelCorner.CornerRadius = UDim.new(0, 6)
             LabelCorner.Name = "ButtonCorner"
             LabelCorner.Parent = Label
 
@@ -1628,7 +1669,7 @@ function lib:Window(text, preset, closebind)
             Textbox.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Textbox.Size = UDim2.new(0, 363, 0, 42)
 
-            TextboxCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            TextboxCorner.CornerRadius = UDim.new(0, 6)
             TextboxCorner.Name = "TextboxCorner"
             TextboxCorner.Parent = Textbox
 
@@ -1650,7 +1691,7 @@ function lib:Window(text, preset, closebind)
             TextboxFrame.Position = UDim2.new(1.28877008, 0, 0.214285716, 0)
             TextboxFrame.Size = UDim2.new(0, 100, 0, 23)
 
-            TextboxFrameCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            TextboxFrameCorner.CornerRadius = UDim.new(0, 6)
             TextboxFrameCorner.Name = "TextboxFrameCorner"
             TextboxFrameCorner.Parent = TextboxFrame
 
@@ -1695,7 +1736,7 @@ function lib:Window(text, preset, closebind)
             Bind.TextColor3 = Color3.fromRGB(0, 0, 0)
             Bind.TextSize = 14.000
 
-            BindCorner.CornerRadius = UDim.new(0, 6) -- Smoother corners
+            BindCorner.CornerRadius = UDim.new(0, 6)
             BindCorner.Name = "BindCorner"
             BindCorner.Parent = Bind
 
