@@ -17,6 +17,7 @@ local CurrentNotification = nil
 local function SaveConfig(name)
     Configs[name] = {
         PresetColor = PresetColor,
+        CloseBind = CloseBind,
         -- Add other settings here as needed
     }
     print("Config saved:", name)
@@ -26,6 +27,7 @@ local function LoadConfig(name)
     if Configs[name] then
         local config = Configs[name]
         PresetColor = config.PresetColor
+        CloseBind = config.CloseBind or Enum.KeyCode.RightControl
         lib:ChangePresetColor(PresetColor)
         print("Config loaded:", name)
         return true
@@ -136,17 +138,6 @@ function lib:Window(text, preset, closebind)
     local CloseBtn = Instance.new("TextButton")
     local ButtonsContainer = Instance.new("Frame")
 
-    -- Config UI Elements
-    local ConfigFrame = Instance.new("Frame")
-    local ConfigFrameCorner = Instance.new("UICorner")
-    local ConfigTitle = Instance.new("TextLabel")
-    local ConfigNameBox = Instance.new("TextBox")
-    local ConfigNameBoxCorner = Instance.new("UICorner")
-    local SaveConfigBtn = Instance.new("TextButton")
-    local SaveConfigBtnCorner = Instance.new("UICorner")
-    local LoadConfigBtn = Instance.new("TextButton")
-    local LoadConfigBtnCorner = Instance.new("UICorner")
-
     Main.Name = "Main"
     Main.Parent = ui
     Main.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -156,19 +147,17 @@ function lib:Window(text, preset, closebind)
     Main.Size = UDim2.new(0, 0, 0, 0)
     Main.ClipsDescendants = true
     Main.Visible = true
-    Main.BackgroundTransparency = 1
-    Main.Rotation = 0
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
     MainCorner.Parent = Main
 
-    -- Buttons container - Positioned more to the right
+    -- Buttons container
     ButtonsContainer.Name = "ButtonsContainer"
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ButtonsContainer.BackgroundTransparency = 1.000
-    ButtonsContainer.Position = UDim2.new(0.89, 0, 0.0264263314, 0)
+    ButtonsContainer.Position = UDim2.new(0.88, 0, 0.0264263314, 0)
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     -- Minimize button
@@ -177,20 +166,20 @@ function lib:Window(text, preset, closebind)
     MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     MinimizeBtn.BackgroundTransparency = 1.000
     MinimizeBtn.Position = UDim2.new(0, 0, 0, 0)
-    MinimizeBtn.Size = UDim2.new(0, 25, 0, 30)
+    MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
     MinimizeBtn.Font = Enum.Font.GothamSemibold
     MinimizeBtn.Text = "-"
     MinimizeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     MinimizeBtn.TextSize = 18.000
     MinimizeBtn.TextWrapped = true
 
-    -- Close button - More spacing from minimize button
+    -- Close button
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
     CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     CloseBtn.BackgroundTransparency = 1.000
-    CloseBtn.Position = UDim2.new(0.6, 0, 0, 0)
-    CloseBtn.Size = UDim2.new(0, 25, 0, 30)
+    CloseBtn.Position = UDim2.new(0.5, 0, 0, 0)
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
     CloseBtn.Font = Enum.Font.GothamSemibold
     CloseBtn.Text = "x"
     CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -220,7 +209,6 @@ function lib:Window(text, preset, closebind)
     Title.TextColor3 = Color3.fromRGB(68, 68, 68)
     Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.TextTransparency = 1
 
     TitleSeparator.Name = "TitleSeparator"
     TitleSeparator.Parent = Main
@@ -228,7 +216,6 @@ function lib:Window(text, preset, closebind)
     TitleSeparator.BorderSizePixel = 0
     TitleSeparator.Position = UDim2.new(0.0339285731, 0, 0.137, 0)
     TitleSeparator.Size = UDim2.new(0, 520, 0, 1)
-    TitleSeparator.BackgroundTransparency = 1
 
     SeparatorLine.Name = "SeparatorLine"
     SeparatorLine.Parent = Main
@@ -236,7 +223,6 @@ function lib:Window(text, preset, closebind)
     SeparatorLine.BorderSizePixel = 0
     SeparatorLine.Position = UDim2.new(0.28, 0, 0.167, 0)
     SeparatorLine.Size = UDim2.new(0, 1, 0, 254)
-    SeparatorLine.BackgroundTransparency = 1
 
     DragFrame.Name = "DragFrame"
     DragFrame.Parent = Main
@@ -244,194 +230,11 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- Config Frame at the bottom
-    ConfigFrame.Name = "ConfigFrame"
-    ConfigFrame.Parent = Main
-    ConfigFrame.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-    ConfigFrame.Position = UDim2.new(0.0339285731, 0, 0.88, 0)
-    ConfigFrame.Size = UDim2.new(0, 520, 0, 32)
-    ConfigFrame.BackgroundTransparency = 1
-
-    ConfigFrameCorner.CornerRadius = UDim.new(0, 6)
-    ConfigFrameCorner.Parent = ConfigFrame
-
-    ConfigTitle.Name = "ConfigTitle"
-    ConfigTitle.Parent = ConfigFrame
-    ConfigTitle.BackgroundTransparency = 1
-    ConfigTitle.Position = UDim2.new(0, 0, 0, 0)
-    ConfigTitle.Size = UDim2.new(0, 60, 0, 32)
-    ConfigTitle.Font = Enum.Font.Gotham
-    ConfigTitle.Text = "Config:"
-    ConfigTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ConfigTitle.TextSize = 12
-    ConfigTitle.TextXAlignment = Enum.TextXAlignment.Left
-    ConfigTitle.TextTransparency = 1
-
-    ConfigNameBox.Name = "ConfigNameBox"
-    ConfigNameBox.Parent = ConfigFrame
-    ConfigNameBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    ConfigNameBox.Position = UDim2.new(0.12, 0, 0.1, 0)
-    ConfigNameBox.Size = UDim2.new(0, 120, 0, 25)
-    ConfigNameBox.Font = Enum.Font.Gotham
-    ConfigNameBox.PlaceholderText = "Config name..."
-    ConfigNameBox.Text = ""
-    ConfigNameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ConfigNameBox.TextSize = 12
-    ConfigNameBox.BackgroundTransparency = 1
-
-    ConfigNameBoxCorner.CornerRadius = UDim.new(0, 4)
-    ConfigNameBoxCorner.Parent = ConfigNameBox
-
-    SaveConfigBtn.Name = "SaveConfigBtn"
-    SaveConfigBtn.Parent = ConfigFrame
-    SaveConfigBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    SaveConfigBtn.Position = UDim2.new(0.5, 0, 0.1, 0)
-    SaveConfigBtn.Size = UDim2.new(0, 70, 0, 25)
-    SaveConfigBtn.Font = Enum.Font.Gotham
-    SaveConfigBtn.Text = "Save"
-    SaveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    SaveConfigBtn.TextSize = 12
-    SaveConfigBtn.AutoButtonColor = false
-    SaveConfigBtn.BackgroundTransparency = 1
-
-    SaveConfigBtnCorner.CornerRadius = UDim.new(0, 4)
-    SaveConfigBtnCorner.Parent = SaveConfigBtn
-
-    LoadConfigBtn.Name = "LoadConfigBtn"
-    LoadConfigBtn.Parent = ConfigFrame
-    LoadConfigBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    LoadConfigBtn.Position = UDim2.new(0.72, 0, 0.1, 0)
-    LoadConfigBtn.Size = UDim2.new(0, 70, 0, 25)
-    LoadConfigBtn.Font = Enum.Font.Gotham
-    LoadConfigBtn.Text = "Load"
-    LoadConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    LoadConfigBtn.TextSize = 12
-    LoadConfigBtn.AutoButtonColor = false
-    LoadConfigBtn.BackgroundTransparency = 1
-
-    LoadConfigBtnCorner.CornerRadius = UDim.new(0, 4)
-    LoadConfigBtnCorner.Parent = LoadConfigBtn
-
-    -- New animation for opening
-    TweenService:Create(
-        Main,
-        TweenInfo.new(.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Size = UDim2.new(0, 560, 0, 329)}
-    ):Play()
-    
-    TweenService:Create(
-        Main,
-        TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-
-    wait(0.2)
-    
-    TweenService:Create(
-        Title,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {TextTransparency = 0}
-    ):Play()
-    
-    TweenService:Create(
-        TitleSeparator,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-    
-    TweenService:Create(
-        SeparatorLine,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        ConfigFrame,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        ConfigTitle,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {TextTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        ConfigNameBox,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        SaveConfigBtn,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
-
-    TweenService:Create(
-        LoadConfigBtn,
-        TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    ):Play()
+    -- New opening animation with scale
+    Main.Size = UDim2.new(0, 0, 0, 0)
+    Main:TweenSize(UDim2.new(0, 560, 0, 329), Enum.EasingDirection.Out, Enum.EasingStyle.Back, .6, true)
 
     MakeDraggable(DragFrame, Main)
-
-    -- Config button functionality
-    SaveConfigBtn.MouseEnter:Connect(function()
-        TweenService:Create(
-            SaveConfigBtn,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}
-        ):Play()
-    end)
-
-    SaveConfigBtn.MouseLeave:Connect(function()
-        TweenService:Create(
-            SaveConfigBtn,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}
-        ):Play()
-    end)
-
-    LoadConfigBtn.MouseEnter:Connect(function()
-        TweenService:Create(
-            LoadConfigBtn,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}
-        ):Play()
-    end)
-
-    LoadConfigBtn.MouseLeave:Connect(function()
-        TweenService:Create(
-            LoadConfigBtn,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}
-        ):Play()
-    end)
-
-    SaveConfigBtn.MouseButton1Click:Connect(function()
-        local configName = ConfigNameBox.Text
-        if configName ~= "" then
-            SaveConfig(configName)
-            lib:Notification("Config", "Config '" .. configName .. "' saved successfully!", "Okay")
-        else
-            lib:Notification("Config", "Please enter a config name!", "Okay")
-        end
-    end)
-
-    LoadConfigBtn.MouseButton1Click:Connect(function()
-        local configName = ConfigNameBox.Text
-        if configName ~= "" then
-            if LoadConfig(configName) then
-                lib:Notification("Config", "Config '" .. configName .. "' loaded successfully!", "Okay")
-            else
-                lib:Notification("Config", "Config '" .. configName .. "' not found!", "Okay")
-            end
-        else
-            lib:Notification("Config", "Please enter a config name!", "Okay")
-        end
-    end)
 
     -- Button hover effects
     MinimizeBtn.MouseEnter:Connect(function()
@@ -466,93 +269,6 @@ function lib:Window(text, preset, closebind)
         ):Play()
     end)
 
-    -- Function to close UI with new animation
-    local function CloseUI()
-        TweenService:Create(
-            Title,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 1}
-        ):Play()
-        
-        TweenService:Create(
-            TitleSeparator,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-        
-        TweenService:Create(
-            SeparatorLine,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-
-        TweenService:Create(
-            ConfigFrame,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-
-        wait(0.1)
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.4, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {Size = UDim2.new(0, 0, 0, 0)}
-        ):Play()
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-        
-        wait(.4)
-        ui.Enabled = false
-    end
-
-    -- Function to open UI with new animation
-    local function OpenUI()
-        ui.Enabled = true
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            {Size = UDim2.new(0, 560, 0, 329)}
-        ):Play()
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-
-        wait(0.2)
-        
-        TweenService:Create(
-            Title,
-            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 0}
-        ):Play()
-        
-        TweenService:Create(
-            TitleSeparator,
-            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-        
-        TweenService:Create(
-            SeparatorLine,
-            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-
-        TweenService:Create(
-            ConfigFrame,
-            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 0}
-        ):Play()
-    end
-
     -- Button functionality
     MinimizeBtn.MouseButton1Click:Connect(function()
         uitoggled = true
@@ -562,30 +278,31 @@ function lib:Window(text, preset, closebind)
             end
         end
         
-        CloseUI()
+        -- New closing animation
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.In, 
+            Enum.EasingStyle.Back, 
+            .5, 
+            true, 
+            function()
+                ui.Enabled = false
+            end
+        )
     end)
 
     CloseBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(
-            Title,
-            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {TextTransparency = 1}
-        ):Play()
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.4, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {Size = UDim2.new(0, 0, 0, 0)}
-        ):Play()
-        
-        TweenService:Create(
-            Main,
-            TweenInfo.new(.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-        
-        wait(.4)
-        ui:Destroy()
+        -- New closing animation
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.In, 
+            Enum.EasingStyle.Back, 
+            .5, 
+            true, 
+            function()
+                ui:Destroy()
+            end
+        )
     end)
 
     if isMobile then
@@ -597,7 +314,7 @@ function lib:Window(text, preset, closebind)
         mobileToggleButton.Size = UDim2.new(0, 80, 0, 40)
         mobileToggleButton.Position = UDim2.new(0, 10, 0, 10)
         mobileToggleButton.Font = Enum.Font.GothamSemibold
-        mobileToggleButton.Text = "Close"
+        mobileToggleButton.Text = "Open"
         mobileToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         mobileToggleButton.TextSize = 14
         mobileToggleButton.ZIndex = 100
@@ -609,17 +326,33 @@ function lib:Window(text, preset, closebind)
         mobileToggleButton.MouseButton1Click:Connect(function()
             if uitoggled then
                 uitoggled = false
+                ui.Enabled = true
                 mobileToggleButton.Text = "Close"
-                OpenUI()
+                Main:TweenSize(
+                    UDim2.new(0, 560, 0, 329),
+                    Enum.EasingDirection.Out,
+                    Enum.EasingStyle.Back,
+                    .6,
+                    true
+                )
             else
                 uitoggled = true
+                Main:TweenSize(
+                    UDim2.new(0, 0, 0, 0), 
+                    Enum.EasingDirection.In, 
+                    Enum.EasingStyle.Back, 
+                    .5, 
+                    true, 
+                    function()
+                        ui.Enabled = false
+                    end
+                )
                 mobileToggleButton.Text = "Open"
-                CloseUI()
             end
         end)
     end
 
-    -- Fixed keybind functionality - Now works properly as OpenUiKeybind
+    -- Fixed keybind functionality
     local keybindConnection
     keybindConnection = UserInputService.InputBegan:Connect(
         function(io, p)
@@ -631,17 +364,34 @@ function lib:Window(text, preset, closebind)
                             mobileToggleButton.Text = "Open" 
                         end
                     end
+                
+                    Main:TweenSize(
+                        UDim2.new(0, 0, 0, 0), 
+                        Enum.EasingDirection.In, 
+                        Enum.EasingStyle.Back, 
+                        .5, 
+                        true, 
+                        function()
+                            ui.Enabled = false
+                        end
+                    )
                     
-                    CloseUI()
                 else
                     uitoggled = false
+                    ui.Enabled = true
                     if isMobile then 
                         if mobileToggleButton then
                             mobileToggleButton.Text = "Close" 
                         end
                     end
-                    
-                    OpenUI()
+                
+                    Main:TweenSize(
+                        UDim2.new(0, 560, 0, 329),
+                        Enum.EasingDirection.Out,
+                        Enum.EasingStyle.Back,
+                        .6,
+                        true
+                    )
                 end
             end
         end
@@ -704,7 +454,6 @@ function lib:Window(text, preset, closebind)
         NotificationHold.Text = ""
         NotificationHold.TextColor3 = Color3.fromRGB(0, 0, 0)
         NotificationHold.TextSize = 14.000
-        NotificationHold.ZIndex = 999
 
         TweenService:Create(
             NotificationHold,
@@ -721,7 +470,6 @@ function lib:Window(text, preset, closebind)
         NotificationFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         NotificationFrame.Size = UDim2.new(0, 164, 0, 193)
         NotificationFrame.BackgroundTransparency = 1
-        NotificationFrame.ZIndex = 1000
 
         local NotificationCorner = Instance.new("UICorner")
         NotificationCorner.CornerRadius = UDim.new(0, 8)
@@ -744,7 +492,6 @@ function lib:Window(text, preset, closebind)
         OkayBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         OkayBtn.TextSize = 14.000
         OkayBtn.BackgroundTransparency = 1
-        OkayBtn.ZIndex = 1001
 
         OkayBtnCorner.CornerRadius = UDim.new(0, 6)
         OkayBtnCorner.Name = "OkayBtnCorner"
@@ -761,7 +508,6 @@ function lib:Window(text, preset, closebind)
         OkayBtnTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
         OkayBtnTitle.TextSize = 14.000
         OkayBtnTitle.TextXAlignment = Enum.TextXAlignment.Left
-        OkayBtnTitle.ZIndex = 1002
 
         NotificationTitle.Name = "NotificationTitle"
         NotificationTitle.Parent = NotificationFrame
@@ -774,7 +520,6 @@ function lib:Window(text, preset, closebind)
         NotificationTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
         NotificationTitle.TextSize = 18.000
         NotificationTitle.TextXAlignment = Enum.TextXAlignment.Left
-        NotificationTitle.ZIndex = 1002
 
         NotificationDesc.Name = "NotificationDesc"
         NotificationDesc.Parent = NotificationFrame
@@ -789,7 +534,6 @@ function lib:Window(text, preset, closebind)
         NotificationDesc.TextWrapped = true
         NotificationDesc.TextXAlignment = Enum.TextXAlignment.Left
         NotificationDesc.TextYAlignment = Enum.TextYAlignment.Top
-        NotificationDesc.ZIndex = 1002
 
         TweenService:Create(
             OkayBtn,
@@ -871,6 +615,11 @@ function lib:Window(text, preset, closebind)
         return Configs
     end
 
+    function lib:SetToggleKey(key)
+        CloseBind = key
+        lib:Notification("Keybind Updated", "UI toggle key has been set to: " .. key.Name, "Okay")
+    end
+
     local tabhold = {}
     function tabhold:Tab(text)
         local TabBtn = Instance.new("TextButton")
@@ -927,7 +676,7 @@ function lib:Window(text, preset, closebind)
         Tab.BackgroundTransparency = 1.000
         Tab.BorderSizePixel = 0
         Tab.Position = UDim2.new(0.31400001, 0, 0.167, 0)
-        Tab.Size = UDim2.new(0, 373, 0, 215)
+        Tab.Size = UDim2.new(0, 373, 0, 254)
         Tab.CanvasSize = UDim2.new(0, 0, 0, 0)
         Tab.ScrollBarThickness = 3
         Tab.Visible = false
