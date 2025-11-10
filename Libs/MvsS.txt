@@ -18,6 +18,7 @@ local function SaveConfig(name)
     Configs[name] = {
         PresetColor = PresetColor,
         CloseBind = CloseBind,
+        -- Add other settings here as needed
     }
     print("Config saved:", name)
 end
@@ -124,6 +125,7 @@ function lib:Window(text, preset, closebind)
     PresetColor = preset or Color3.fromRGB(44, 120, 224)
     fs = false
     
+    -- Store the main window reference for keybind updates
     local MainWindow = nil
     local keybindConnection = nil
 
@@ -138,6 +140,7 @@ function lib:Window(text, preset, closebind)
     local SeparatorLine = Instance.new("Frame")
     local TitleSeparator = Instance.new("Frame")
     
+    -- Title bar buttons
     local MinimizeBtn = Instance.new("TextButton")
     local CloseBtn = Instance.new("TextButton")
     local ButtonsContainer = Instance.new("Frame")
@@ -156,6 +159,7 @@ function lib:Window(text, preset, closebind)
     MainCorner.CornerRadius = UDim.new(0, 8)
     MainCorner.Parent = Main
 
+    -- Buttons container
     ButtonsContainer.Name = "ButtonsContainer"
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -163,6 +167,7 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Position = UDim2.new(0.88, 0, 0.0264263314, 0)
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
+    -- Minimize button
     MinimizeBtn.Name = "MinimizeBtn"
     MinimizeBtn.Parent = ButtonsContainer
     MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -175,6 +180,7 @@ function lib:Window(text, preset, closebind)
     MinimizeBtn.TextSize = 18.000
     MinimizeBtn.TextWrapped = true
 
+    -- Close button
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
     CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -189,27 +195,15 @@ function lib:Window(text, preset, closebind)
 
     TabHold.Name = "TabHold"
     TabHold.Parent = Main
-    TabHold.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    TabHold.BackgroundTransparency = 0
+    TabHold.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    TabHold.BackgroundTransparency = 1.000
     TabHold.Position = UDim2.new(0.0339285731, 0, 0.167335425, 0)
-    TabHold.Size = UDim2.new(0, 120, 0, 254)
-
-    local TabHoldCorner = Instance.new("UICorner")
-    TabHoldCorner.CornerRadius = UDim.new(0, 6)
-    TabHoldCorner.Parent = TabHold
-
-    local TabHoldPadding = Instance.new("UIPadding")
-    TabHoldPadding.Parent = TabHold
-    TabHoldPadding.PaddingTop = UDim.new(0, 10)
-    TabHoldPadding.PaddingLeft = UDim.new(0, 8)
-    TabHoldPadding.PaddingRight = UDim.new(0, 8)
-    TabHoldPadding.PaddingBottom = UDim.new(0, 10)
+    TabHold.Size = UDim2.new(0, 107, 0, 254)
 
     TabHoldLayout.Name = "TabHoldLayout"
     TabHoldLayout.Parent = TabHold
     TabHoldLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabHoldLayout.Padding = UDim.new(0, 12)
-    TabHoldLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    TabHoldLayout.Padding = UDim.new(0, 11)
 
     Title.Name = "Title"
     Title.Parent = Main
@@ -243,19 +237,13 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    Main.Size = UDim2.new(0, 560, 0, 329)
-    Main.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Main.AnchorPoint = Vector2.new(0.5, 0.5)
-    
-    local openingTween = TweenService:Create(
-        Main,
-        TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Size = UDim2.new(0, 560, 0, 329)}
-    )
-    openingTween:Play()
+    -- New opening animation with scale
+    Main.Size = UDim2.new(0, 0, 0, 0)
+    Main:TweenSize(UDim2.new(0, 560, 0, 329), Enum.EasingDirection.Out, Enum.EasingStyle.Back, .6, true)
 
     MakeDraggable(DragFrame, Main)
 
+    -- Button hover effects
     MinimizeBtn.MouseEnter:Connect(function()
         TweenService:Create(
             MinimizeBtn,
@@ -288,6 +276,7 @@ function lib:Window(text, preset, closebind)
         ):Play()
     end)
 
+    -- Button functionality
     MinimizeBtn.MouseButton1Click:Connect(function()
         uitoggled = true
         if isMobile then 
@@ -296,29 +285,31 @@ function lib:Window(text, preset, closebind)
             end
         end
         
-        local closingTween = TweenService:Create(
-            Main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {Size = UDim2.new(0, 0, 0, 0)}
+        -- New closing animation
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.In, 
+            Enum.EasingStyle.Back, 
+            .5, 
+            true, 
+            function()
+                ui.Enabled = false
+            end
         )
-        closingTween:Play()
-        
-        closingTween.Completed:Connect(function()
-            ui.Enabled = false
-        end)
     end)
 
     CloseBtn.MouseButton1Click:Connect(function()
-        local closingTween = TweenService:Create(
-            Main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-            {Size = UDim2.new(0, 0, 0, 0)}
+        -- New closing animation
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.In, 
+            Enum.EasingStyle.Back, 
+            .5, 
+            true, 
+            function()
+                ui:Destroy()
+            end
         )
-        closingTween:Play()
-        
-        closingTween.Completed:Connect(function()
-            ui:Destroy()
-        end)
     end)
 
     if isMobile then
@@ -344,29 +335,31 @@ function lib:Window(text, preset, closebind)
                 uitoggled = false
                 ui.Enabled = true
                 mobileToggleButton.Text = "Close"
-                local openingTween = TweenService:Create(
-                    Main,
-                    TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                    {Size = UDim2.new(0, 560, 0, 329)}
+                Main:TweenSize(
+                    UDim2.new(0, 560, 0, 329),
+                    Enum.EasingDirection.Out,
+                    Enum.EasingStyle.Back,
+                    .6,
+                    true
                 )
-                openingTween:Play()
             else
                 uitoggled = true
-                local closingTween = TweenService:Create(
-                    Main,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-                    {Size = UDim2.new(0, 0, 0, 0)}
+                Main:TweenSize(
+                    UDim2.new(0, 0, 0, 0), 
+                    Enum.EasingDirection.In, 
+                    Enum.EasingStyle.Back, 
+                    .5, 
+                    true, 
+                    function()
+                        ui.Enabled = false
+                    end
                 )
-                closingTween:Play()
-                
-                closingTween.Completed:Connect(function()
-                    ui.Enabled = false
-                end)
                 mobileToggleButton.Text = "Open"
             end
         end)
     end
 
+    -- Keybind functionality with proper updating
     local function UpdateKeybindConnection()
         if keybindConnection then
             keybindConnection:Disconnect()
@@ -383,16 +376,16 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        local closingTween = TweenService:Create(
-                            Main,
-                            TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-                            {Size = UDim2.new(0, 0, 0, 0)}
+                        Main:TweenSize(
+                            UDim2.new(0, 0, 0, 0), 
+                            Enum.EasingDirection.In, 
+                            Enum.EasingStyle.Back, 
+                            .5, 
+                            true, 
+                            function()
+                                ui.Enabled = false
+                            end
                         )
-                        closingTween:Play()
-                        
-                        closingTween.Completed:Connect(function()
-                            ui.Enabled = false
-                        end)
                         
                     else
                         uitoggled = false
@@ -403,20 +396,23 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        local openingTween = TweenService:Create(
-                            Main,
-                            TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-                            {Size = UDim2.new(0, 560, 0, 329)}
+                        Main:TweenSize(
+                            UDim2.new(0, 560, 0, 329),
+                            Enum.EasingDirection.Out,
+                            Enum.EasingStyle.Back,
+                            .6,
+                            true
                         )
-                        openingTween:Play()
                     end
                 end
             end
         )
     end
 
+    -- Initialize the keybind connection
     UpdateKeybindConnection()
 
+    -- Clean up connection when UI is destroyed
     Main.Destroying:Connect(function()
         if keybindConnection then
             keybindConnection:Disconnect()
@@ -446,6 +442,7 @@ function lib:Window(text, preset, closebind)
     end
 
     function lib:Notification(texttitle, textdesc, textbtn)
+        -- Remove existing notification if any
         if CurrentNotification then
             CurrentNotification:Destroy()
             CurrentNotification = nil
@@ -644,20 +641,21 @@ function lib:Window(text, preset, closebind)
     end
 
     function lib:PresetMainSettings(tab)
+        -- Config Label
         tab:Label("Config Settings")
         
+        -- Create New Config Textbox
         local newConfigName = ""
-        local configInputActive = false
-        
-        tab:Textbox("Create New Config", false, function(text)
+        tab:Textbox("Create New Config", true, function(text)
             newConfigName = text
-            configInputActive = (text ~= nil and text ~= "")
         end)
         
+        -- Save New Config Button
         tab:Button("Save New Config", function()
-            if newConfigName and newConfigName ~= "" and configInputActive then
+            if newConfigName and newConfigName ~= "" then
                 SaveConfig(newConfigName)
                 lib:Notification("Config Created", "New config '" .. newConfigName .. "' has been created and saved.", "Okay")
+                -- Refresh the dropdown
                 if refreshDropdown then
                     refreshDropdown()
                 end
@@ -666,6 +664,7 @@ function lib:Window(text, preset, closebind)
             end
         end)
         
+        -- Configs Dropdown
         local configList = {"default"}
         local refreshDropdown = nil
         
@@ -681,8 +680,10 @@ function lib:Window(text, preset, closebind)
             if #configList == 0 then
                 table.insert(configList, "default")
             end
+            -- Note: In a real implementation, you'd need to refresh the dropdown UI elements
         end
         
+        -- Load Config Button
         tab:Button("Load Selected Config", function()
             if CurrentConfig then
                 if LoadConfig(CurrentConfig) then
@@ -695,6 +696,7 @@ function lib:Window(text, preset, closebind)
             end
         end)
         
+        -- Save Config Button
         tab:Button("Save Current Config", function()
             if CurrentConfig then
                 SaveConfig(CurrentConfig)
@@ -704,15 +706,19 @@ function lib:Window(text, preset, closebind)
             end
         end)
         
+        -- UI Keybind Section
         tab:Label("UI Keybind Settings")
         
         local currentKeyText = "Current: " .. lib:GetToggleKey().Name
         tab:Label(currentKeyText)
         
+        -- Keybind changer
         tab:Bind("Change UI Toggle Key", lib:GetToggleKey(), function()
+            -- This will be triggered when the bind is pressed
             lib:Notification("Keybind Updated", "UI toggle key has been updated to: " .. lib:GetToggleKey().Name, "Okay")
         end)
         
+        -- Refresh the config list initially
         refreshDropdown()
     end
 
@@ -725,28 +731,24 @@ function lib:Window(text, preset, closebind)
 
         TabBtn.Name = "TabBtn"
         TabBtn.Parent = TabHold
-        TabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        TabBtn.BackgroundTransparency = 0
-        TabBtn.Size = UDim2.new(1, -16, 0, 38)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.BackgroundTransparency = 1.000
+        TabBtn.Size = UDim2.new(0, 107, 0, 21)
         TabBtn.Font = Enum.Font.SourceSans
         TabBtn.Text = ""
         TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         TabBtn.TextSize = 14.000
 
-        local TabBtnCorner = Instance.new("UICorner")
-        TabBtnCorner.CornerRadius = UDim.new(0, 4)
-        TabBtnCorner.Parent = TabBtn
-
         TabTitle.Name = "TabTitle"
         TabTitle.Parent = TabBtn
         TabTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabTitle.BackgroundTransparency = 1.000
-        TabTitle.Size = UDim2.new(1, 0, 1, 0)
-        TabTitle.Font = Enum.Font.GothamSemibold
+        TabTitle.Size = UDim2.new(0, 107, 0, 21)
+        TabTitle.Font = Enum.Font.Gotham
         TabTitle.Text = text
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
-        TabTitle.TextSize = 16.000
-        TabTitle.TextXAlignment = Enum.TextXAlignment.Center
+        TabTitle.TextSize = 14.000
+        TabTitle.TextXAlignment = Enum.TextXAlignment.Left
 
         TabBtnIndicator.Name = "TabBtnIndicator"
         TabBtnIndicator.Parent = TabBtn
@@ -788,9 +790,8 @@ function lib:Window(text, preset, closebind)
 
         if fs == false then
             fs = true
-            TabBtnIndicator.Size = UDim2.new(1, 0, 0, 2)
+            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 7.5, 0, 2)
             TabTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             Tab.Visible = true
         end
 
@@ -811,59 +812,27 @@ function lib:Window(text, preset, closebind)
                             .2,
                             true
                         )
-                        TweenService:Create(
-                            v,
-                            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}
-                        ):Play()
+                        TabBtnIndicator:TweenSize(
+                            UDim2.new(0, string.len(text) * 7.5, 0, 2),
+                            Enum.EasingDirection.Out,
+                            Enum.EasingStyle.Quart,
+                            .2,
+                            true
+                        )
                         TweenService:Create(
                             v.TabTitle,
                             TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                             {TextColor3 = Color3.fromRGB(150, 150, 150)}
                         ):Play()
+                        TweenService:Create(
+                            TabTitle,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {TextColor3 = Color3.fromRGB(255, 255, 255)}
+                        ):Play()
                     end
                 end
-                
-                TabBtnIndicator:TweenSize(
-                    UDim2.new(1, 0, 0, 2),
-                    Enum.EasingDirection.Out,
-                    Enum.EasingStyle.Quart,
-                    .2,
-                    true
-                )
-                TweenService:Create(
-                    TabBtn,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
-                ):Play()
-                TweenService:Create(
-                    TabTitle,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {TextColor3 = Color3.fromRGB(255, 255, 255)}
-                ):Play()
             end
         )
-
-        TabBtn.MouseEnter:Connect(function()
-            if Tab.Visible == false then
-                TweenService:Create(
-                    TabBtn,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}
-                ):Play()
-            end
-        end)
-
-        TabBtn.MouseLeave:Connect(function()
-            if Tab.Visible == false then
-                TweenService:Create(
-                    TabBtn,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}
-                ):Play()
-            end
-        end)
-
         local tabcontent = {}
         function tabcontent:Button(text, callback)
             local Button = Instance.new("TextButton")
@@ -2080,6 +2049,7 @@ function lib:Window(text, preset, closebind)
                     if inputwait.KeyCode.Name ~= "Unknown" then
                         BindText.Text = inputwait.KeyCode.Name
                         Key = inputwait.KeyCode.Name
+                        -- Update the UI toggle key
                         lib:SetToggleKey(inputwait.KeyCode)
                         binding = false
                         pcall(callback)
