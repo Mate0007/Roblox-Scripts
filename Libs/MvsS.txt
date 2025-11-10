@@ -11,6 +11,9 @@ local CloseBind = Enum.KeyCode.RightControl
 local Configs = {}
 local CurrentConfig = "default"
 
+-- Notification management
+local CurrentNotification = nil
+
 local function SaveConfig(name)
     Configs[name] = {
         PresetColor = PresetColor,
@@ -127,6 +130,11 @@ function lib:Window(text, preset, closebind)
     local DragFrame = Instance.new("Frame")
     local SeparatorLine = Instance.new("Frame")
     local TitleSeparator = Instance.new("Frame")
+    
+    -- Title bar buttons
+    local MinimizeBtn = Instance.new("TextButton")
+    local CloseBtn = Instance.new("TextButton")
+    local ButtonsContainer = Instance.new("Frame")
 
     Main.Name = "Main"
     Main.Parent = ui
@@ -141,6 +149,40 @@ function lib:Window(text, preset, closebind)
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
     MainCorner.Parent = Main
+
+    -- Buttons container
+    ButtonsContainer.Name = "ButtonsContainer"
+    ButtonsContainer.Parent = Main
+    ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    ButtonsContainer.BackgroundTransparency = 1.000
+    ButtonsContainer.Position = UDim2.new(0.85, 0, 0.0264263314, 0)
+    ButtonsContainer.Size = UDim2.new(0, 60, 0, 30)
+
+    -- Minimize button
+    MinimizeBtn.Name = "MinimizeBtn"
+    MinimizeBtn.Parent = ButtonsContainer
+    MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    MinimizeBtn.BackgroundTransparency = 1.000
+    MinimizeBtn.Position = UDim2.new(0, 0, 0, 0)
+    MinimizeBtn.Size = UDim2.new(0, 25, 0, 30)
+    MinimizeBtn.Font = Enum.Font.GothamSemibold
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    MinimizeBtn.TextSize = 18.000
+    MinimizeBtn.TextWrapped = true
+
+    -- Close button
+    CloseBtn.Name = "CloseBtn"
+    CloseBtn.Parent = ButtonsContainer
+    CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    CloseBtn.BackgroundTransparency = 1.000
+    CloseBtn.Position = UDim2.new(0.45, 0, 0, 0)
+    CloseBtn.Size = UDim2.new(0, 25, 0, 30)
+    CloseBtn.Font = Enum.Font.GothamSemibold
+    CloseBtn.Text = "x"
+    CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    CloseBtn.TextSize = 16.000
+    CloseBtn.TextWrapped = true
 
     TabHold.Name = "TabHold"
     TabHold.Parent = Main
@@ -158,7 +200,7 @@ function lib:Window(text, preset, closebind)
     Title.Parent = Main
     Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Title.BackgroundTransparency = 1.000
-    Title.Position = UDim2.new(0.0339285731, 0, 0.0264263314, 0) -- Moved more up
+    Title.Position = UDim2.new(0.0339285731, 0, 0.0264263314, 0)
     Title.Size = UDim2.new(0, 200, 0, 30)
     Title.Font = Enum.Font.GothamSemibold
     Title.Text = text
@@ -189,6 +231,73 @@ function lib:Window(text, preset, closebind)
     Main:TweenSize(UDim2.new(0, 560, 0, 329), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .6, true)
 
     MakeDraggable(DragFrame, Main)
+
+    -- Button hover effects
+    MinimizeBtn.MouseEnter:Connect(function()
+        TweenService:Create(
+            MinimizeBtn,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextColor3 = Color3.fromRGB(255, 255, 255)}
+        ):Play()
+    end)
+
+    MinimizeBtn.MouseLeave:Connect(function()
+        TweenService:Create(
+            MinimizeBtn,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextColor3 = Color3.fromRGB(150, 150, 150)}
+        ):Play()
+    end)
+
+    CloseBtn.MouseEnter:Connect(function()
+        TweenService:Create(
+            CloseBtn,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextColor3 = Color3.fromRGB(255, 100, 100)}
+        ):Play()
+    end)
+
+    CloseBtn.MouseLeave:Connect(function()
+        TweenService:Create(
+            CloseBtn,
+            TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {TextColor3 = Color3.fromRGB(150, 150, 150)}
+        ):Play()
+    end)
+
+    -- Button functionality
+    MinimizeBtn.MouseButton1Click:Connect(function()
+        uitoggled = true
+        if isMobile then 
+            if mobileToggleButton then
+                mobileToggleButton.Text = "Open" 
+            end
+        end
+        
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.Out, 
+            Enum.EasingStyle.Quart, 
+            .6, 
+            true, 
+            function()
+                ui.Enabled = false
+            end
+        )
+    end)
+
+    CloseBtn.MouseButton1Click:Connect(function()
+        Main:TweenSize(
+            UDim2.new(0, 0, 0, 0), 
+            Enum.EasingDirection.Out, 
+            Enum.EasingStyle.Quart, 
+            .6, 
+            true, 
+            function()
+                ui:Destroy()
+            end
+        )
+    end)
 
     if isMobile then
         mobileToggleButton = Instance.new("TextButton")
@@ -237,12 +346,18 @@ function lib:Window(text, preset, closebind)
         end)
     end
 
-    UserInputService.InputBegan:Connect(
+    -- Fixed keybind functionality
+    local keybindConnection
+    keybindConnection = UserInputService.InputBegan:Connect(
         function(io, p)
-            if io.KeyCode == CloseBind then
+            if io.KeyCode == CloseBind and not p then
                 if uitoggled == false then
                     uitoggled = true
-                    if isMobile then mobileToggleButton.Text = "Open" end
+                    if isMobile then 
+                        if mobileToggleButton then
+                            mobileToggleButton.Text = "Open" 
+                        end
+                    end
                 
                     Main:TweenSize(
                         UDim2.new(0, 0, 0, 0), 
@@ -258,7 +373,11 @@ function lib:Window(text, preset, closebind)
                 else
                     uitoggled = false
                     ui.Enabled = true
-                    if isMobile then mobileToggleButton.Text = "Close" end
+                    if isMobile then 
+                        if mobileToggleButton then
+                            mobileToggleButton.Text = "Close" 
+                        end
+                    end
                 
                     Main:TweenSize(
                         UDim2.new(0, 560, 0, 329),
@@ -271,6 +390,13 @@ function lib:Window(text, preset, closebind)
             end
         end
     )
+
+    -- Clean up connection when UI is destroyed
+    Main.Destroying:Connect(function()
+        if keybindConnection then
+            keybindConnection:Disconnect()
+        end
+    end)
 
     TabFolder.Name = "TabFolder"
     TabFolder.Parent = Main
@@ -295,7 +421,15 @@ function lib:Window(text, preset, closebind)
     end
 
     function lib:Notification(texttitle, textdesc, textbtn)
+        -- Remove existing notification if any
+        if CurrentNotification then
+            CurrentNotification:Destroy()
+            CurrentNotification = nil
+        end
+
         local NotificationHold = Instance.new("TextButton")
+        CurrentNotification = NotificationHold
+        
         local NotificationFrame = Instance.new("Frame")
         local OkayBtn = Instance.new("TextButton")
         local OkayBtnCorner = Instance.new("UICorner")
@@ -373,7 +507,7 @@ function lib:Window(text, preset, closebind)
         NotificationTitle.Parent = NotificationFrame
         NotificationTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         NotificationTitle.BackgroundTransparency = 1.000
-        NotificationTitle.Position = UDim2.new(0.0670731738, 0, 0.0529015523, 0) -- Moved more up
+        NotificationTitle.Position = UDim2.new(0.0670731738, 0, 0.0529015523, 0)
         NotificationTitle.Size = UDim2.new(0, 143, 0, 26)
         NotificationTitle.Font = Enum.Font.Gotham
         NotificationTitle.Text = texttitle
@@ -421,44 +555,46 @@ function lib:Window(text, preset, closebind)
             end
         )
 
-        OkayBtn.MouseButton1Click:Connect(
-            function()
-                -- Fade out everything at the same time
-                TweenService:Create(
-                    NotificationFrame,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    NotificationHold,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    NotificationTitle,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {TextTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    NotificationDesc,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {TextTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    OkayBtn,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    OkayBtnTitle,
-                    TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {TextTransparency = 1}
-                ):Play()
+        local function CloseNotification()
+            TweenService:Create(
+                NotificationFrame,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                NotificationHold,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                NotificationTitle,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                NotificationDesc,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                OkayBtn,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ):Play()
+            TweenService:Create(
+                OkayBtnTitle,
+                TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 1}
+            ):Play()
 
-                wait(.2)
-                NotificationHold:Destroy()
+            wait(.2)
+            NotificationHold:Destroy()
+            if CurrentNotification == NotificationHold then
+                CurrentNotification = nil
             end
-        )
+        end
+
+        OkayBtn.MouseButton1Click:Connect(CloseNotification)
     end
 
     function lib:SaveConfig(name)
