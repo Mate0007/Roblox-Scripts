@@ -11,28 +11,41 @@ local CloseBind = Enum.KeyCode.RightControl
 local Configs = {}
 local CurrentConfig = "default"
 
--- Store element states for configs
-local ElementStates = {}
-
 -- Notification management
 local CurrentNotification = nil
 
+-- Track UI state
+local uiEnabled = true
+local uitoggled = false
+
 local function SaveConfig(name)
-    Configs[name] = {
+    if not name or name == "" then
+        return false
+    end
+    
+    -- Collect all UI state
+    local uiState = {
         PresetColor = PresetColor,
         CloseBind = CloseBind,
-        ElementStates = ElementStates
+        -- Add other settings here as needed
     }
+    
+    Configs[name] = uiState
     print("Config saved:", name)
+    return true
 end
 
 local function LoadConfig(name)
     if Configs[name] then
         local config = Configs[name]
-        PresetColor = config.PresetColor
-        CloseBind = config.CloseBind or Enum.KeyCode.RightControl
-        ElementStates = config.ElementStates or {}
-        lib:ChangePresetColor(PresetColor)
+        PresetColor = config.PresetColor or PresetColor
+        CloseBind = config.CloseBind or CloseBind
+        
+        -- Update UI elements with new preset color
+        if lib.ChangePresetColor then
+            lib:ChangePresetColor(PresetColor)
+        end
+        
         print("Config loaded:", name)
         return true
     else
@@ -49,7 +62,6 @@ ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- Mobile support variables
 local isMobile = UserInputService.TouchEnabled and not UserInputService.MouseEnabled
 local mobileToggleButton = nil
-local uitoggled = false
 
 coroutine.wrap(
     function()
@@ -124,75 +136,79 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- Smooth fade function
-local function SmoothFade(object, targetTransparency, duration, onComplete)
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- Improved fade animations
+local function FadeInUI(main)
+    main.Visible = true
+    main.BackgroundTransparency = 1
     
-    -- Create tweens for all visual properties
-    local tweens = {}
-    
-    if object:IsA("GuiObject") then
-        table.insert(tweens, TweenService:Create(object, tweenInfo, {BackgroundTransparency = targetTransparency}))
-        
-        if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
-            table.insert(tweens, TweenService:Create(object, tweenInfo, {TextTransparency = targetTransparency}))
-        end
-        
-        if object:IsA("ImageLabel") or object:IsA("ImageButton") then
-            table.insert(tweens, TweenService:Create(object, tweenInfo, {ImageTransparency = targetTransparency}))
-        end
-    end
-    
-    -- Also fade children
-    for _, child in ipairs(object:GetDescendants()) do
+    -- Fade in all children simultaneously
+    for _, child in ipairs(main:GetDescendants()) do
         if child:IsA("GuiObject") then
+            child.BackgroundTransparency = 1
             if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
-                table.insert(tweens, TweenService:Create(child, tweenInfo, {TextTransparency = targetTransparency}))
+                child.TextTransparency = 1
+            elseif child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                child.ImageTransparency = 1
             end
-            
-            if child:IsA("ImageLabel") or child:IsA("ImageButton") then
-                table.insert(tweens, TweenService:Create(child, tweenInfo, {ImageTransparency = targetTransparency}))
-            end
-            
-            table.insert(tweens, TweenService:Create(child, tweenInfo, {BackgroundTransparency = targetTransparency}))
         end
     end
     
-    -- Play all tweens simultaneously
-    for _, tween in ipairs(tweens) do
-        tween:Play()
-    end
+    local fadeIn = TweenService:Create(
+        main,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0}
+    )
+    fadeIn:Play()
     
-    if onComplete then
-        delay(duration, onComplete)
+    -- Fade in all children
+    for _, child in ipairs(main:GetDescendants()) do
+        if child:IsA("GuiObject") then
+            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            if child:IsA("Frame") then
+                TweenService:Create(child, tweenInfo, {BackgroundTransparency = 0}):Play()
+            elseif child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                TweenService:Create(child, tweenInfo, {TextTransparency = 0}):Play()
+            elseif child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                TweenService:Create(child, tweenInfo, {ImageTransparency = 0}):Play()
+            end
+        end
     end
 end
 
--- Reset transparency function
-local function ResetTransparency(object)
-    if object:IsA("GuiObject") then
-        object.BackgroundTransparency = 0
-        
-        if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
-            object.TextTransparency = 0
-        end
-        
-        if object:IsA("ImageLabel") or object:IsA("ImageButton") then
-            object.ImageTransparency = 0
+local function FadeOutUI(main)
+    local fadeOut = TweenService:Create(
+        main,
+        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 1}
+    )
+    fadeOut:Play()
+    
+    -- Fade out all children simultaneously
+    for _, child in ipairs(main:GetDescendants()) do
+        if child:IsA("GuiObject") then
+            local tweenInfo = TweenInfo.new(0..ParseStyle.Quad, Enum.EasingDirection.Out)
+            if child:IsA("Frame") then
+                TweenService:Create(child, tweenInfo, {BackgroundTransparency = 1}):Play()
+            elseif child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                TweenService:Create(child, tweenInfo, {TextTransparency = 1}):Play()
+            elseif child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                TweenService:Create(child, tweenInfo, {ImageTransparency = 1}):Play()
+            end
         end
     end
     
-    for _, child in ipairs(object:GetDescendants()) do
+    wait(0.5)
+    main.Visible = false
+    -- Reset transparency for next open
+    main.BackgroundTransparency = 0
+    for _, child in ipairs(main:GetDescendants()) do
         if child:IsA("GuiObject") then
+            child.BackgroundTransparency = 0
             if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
                 child.TextTransparency = 0
-            end
-            
-            if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+            elseif child:IsA("ImageLabel") or child:IsA("ImageButton") then
                 child.ImageTransparency = 0
             end
-            
-            child.BackgroundTransparency = 0
         end
     end
 end
@@ -202,7 +218,6 @@ function lib:Window(text, preset, closebind)
     PresetColor = preset or Color3.fromRGB(44, 120, 224)
     fs = false
     
-    -- Store the main window reference for keybind updates
     local MainWindow = nil
     local keybindConnection = nil
 
@@ -314,10 +329,8 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- New smooth fade-in animation
-    Main.BackgroundTransparency = 1
-    ResetTransparency(Main)
-    SmoothFade(Main, 0, 0.5)
+    -- Apply smooth fade-in animation
+    FadeInUI(Main)
 
     MakeDraggable(DragFrame, Main)
 
@@ -363,18 +376,16 @@ function lib:Window(text, preset, closebind)
             end
         end
         
-        -- New smooth fade-out animation
-        SmoothFade(Main, 1, 0.5, function()
-            ui.Enabled = false
-            ResetTransparency(Main)
-        end)
+        FadeOutUI(Main)
+        wait(0.5)
+        uiEnabled = false
+        ui.Enabled = false
     end)
 
     CloseBtn.MouseButton1Click:Connect(function()
-        -- New smooth fade-out animation
-        SmoothFade(Main, 1, 0.5, function()
-            ui:Destroy()
-        end)
+        FadeOutUI(Main)
+        wait(0.5)
+        ui:Destroy()
     end)
 
     if isMobile then
@@ -398,26 +409,22 @@ function lib:Window(text, preset, closebind)
         mobileToggleButton.MouseButton1Click:Connect(function()
             if uitoggled then
                 uitoggled = false
+                uiEnabled = true
                 ui.Enabled = true
                 mobileToggleButton.Text = "Close"
-                
-                -- Smooth fade in
-                ResetTransparency(Main)
-                SmoothFade(Main, 0, 0.5)
+                FadeInUI(Main)
             else
                 uitoggled = true
                 mobileToggleButton.Text = "Open"
-                
-                -- Smooth fade out
-                SmoothFade(Main, 1, 0.5, function()
-                    ui.Enabled = false
-                    ResetTransparency(Main)
-                end)
+                FadeOutUI(Main)
+                wait(0.5)
+                uiEnabled = false
+                ui.Enabled = false
             end
         end)
     end
 
-    -- Keybind functionality with proper updating
+    -- Improved keybind functionality
     local function UpdateKeybindConnection()
         if keybindConnection then
             keybindConnection:Disconnect()
@@ -434,14 +441,14 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        -- Smooth fade out
-                        SmoothFade(Main, 1, 0.5, function()
-                            ui.Enabled = false
-                            ResetTransparency(Main)
-                        end)
+                        FadeOutUI(Main)
+                        wait(0.5)
+                        uiEnabled = false
+                        ui.Enabled = false
                         
                     else
                         uitoggled = false
+                        uiEnabled = true
                         ui.Enabled = true
                         if isMobile then 
                             if mobileToggleButton then
@@ -449,9 +456,7 @@ function lib:Window(text, preset, closebind)
                             end
                         end
                     
-                        -- Smooth fade in
-                        ResetTransparency(Main)
-                        SmoothFade(Main, 0, 0.5)
+                        FadeInUI(Main)
                     end
                 end
             end
@@ -491,7 +496,6 @@ function lib:Window(text, preset, closebind)
     end
 
     function lib:Notification(texttitle, textdesc, textbtn)
-        -- Remove existing notification if any
         if CurrentNotification then
             CurrentNotification:Destroy()
             CurrentNotification = nil
@@ -667,12 +671,25 @@ function lib:Window(text, preset, closebind)
         OkayBtn.MouseButton1Click:Connect(CloseNotification)
     end
 
+    -- Improved config functions
     function lib:SaveConfig(name)
-        SaveConfig(name)
+        if SaveConfig(name) then
+            lib:Notification("Config Saved", "Configuration '" .. name .. "' saved successfully.", "Okay")
+            return true
+        else
+            lib:Notification("Error", "Failed to save config. Please check the name.", "Okay")
+            return false
+        end
     end
 
     function lib:LoadConfig(name)
-        return LoadConfig(name)
+        if LoadConfig(name) then
+            lib:Notification("Config Loaded", "Configuration '" .. name .. "' loaded successfully.", "Okay")
+            return true
+        else
+            lib:Notification("Error", "Config '" .. name .. "' not found.", "Okay")
+            return false
+        end
     end
 
     function lib:GetConfigs()
@@ -695,15 +712,14 @@ function lib:Window(text, preset, closebind)
         
         -- Create New Config Textbox with proper tracking
         local configInputValue = ""
-        tab:Textbox("Create New Config", true, function(text)
+        local configTextBox = tab:Textbox("Create New Config", true, function(text)
             configInputValue = text
         end)
         
         -- Save New Config Button
         tab:Button("Save New Config", function()
             if configInputValue and configInputValue ~= "" then
-                SaveConfig(configInputValue)
-                lib:Notification("Config Created", "New config '" .. configInputValue .. "' has been created and saved.", "Okay")
+                lib:SaveConfig(configInputValue)
             else
                 lib:Notification("Error", "Please enter a config name first.", "Okay")
             end
@@ -711,24 +727,27 @@ function lib:Window(text, preset, closebind)
         
         -- Configs Dropdown
         local configList = {"default"}
-        for configName, _ in pairs(Configs) do
-            if configName ~= "default" then
-                table.insert(configList, configName)
-            end
-        end
+        local refreshDropdown = nil
         
-        tab:Dropdown("Select Config", configList, function(selected)
+        local dropdown = tab:Dropdown("Select Config", configList, function(selected)
             CurrentConfig = selected
         end)
+        
+        refreshDropdown = function()
+            configList = {}
+            for configName, _ in pairs(Configs) do
+                table.insert(configList, configName)
+            end
+            if #configList == 0 then
+                table.insert(configList, "default")
+            end
+            -- Note: In a real implementation, you'd need to refresh the dropdown UI elements
+        end
         
         -- Load Config Button
         tab:Button("Load Selected Config", function()
             if CurrentConfig then
-                if LoadConfig(CurrentConfig) then
-                    lib:Notification("Config Loaded", "Configuration '" .. CurrentConfig .. "' loaded successfully.", "Okay")
-                else
-                    lib:Notification("Error", "Failed to load config '" .. CurrentConfig .. "'", "Okay")
-                end
+                lib:LoadConfig(CurrentConfig)
             else
                 lib:Notification("Error", "Please select a config first.", "Okay")
             end
@@ -737,8 +756,7 @@ function lib:Window(text, preset, closebind)
         -- Save Config Button
         tab:Button("Save Current Config", function()
             if CurrentConfig then
-                SaveConfig(CurrentConfig)
-                lib:Notification("Config Saved", "Configuration '" .. CurrentConfig .. "' saved successfully.", "Okay")
+                lib:SaveConfig(CurrentConfig)
             else
                 lib:Notification("Error", "Please select a config first.", "Okay")
             end
@@ -754,6 +772,9 @@ function lib:Window(text, preset, closebind)
         tab:Bind("Change UI Toggle Key", lib:GetToggleKey(), function()
             lib:Notification("Keybind Updated", "UI toggle key has been updated to: " .. lib:GetToggleKey().Name, "Okay")
         end)
+        
+        -- Refresh the config list initially
+        refreshDropdown()
     end
 
     local tabhold = {}
@@ -2004,15 +2025,13 @@ function lib:Window(text, preset, closebind)
             TextBox.BackgroundTransparency = 1.000
             TextBox.Size = UDim2.new(0, 100, 0, 23)
             TextBox.Font = Enum.Font.Gotham
-            TextBox.PlaceholderText = "Type here..."
             TextBox.Text = ""
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
-            TextBox.ClearTextOnFocus = false
 
             -- Real-time tracking of input
             TextBox:GetPropertyChangedSignal("Text"):Connect(function()
-                pcall(callback, TextBox.Text)
+                configInputValue = TextBox.Text
             end)
 
             TextBox.FocusLost:Connect(
@@ -2116,4 +2135,5 @@ function lib:Window(text, preset, closebind)
     end
     return tabhold
 end
+
 return lib
