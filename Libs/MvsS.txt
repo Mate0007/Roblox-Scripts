@@ -186,7 +186,7 @@ local function FadeOutUI(main)
     -- Fade out all children simultaneously
     for _, child in ipairs(main:GetDescendants()) do
         if child:IsA("GuiObject") then
-            local tweenInfo = TweenInfo.new(0..ParseStyle.Quad, Enum.EasingDirection.Out)
+            local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             if child:IsA("Frame") then
                 TweenService:Create(child, tweenInfo, {BackgroundTransparency = 1}):Play()
             elseif child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
@@ -704,77 +704,6 @@ function lib:Window(text, preset, closebind)
 
     function lib:GetToggleKey()
         return CloseBind
-    end
-
-    function lib:PresetMainSettings(tab)
-        -- Config Label
-        tab:Label("Config Settings")
-        
-        -- Create New Config Textbox with proper tracking
-        local configInputValue = ""
-        local configTextBox = tab:Textbox("Create New Config", true, function(text)
-            configInputValue = text
-        end)
-        
-        -- Save New Config Button
-        tab:Button("Save New Config", function()
-            if configInputValue and configInputValue ~= "" then
-                lib:SaveConfig(configInputValue)
-            else
-                lib:Notification("Error", "Please enter a config name first.", "Okay")
-            end
-        end)
-        
-        -- Configs Dropdown
-        local configList = {"default"}
-        local refreshDropdown = nil
-        
-        local dropdown = tab:Dropdown("Select Config", configList, function(selected)
-            CurrentConfig = selected
-        end)
-        
-        refreshDropdown = function()
-            configList = {}
-            for configName, _ in pairs(Configs) do
-                table.insert(configList, configName)
-            end
-            if #configList == 0 then
-                table.insert(configList, "default")
-            end
-            -- Note: In a real implementation, you'd need to refresh the dropdown UI elements
-        end
-        
-        -- Load Config Button
-        tab:Button("Load Selected Config", function()
-            if CurrentConfig then
-                lib:LoadConfig(CurrentConfig)
-            else
-                lib:Notification("Error", "Please select a config first.", "Okay")
-            end
-        end)
-        
-        -- Save Config Button
-        tab:Button("Save Current Config", function()
-            if CurrentConfig then
-                lib:SaveConfig(CurrentConfig)
-            else
-                lib:Notification("Error", "Please select a config first.", "Okay")
-            end
-        end)
-        
-        -- UI Keybind Section
-        tab:Label("UI Keybind Settings")
-        
-        local currentKeyText = "Current: " .. lib:GetToggleKey().Name
-        tab:Label(currentKeyText)
-        
-        -- Keybind changer
-        tab:Bind("Change UI Toggle Key", lib:GetToggleKey(), function()
-            lib:Notification("Keybind Updated", "UI toggle key has been updated to: " .. lib:GetToggleKey().Name, "Okay")
-        end)
-        
-        -- Refresh the config list initially
-        refreshDropdown()
     end
 
     local tabhold = {}
@@ -2029,11 +1958,6 @@ function lib:Window(text, preset, closebind)
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
 
-            -- Real-time tracking of input
-            TextBox:GetPropertyChangedSignal("Text"):Connect(function()
-                configInputValue = TextBox.Text
-            end)
-
             TextBox.FocusLost:Connect(
                 function(ep)
                     if ep then
@@ -2135,6 +2059,5 @@ function lib:Window(text, preset, closebind)
     end
     return tabhold
 end
-
 
 return lib
