@@ -7,9 +7,12 @@ local Mouse = LocalPlayer:GetMouse()
 local PresetColor = Color3.fromRGB(44, 120, 224)
 local CloseBind = Enum.KeyCode.RightControl
 
--- Config saving system
+-- Improved Config saving system
 local Configs = {}
 local CurrentConfig = "default"
+
+-- Store element states for configs
+local ElementStates = {}
 
 -- Notification management
 local CurrentNotification = nil
@@ -18,7 +21,7 @@ local function SaveConfig(name)
     Configs[name] = {
         PresetColor = PresetColor,
         CloseBind = CloseBind,
-        -- Add other settings here as needed
+        ElementStates = ElementStates
     }
     print("Config saved:", name)
 end
@@ -28,6 +31,7 @@ local function LoadConfig(name)
         local config = Configs[name]
         PresetColor = config.PresetColor
         CloseBind = config.CloseBind or Enum.KeyCode.RightControl
+        ElementStates = config.ElementStates or {}
         lib:ChangePresetColor(PresetColor)
         print("Config loaded:", name)
         return true
@@ -120,6 +124,79 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
+-- Smooth fade function
+local function SmoothFade(object, targetTransparency, duration, onComplete)
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    
+    -- Create tweens for all visual properties
+    local tweens = {}
+    
+    if object:IsA("GuiObject") then
+        table.insert(tweens, TweenService:Create(object, tweenInfo, {BackgroundTransparency = targetTransparency}))
+        
+        if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
+            table.insert(tweens, TweenService:Create(object, tweenInfo, {TextTransparency = targetTransparency}))
+        end
+        
+        if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+            table.insert(tweens, TweenService:Create(object, tweenInfo, {ImageTransparency = targetTransparency}))
+        end
+    end
+    
+    -- Also fade children
+    for _, child in ipairs(object:GetDescendants()) do
+        if child:IsA("GuiObject") then
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                table.insert(tweens, TweenService:Create(child, tweenInfo, {TextTransparency = targetTransparency}))
+            end
+            
+            if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                table.insert(tweens, TweenService:Create(child, tweenInfo, {ImageTransparency = targetTransparency}))
+            end
+            
+            table.insert(tweens, TweenService:Create(child, tweenInfo, {BackgroundTransparency = targetTransparency}))
+        end
+    end
+    
+    -- Play all tweens simultaneously
+    for _, tween in ipairs(tweens) do
+        tween:Play()
+    end
+    
+    if onComplete then
+        delay(duration, onComplete)
+    end
+end
+
+-- Reset transparency function
+local function ResetTransparency(object)
+    if object:IsA("GuiObject") then
+        object.BackgroundTransparency = 0
+        
+        if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then
+            object.TextTransparency = 0
+        end
+        
+        if object:IsA("ImageLabel") or object:IsA("ImageButton") then
+            object.ImageTransparency = 0
+        end
+    end
+    
+    for _, child in ipairs(object:GetDescendants()) do
+        if child:IsA("GuiObject") then
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                child.TextTransparency = 0
+            end
+            
+            if child:IsA("ImageLabel") or child:IsA("ImageButton") then
+                child.ImageTransparency = 0
+            end
+            
+            child.BackgroundTransparency = 0
+        end
+    end
+end
+
 function lib:Window(text, preset, closebind)
     CloseBind = closebind or Enum.KeyCode.RightControl
     PresetColor = preset or Color3.fromRGB(44, 120, 224)
@@ -151,7 +228,7 @@ function lib:Window(text, preset, closebind)
     Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     Main.BorderSizePixel = 0
     Main.Position = UDim2.new(0.5, 0, 0.5, 0)
-    Main.Size = UDim2.new(0, 0, 0, 0)
+    Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
     Main.Visible = true
 
@@ -203,7 +280,7 @@ function lib:Window(text, preset, closebind)
     TabHoldLayout.Name = "TabHoldLayout"
     TabHoldLayout.Parent = TabHold
     TabHoldLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    TabHoldLayout.Padding = UDim.new(0, 16) -- Increased spacing between tabs
+    TabHoldLayout.Padding = UDim.new(0, 16)
 
     Title.Name = "Title"
     Title.Parent = Main
@@ -239,15 +316,8 @@ function lib:Window(text, preset, closebind)
 
     -- New smooth fade-in animation
     Main.BackgroundTransparency = 1
-    Main.Size = UDim2.new(0, 560, 0, 329)
-    
-    -- Fade in all elements simultaneously
-    local fadeInTween = TweenService:Create(
-        Main,
-        TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = 0}
-    )
-    fadeInTween:Play()
+    ResetTransparency(Main)
+    SmoothFade(Main, 0, 0.5)
 
     MakeDraggable(DragFrame, Main)
 
@@ -294,27 +364,17 @@ function lib:Window(text, preset, closebind)
         end
         
         -- New smooth fade-out animation
-        TweenService:Create(
-            Main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-        
-        wait(0.5)
-        ui.Enabled = false
-        Main.BackgroundTransparency = 0 -- Reset for next open
+        SmoothFade(Main, 1, 0.5, function()
+            ui.Enabled = false
+            ResetTransparency(Main)
+        end)
     end)
 
     CloseBtn.MouseButton1Click:Connect(function()
         -- New smooth fade-out animation
-        TweenService:Create(
-            Main,
-            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            {BackgroundTransparency = 1}
-        ):Play()
-        
-        wait(0.5)
-        ui:Destroy()
+        SmoothFade(Main, 1, 0.5, function()
+            ui:Destroy()
+        end)
     end)
 
     if isMobile then
@@ -342,26 +402,17 @@ function lib:Window(text, preset, closebind)
                 mobileToggleButton.Text = "Close"
                 
                 -- Smooth fade in
-                Main.BackgroundTransparency = 1
-                TweenService:Create(
-                    Main,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 0}
-                ):Play()
+                ResetTransparency(Main)
+                SmoothFade(Main, 0, 0.5)
             else
                 uitoggled = true
                 mobileToggleButton.Text = "Open"
                 
                 -- Smooth fade out
-                TweenService:Create(
-                    Main,
-                    TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                
-                wait(0.5)
-                ui.Enabled = false
-                Main.BackgroundTransparency = 0 -- Reset for next open
+                SmoothFade(Main, 1, 0.5, function()
+                    ui.Enabled = false
+                    ResetTransparency(Main)
+                end)
             end
         end)
     end
@@ -384,15 +435,10 @@ function lib:Window(text, preset, closebind)
                         end
                     
                         -- Smooth fade out
-                        TweenService:Create(
-                            Main,
-                            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 1}
-                        ):Play()
-                        
-                        wait(0.5)
-                        ui.Enabled = false
-                        Main.BackgroundTransparency = 0 -- Reset for next open
+                        SmoothFade(Main, 1, 0.5, function()
+                            ui.Enabled = false
+                            ResetTransparency(Main)
+                        end)
                         
                     else
                         uitoggled = false
@@ -404,12 +450,8 @@ function lib:Window(text, preset, closebind)
                         end
                     
                         -- Smooth fade in
-                        Main.BackgroundTransparency = 1
-                        TweenService:Create(
-                            Main,
-                            TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 0}
-                        ):Play()
+                        ResetTransparency(Main)
+                        SmoothFade(Main, 0, 0.5)
                     end
                 end
             end
@@ -651,12 +693,10 @@ function lib:Window(text, preset, closebind)
         -- Config Label
         tab:Label("Config Settings")
         
-        -- Create New Config Textbox with real-time tracking
-        local newConfigName = ""
+        -- Create New Config Textbox with proper tracking
         local configInputValue = ""
         tab:Textbox("Create New Config", true, function(text)
-            newConfigName = text
-            configInputValue = text -- Track the input value
+            configInputValue = text
         end)
         
         -- Save New Config Button
@@ -664,10 +704,6 @@ function lib:Window(text, preset, closebind)
             if configInputValue and configInputValue ~= "" then
                 SaveConfig(configInputValue)
                 lib:Notification("Config Created", "New config '" .. configInputValue .. "' has been created and saved.", "Okay")
-                -- Refresh the dropdown
-                if refreshDropdown then
-                    refreshDropdown()
-                end
             else
                 lib:Notification("Error", "Please enter a config name first.", "Okay")
             end
@@ -675,22 +711,15 @@ function lib:Window(text, preset, closebind)
         
         -- Configs Dropdown
         local configList = {"default"}
-        local refreshDropdown = nil
-        
-        local dropdown = tab:Dropdown("Select Config", configList, function(selected)
-            CurrentConfig = selected
-        end)
-        
-        refreshDropdown = function()
-            configList = {}
-            for configName, _ in pairs(Configs) do
+        for configName, _ in pairs(Configs) do
+            if configName ~= "default" then
                 table.insert(configList, configName)
             end
-            if #configList == 0 then
-                table.insert(configList, "default")
-            end
-            -- Note: In a real implementation, you'd need to refresh the dropdown UI elements
         end
+        
+        tab:Dropdown("Select Config", configList, function(selected)
+            CurrentConfig = selected
+        end)
         
         -- Load Config Button
         tab:Button("Load Selected Config", function()
@@ -723,12 +752,8 @@ function lib:Window(text, preset, closebind)
         
         -- Keybind changer
         tab:Bind("Change UI Toggle Key", lib:GetToggleKey(), function()
-            -- This will be triggered when the bind is pressed
             lib:Notification("Keybind Updated", "UI toggle key has been updated to: " .. lib:GetToggleKey().Name, "Okay")
         end)
-        
-        -- Refresh the config list initially
-        refreshDropdown()
     end
 
     local tabhold = {}
@@ -742,7 +767,7 @@ function lib:Window(text, preset, closebind)
         TabBtn.Parent = TabHold
         TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabBtn.BackgroundTransparency = 1.000
-        TabBtn.Size = UDim2.new(0, 107, 0, 28) -- Increased height for bigger text
+        TabBtn.Size = UDim2.new(0, 107, 0, 28)
         TabBtn.Font = Enum.Font.SourceSans
         TabBtn.Text = ""
         TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
@@ -752,11 +777,11 @@ function lib:Window(text, preset, closebind)
         TabTitle.Parent = TabBtn
         TabTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         TabTitle.BackgroundTransparency = 1.000
-        TabTitle.Size = UDim2.new(0, 107, 0, 28) -- Increased height for bigger text
+        TabTitle.Size = UDim2.new(0, 107, 0, 28)
         TabTitle.Font = Enum.Font.Gotham
         TabTitle.Text = text
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
-        TabTitle.TextSize = 14.000 -- Medium size
+        TabTitle.TextSize = 14.000
         TabTitle.TextXAlignment = Enum.TextXAlignment.Left
 
         TabBtnIndicator.Name = "TabBtnIndicator"
@@ -799,7 +824,7 @@ function lib:Window(text, preset, closebind)
 
         if fs == false then
             fs = true
-            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 8.5, 0, 2) -- Adjusted for bigger text
+            TabBtnIndicator.Size = UDim2.new(0, string.len(text) * 8.5, 0, 2)
             TabTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             Tab.Visible = true
         end
@@ -822,7 +847,7 @@ function lib:Window(text, preset, closebind)
                             true
                         )
                         TabBtnIndicator:TweenSize(
-                            UDim2.new(0, string.len(text) * 8.5, 0, 2), -- Adjusted for bigger text
+                            UDim2.new(0, string.len(text) * 8.5, 0, 2),
                             Enum.EasingDirection.Out,
                             Enum.EasingStyle.Quart,
                             .2,
@@ -1979,13 +2004,15 @@ function lib:Window(text, preset, closebind)
             TextBox.BackgroundTransparency = 1.000
             TextBox.Size = UDim2.new(0, 100, 0, 23)
             TextBox.Font = Enum.Font.Gotham
+            TextBox.PlaceholderText = "Type here..."
             TextBox.Text = ""
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
+            TextBox.ClearTextOnFocus = false
 
             -- Real-time tracking of input
             TextBox:GetPropertyChangedSignal("Text"):Connect(function()
-                configInputValue = TextBox.Text
+                pcall(callback, TextBox.Text)
             end)
 
             TextBox.FocusLost:Connect(
