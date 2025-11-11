@@ -27,8 +27,6 @@ if not name or name == "" then
 return false, "Config name cannot be empty"
 end
 
-text
-
 local configData = {
 PresetColor = PresetColor,
 CloseBind = CloseBind,
@@ -58,8 +56,6 @@ local function LoadConfig(name)
 if not Configs[name] then
 return false, "Config not found: " .. name
 end
-
-text
 
 local config = Configs[name]
 PresetColor = config.PresetColor or PresetColor
@@ -99,12 +95,6 @@ while wait() do
 lib.RainbowColorValue = lib.RainbowColorValue + 1 / 255
 lib.HueSelectionPosition = lib.HueSelectionPosition + 1
 
-text
-
-text
-
-text
-
 if lib.RainbowColorValue >= 1 then
     lib.RainbowColorValue = 0
 end
@@ -121,8 +111,6 @@ local Dragging = nil
 local DragInput = nil
 local DragStart = nil
 local StartPosition = nil
-
-text
 
 local function Update(input)
 local Delta = input.Position - DragStart
@@ -142,10 +130,6 @@ if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType
 Dragging = true
 DragStart = input.Position
 StartPosition = object.Position
-
-text
-
-text
 
     input.Changed:Connect(
         function()
@@ -181,8 +165,6 @@ end
 -- Smooth fade animations - fade ALL elements together
 local function FadeInUI(main)
 main.Visible = true
-
-text
 
 local tweens = {}
 
@@ -228,8 +210,6 @@ end
 local function FadeOutUI(main)
 -- Store original transparencies
 originalTransparencies[main] = main.BackgroundTransparency
-
-text
 
 local tweens = {}
 
@@ -282,8 +262,6 @@ function lib:Window(text, preset, closebind)
 CloseBind = closebind or Enum.KeyCode.RightControl
 PresetColor = preset or Color3.fromRGB(44, 120, 224)
 fs = false
-
-text
 
 local MainWindow = nil
 local keybindConnection = nil
@@ -437,8 +415,6 @@ mobileToggleButton.Text = "Open"
 end
 end
 
-text
-
 FadeOutUI(Main)
 wait(0.3)
 uiEnabled = false
@@ -464,8 +440,6 @@ mobileToggleButton.Text = "Open"
 mobileToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 mobileToggleButton.TextSize = 14
 mobileToggleButton.ZIndex = 100
-
-text
 
 local MobileCorner = Instance.new("UICorner")
 MobileCorner.CornerRadius = UDim.new(0, 6)
@@ -494,8 +468,6 @@ if keybindConnection then
 keybindConnection:Disconnect()
 end
 
-text
-
 keybindConnection = UserInputService.InputBegan:Connect(
 function(io, p)
 if io.KeyCode == CloseBind and not p then
@@ -506,8 +478,6 @@ if mobileToggleButton then
 mobileToggleButton.Text = "Open"
 end
 end
-
-text
 
             FadeOutUI(Main)
             wait(0.3)
@@ -566,8 +536,6 @@ if CurrentNotification then
 CurrentNotification:Destroy()
 CurrentNotification = nil
 end
-
-text
 
 local NotificationHold = Instance.new("TextButton")
 CurrentNotification = NotificationHold
@@ -729,8 +697,6 @@ TweenInfo.new(.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 {TextTransparency = 1}
 ):Play()
 
-text
-
 wait(.2)
 NotificationHold:Destroy()
 if CurrentNotification == NotificationHold then
@@ -744,8 +710,6 @@ end
 -- Config Tab for saving/loading
 function lib:ConfigTab(tab)
 local configTab = tab
-
-text
 
 -- Config name input
 configTab:Textbox("Config Name", false, function(text)
@@ -813,8 +777,6 @@ local TabBtn = Instance.new("TextButton")
 local TabTitle = Instance.new("TextLabel")
 local TabBtnIndicator = Instance.new("Frame")
 local TabBtnIndicatorCorner = Instance.new("UICorner")
-
-text
 
 TabBtn.Name = "TabBtn"
 TabBtn.Parent = TabHold
@@ -929,8 +891,6 @@ local Button = Instance.new("TextButton")
 local ButtonCorner = Instance.new("UICorner")
 local ButtonTitle = Instance.new("TextLabel")
 
-text
-
 Button.Name = "Button"
 Button.Parent = Tab
 Button.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
@@ -990,8 +950,6 @@ function tabcontent:Toggle(text,default, callback)
 elementIdCounter = elementIdCounter + 1
 local elementId = "Toggle_" .. elementIdCounter
 local toggled = false
-
-text
 
 local Toggle = Instance.new("TextButton")
 local ToggleCorner = Instance.new("UICorner")
@@ -1268,8 +1226,6 @@ local elementId = "Slider_" .. elementIdCounter
 local dragging = false
 local currentValue = start or 0
 
-text
-
 local Slider = Instance.new("TextButton")
 local SliderCorner = Instance.new("UICorner")
 local SliderTitle = Instance.new("TextLabel")
@@ -1429,8 +1385,6 @@ local droptog = false
 local framesize = 0
 local itemcount = 0
 local currentValue = nil
-
-text
 
 local Dropdown = Instance.new("Frame")
 local DropdownCorner = Instance.new("UICorner")
@@ -1622,8 +1576,6 @@ local Label = Instance.new("TextButton")
 local LabelCorner = Instance.new("UICorner")
 local LabelTitle = Instance.new("TextLabel")
 
-text
-
 Label.Name = "Button"
 Label.Parent = Tab
 Label.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
@@ -1657,8 +1609,6 @@ function tabcontent:Textbox(text, disapper, callback)
 elementIdCounter = elementIdCounter + 1
 local elementId = "Textbox_" .. elementIdCounter
 local currentValue = ""
-
-text
 
 local Textbox = Instance.new("Frame")
 local TextboxCorner = Instance.new("UICorner")
@@ -1757,8 +1707,6 @@ local elementId = "Bind_" .. elementIdCounter
 local binding = false
 local Key = keypreset.Name
 local currentKey = keypreset
-
-text
 
 local Bind = Instance.new("TextButton")
 local BindCorner = Instance.new("UICorner")
@@ -1867,4 +1815,3 @@ return tabhold
 end
 
 return lib
-
