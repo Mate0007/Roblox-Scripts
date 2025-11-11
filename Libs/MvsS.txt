@@ -11,7 +11,6 @@ local CloseBind = Enum.KeyCode.RightControl
 local Configs = {}
 local CurrentConfig = "default"
 local ConfigElements = {} -- Track all UI elements for saving/loading
-local CurrentConfigName = "" -- Track config name in real-time
 
 -- Notification management
 local CurrentNotification = nil
@@ -160,103 +159,30 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- Enhanced fade animations - fade all elements
+-- Simple fade animations - only fade main frame
 local function FadeInUI(main)
     main.Visible = true
-    
-    -- Set initial transparency for all elements
-    for _, v in pairs(main:GetDescendants()) do
-        if v:IsA("Frame") or v:IsA("TextButton") or v:IsA("ScrollingFrame") then
-            v.BackgroundTransparency = 1
-        elseif v:IsA("TextLabel") or v:IsA("TextBox") then
-            v.TextTransparency = 1
-            if v.BackgroundTransparency ~= 1 then
-                v.BackgroundTransparency = 1
-            end
-        elseif v:IsA("ImageLabel") or v:IsA("ImageButton") then
-            v.ImageTransparency = 1
-        end
-    end
     main.BackgroundTransparency = 1
     
-    -- Fade in all elements together
-    for _, v in pairs(main:GetDescendants()) do
-        if v:IsA("Frame") or v:IsA("TextButton") or v:IsA("ScrollingFrame") then
-            if v.BackgroundColor3 ~= Color3.fromRGB(255, 255, 255) or v.BackgroundTransparency < 1 then
-                TweenService:Create(
-                    v,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = v.Name == "DragFrame" and 1 or 0}
-                ):Play()
-            end
-        elseif v:IsA("TextLabel") or v:IsA("TextBox") then
-            TweenService:Create(
-                v,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {TextTransparency = 0}
-            ):Play()
-            if v.BackgroundTransparency ~= 1 then
-                TweenService:Create(
-                    v,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = v.BackgroundTransparency}
-                ):Play()
-            end
-        elseif v:IsA("ImageLabel") or v:IsA("ImageButton") then
-            TweenService:Create(
-                v,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {ImageTransparency = 0}
-            ):Play()
-        end
-    end
-    
-    TweenService:Create(
+    local fadeIn = TweenService:Create(
         main,
         TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 0}
-    ):Play()
+    )
+    fadeIn:Play()
 end
 
 local function FadeOutUI(main)
-    -- Fade out all elements together
-    for _, v in pairs(main:GetDescendants()) do
-        if v:IsA("Frame") or v:IsA("TextButton") or v:IsA("ScrollingFrame") then
-            TweenService:Create(
-                v,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = 1}
-            ):Play()
-        elseif v:IsA("TextLabel") or v:IsA("TextBox") then
-            TweenService:Create(
-                v,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {TextTransparency = 1}
-            ):Play()
-            if v.BackgroundTransparency ~= 1 then
-                TweenService:Create(
-                    v,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-            end
-        elseif v:IsA("ImageLabel") or v:IsA("ImageButton") then
-            TweenService:Create(
-                v,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {ImageTransparency = 1}
-            ):Play()
-        end
-    end
-    
-    TweenService:Create(
+    local fadeOut = TweenService:Create(
         main,
         TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 1}
-    ):Play()
+    )
+    fadeOut:Play()
     
     wait(0.3)
     main.Visible = false
+    main.BackgroundTransparency = 0
 end
 
 function lib:Window(text, preset, closebind)
@@ -266,6 +192,8 @@ function lib:Window(text, preset, closebind)
     
     local MainWindow = nil
     local keybindConnection = nil
+    local ConfigNameInput = nil
+    local CurrentConfigTextbox = nil
 
     local Main = Instance.new("Frame")
     MainWindow = Main
@@ -707,80 +635,20 @@ function lib:Window(text, preset, closebind)
         OkayBtn.MouseButton1Click:Connect(CloseNotification)
     end
 
-    -- Config Tab for saving/loading with CUSTOM INPUT BOX
+    -- Config Tab for saving/loading
     function lib:ConfigTab(tab)
         local configTab = tab
         
-        -- Custom Config Input Box that constantly tracks text
-        local ConfigInputBox = Instance.new("Frame")
-        local ConfigInputCorner = Instance.new("UICorner")
-        local ConfigInputTitle = Instance.new("TextLabel")
-        local ConfigInputFrame = Instance.new("Frame")
-        local ConfigInputFrameCorner = Instance.new("UICorner")
-        local ConfigTextBox = Instance.new("TextBox")
-
-        ConfigInputBox.Name = "ConfigInputBox"
-        ConfigInputBox.Parent = tab
-        ConfigInputBox.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-        ConfigInputBox.ClipsDescendants = true
-        ConfigInputBox.Size = UDim2.new(0, 363, 0, 42)
-
-        ConfigInputCorner.CornerRadius = UDim.new(0, 6)
-        ConfigInputCorner.Name = "ConfigInputCorner"
-        ConfigInputCorner.Parent = ConfigInputBox
-
-        ConfigInputTitle.Name = "ConfigInputTitle"
-        ConfigInputTitle.Parent = ConfigInputBox
-        ConfigInputTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        ConfigInputTitle.BackgroundTransparency = 1.000
-        ConfigInputTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
-        ConfigInputTitle.Size = UDim2.new(0, 187, 0, 42)
-        ConfigInputTitle.Font = Enum.Font.Gotham
-        ConfigInputTitle.Text = "Config Name"
-        ConfigInputTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ConfigInputTitle.TextSize = 14.000
-        ConfigInputTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-        ConfigInputFrame.Name = "ConfigInputFrame"
-        ConfigInputFrame.Parent = ConfigInputTitle
-        ConfigInputFrame.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
-        ConfigInputFrame.Position = UDim2.new(1.28877008, 0, 0.214285716, 0)
-        ConfigInputFrame.Size = UDim2.new(0, 100, 0, 23)
-
-        ConfigInputFrameCorner.CornerRadius = UDim.new(0, 6)
-        ConfigInputFrameCorner.Name = "ConfigInputFrameCorner"
-        ConfigInputFrameCorner.Parent = ConfigInputFrame
-
-        ConfigTextBox.Parent = ConfigInputFrame
-        ConfigTextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        ConfigTextBox.BackgroundTransparency = 1.000
-        ConfigTextBox.Size = UDim2.new(0, 100, 0, 23)
-        ConfigTextBox.Font = Enum.Font.Gotham
-        ConfigTextBox.Text = ""
-        ConfigTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ConfigTextBox.TextSize = 14.000
-        ConfigTextBox.PlaceholderText = "Enter name"
-        
-        -- Constantly update CurrentConfigName
-        spawn(function()
-            while ConfigTextBox and ConfigTextBox.Parent do
-                CurrentConfigName = ConfigTextBox.Text
-                wait(0.1)
-            end
+        -- Config name input
+        configTab:Textbox("Config Name", false, function(text)
+            CurrentConfigTextbox = text
         end)
-        
-        -- Also update on property change
-        ConfigTextBox:GetPropertyChangedSignal("Text"):Connect(function()
-            CurrentConfigName = ConfigTextBox.Text
-        end)
-        
-        -- Update canvas size
-        tab.CanvasSize = UDim2.new(0, 0, 0, tab.TabLayout.AbsoluteContentSize.Y)
         
         -- Save config button
         configTab:Button("Save Config", function()
-            if CurrentConfigName and CurrentConfigName ~= "" then
-                local success, msg = SaveConfig(CurrentConfigName)
+            local configName = CurrentConfigTextbox
+            if configName and configName ~= "" then
+                local success, msg = SaveConfig(configName)
                 if success then
                     lib:Notification("Success", msg, "Okay")
                 else
@@ -793,8 +661,9 @@ function lib:Window(text, preset, closebind)
         
         -- Load config button
         configTab:Button("Load Config", function()
-            if CurrentConfigName and CurrentConfigName ~= "" then
-                local success, msg = LoadConfig(CurrentConfigName)
+            local configName = CurrentConfigTextbox
+            if configName and configName ~= "" then
+                local success, msg = LoadConfig(configName)
                 if success then
                     lib:Notification("Success", msg, "Okay")
                 else
@@ -890,7 +759,6 @@ function lib:Window(text, preset, closebind)
         Tab.CanvasSize = UDim2.new(0, 0, 0, 0)
         Tab.ScrollBarThickness = 3
         Tab.Visible = false
-        Tab.TabLayout = TabLayout -- Add reference for ConfigTab
 
         TabLayout.Name = "TabLayout"
         TabLayout.Parent = Tab
@@ -1734,6 +1602,11 @@ function lib:Window(text, preset, closebind)
             TextBox:GetPropertyChangedSignal("Text"):Connect(function()
                 currentValue = TextBox.Text
                 ConfigElements[elementId].Value = currentValue
+                
+                -- Special handling for config name input
+                if text == "Config Name" then
+                    CurrentConfigTextbox = currentValue
+                end
             end)
 
             TextBox.FocusLost:Connect(
