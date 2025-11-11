@@ -10,6 +10,7 @@ local CloseBind = Enum.KeyCode.RightControl
 -- Config saving system
 local Configs = {}
 local CurrentConfig = "default"
+local ConfigElements = {} -- Track all UI elements for saving/loading
 
 -- Notification management
 local CurrentNotification = nil
@@ -20,35 +21,60 @@ local uitoggled = false
 
 local function SaveConfig(name)
     if not name or name == "" then
-        return false
+        return false, "Config name cannot be empty"
     end
     
-    local uiState = {
+    local configData = {
         PresetColor = PresetColor,
         CloseBind = CloseBind,
+        Elements = {}
     }
     
-    Configs[name] = uiState
-    print("Config saved:", name)
-    return true
+    -- Save all tracked elements
+    for id, element in pairs(ConfigElements) do
+        if element.Type == "Toggle" then
+            configData.Elements[id] = element.Value
+        elseif element.Type == "Slider" then
+            configData.Elements[id] = element.Value
+        elseif element.Type == "Dropdown" then
+            configData.Elements[id] = element.Value
+        elseif element.Type == "Textbox" then
+            configData.Elements[id] = element.Value
+        elseif element.Type == "Bind" then
+            configData.Elements[id] = element.Value
+        end
+    end
+    
+    Configs[name] = configData
+    return true, "Config saved: " .. name
 end
 
 local function LoadConfig(name)
-    if Configs[name] then
-        local config = Configs[name]
-        PresetColor = config.PresetColor or PresetColor
-        CloseBind = config.CloseBind or CloseBind
-        
-        if lib.ChangePresetColor then
-            lib:ChangePresetColor(PresetColor)
-        end
-        
-        print("Config loaded:", name)
-        return true
-    else
-        print("Config not found:", name)
-        return false
+    if not Configs[name] then
+        return false, "Config not found: " .. name
     end
+    
+    local config = Configs[name]
+    PresetColor = config.PresetColor or PresetColor
+    CloseBind = config.CloseBind or CloseBind
+    
+    -- Load all element values
+    if config.Elements then
+        for id, value in pairs(config.Elements) do
+            if ConfigElements[id] then
+                local element = ConfigElements[id]
+                if element.LoadValue then
+                    element.LoadValue(value)
+                end
+            end
+        end
+    end
+    
+    if lib.ChangePresetColor then
+        lib:ChangePresetColor(PresetColor)
+    end
+    
+    return true, "Config loaded: " .. name
 end
 
 local ui = Instance.new("ScreenGui")
@@ -166,6 +192,8 @@ function lib:Window(text, preset, closebind)
     
     local MainWindow = nil
     local keybindConnection = nil
+    local ConfigNameInput = nil
+    local CurrentConfigTextbox = nil
 
     local Main = Instance.new("Frame")
     MainWindow = Main
@@ -248,7 +276,7 @@ function lib:Window(text, preset, closebind)
     Title.Size = UDim2.new(0, 200, 0, 30)
     Title.Font = Enum.Font.GothamSemibold
     Title.Text = text
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextColor3 = Color3.fromRGB(120, 120, 120) -- Slightly darker grey than tabs
     Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -607,28 +635,58 @@ function lib:Window(text, preset, closebind)
         OkayBtn.MouseButton1Click:Connect(CloseNotification)
     end
 
-    function lib:SaveConfig(name)
-        if SaveConfig(name) then
-            lib:Notification("Config Saved", "Configuration '" .. name .. "' saved successfully.", "Okay")
-            return true
-        else
-            lib:Notification("Error", "Failed to save config. Please check the name.", "Okay")
-            return false
-        end
-    end
-
-    function lib:LoadConfig(name)
-        if LoadConfig(name) then
-            lib:Notification("Config Loaded", "Configuration '" .. name .. "' loaded successfully.", "Okay")
-            return true
-        else
-            lib:Notification("Error", "Config '" .. name .. "' not found.", "Okay")
-            return false
-        end
-    end
-
-    function lib:GetConfigs()
-        return Configs
+    -- Config Tab for saving/loading
+    function lib:ConfigTab(tab)
+        local configTab = tab
+        
+        -- Config name input
+        configTab:Textbox("Config Name", false, function(text)
+            CurrentConfigTextbox = text
+        end)
+        
+        -- Save config button
+        configTab:Button("Save Config", function()
+            local configName = CurrentConfigTextbox
+            if configName and configName ~= "" then
+                local success, msg = SaveConfig(configName)
+                if success then
+                    lib:Notification("Success", msg, "Okay")
+                else
+                    lib:Notification("Error", msg, "Okay")
+                end
+            else
+                lib:Notification("Error", "Please enter a config name first", "Okay")
+            end
+        end)
+        
+        -- Load config button
+        configTab:Button("Load Config", function()
+            local configName = CurrentConfigTextbox
+            if configName and configName ~= "" then
+                local success, msg = LoadConfig(configName)
+                if success then
+                    lib:Notification("Success", msg, "Okay")
+                else
+                    lib:Notification("Error", msg, "Okay")
+                end
+            else
+                lib:Notification("Error", "Please enter a config name first", "Okay")
+            end
+        end)
+        
+        -- List configs
+        configTab:Button("List Configs", function()
+            local configList = ""
+            for name, _ in pairs(Configs) do
+                configList = configList .. name .. ", "
+            end
+            if configList == "" then
+                configList = "No configs saved"
+            else
+                configList = string.sub(configList, 1, -3)
+            end
+            lib:Notification("Saved Configs", configList, "Okay")
+        end)
     end
 
     function lib:SetToggleKey(key)
@@ -754,6 +812,7 @@ function lib:Window(text, preset, closebind)
         )
         
         local tabcontent = {}
+        local elementIdCounter = 0
         
         function tabcontent:Button(text, callback)
             local Button = Instance.new("TextButton")
@@ -816,6 +875,8 @@ function lib:Window(text, preset, closebind)
         end
         
         function tabcontent:Toggle(text,default, callback)
+            elementIdCounter = elementIdCounter + 1
+            local elementId = "Toggle_" .. elementIdCounter
             local toggled = false
 
             local Toggle = Instance.new("TextButton")
@@ -897,6 +958,73 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
             FrameToggleCircleCorner.Parent = FrameToggleCircle
 
+            -- Save config element
+            ConfigElements[elementId] = {
+                Type = "Toggle",
+                Value = toggled,
+                LoadValue = function(value)
+                    if value then
+                        toggled = true
+                        TweenService:Create(
+                            Toggle,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle1,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 1}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle2,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 1}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle3,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 0}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggleCircle,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
+                        ):Play()
+                        FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
+                        pcall(callback, toggled)
+                    else
+                        toggled = false
+                        TweenService:Create(
+                            Toggle,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle1,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 0}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle2,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 0}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggle3,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundTransparency = 1}
+                        ):Play()
+                        TweenService:Create(
+                            FrameToggleCircle,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
+                        ):Play()
+                        FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
+                        pcall(callback, toggled)
+                    end
+                end
+            }
+
             coroutine.wrap(
                 function()
                     while wait() do
@@ -975,6 +1103,7 @@ function lib:Window(text, preset, closebind)
                         )
                     end
                     toggled = not toggled
+                    ConfigElements[elementId].Value = toggled
                     pcall(callback, toggled)
                 end
             )
@@ -1013,13 +1142,18 @@ function lib:Window(text, preset, closebind)
                     true
                 )
                 toggled = not toggled
+                ConfigElements[elementId].Value = toggled
             end
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
         
         function tabcontent:Slider(text, min, max, start, callback)
+            elementIdCounter = elementIdCounter + 1
+            local elementId = "Slider_" .. elementIdCounter
             local dragging = false
+            local currentValue = start or 0
+            
             local Slider = Instance.new("TextButton")
             local SliderCorner = Instance.new("UICorner")
             local SliderTitle = Instance.new("TextLabel")
@@ -1097,6 +1231,21 @@ function lib:Window(text, preset, closebind)
             SlideCircle.Image = "rbxassetid://3570695787"
             SlideCircle.ImageColor3 = PresetColor
 
+            -- Save config element
+            ConfigElements[elementId] = {
+                Type = "Slider",
+                Value = currentValue,
+                LoadValue = function(value)
+                    currentValue = value
+                    local pos = UDim2.new(value / max, -6, -1.30499995, 0)
+                    local pos1 = UDim2.new(value / max, 0, 0, 3)
+                    CurrentValueFrame.Size = pos1
+                    SlideCircle.Position = pos
+                    SliderValue.Text = tostring(value)
+                    pcall(callback, value)
+                end
+            }
+
             coroutine.wrap(
                 function()
                     while wait() do
@@ -1125,6 +1274,8 @@ function lib:Window(text, preset, closebind)
                 SlideCircle:TweenPosition(pos, "Out", "Sine", 0.1, true)
                 local value = math.floor(((pos.X.Scale * max) / max) * (max - min) + min)
                 SliderValue.Text = tostring(value)
+                currentValue = value
+                ConfigElements[elementId].Value = currentValue
                 pcall(callback, value)
             end
             
@@ -1156,9 +1307,12 @@ function lib:Window(text, preset, closebind)
         end
         
         function tabcontent:Dropdown(text, list, callback)
+            elementIdCounter = elementIdCounter + 1
+            local elementId = "Dropdown_" .. elementIdCounter
             local droptog = false
             local framesize = 0
             local itemcount = 0
+            local currentValue = nil
 
             local Dropdown = Instance.new("Frame")
             local DropdownCorner = Instance.new("UICorner")
@@ -1223,6 +1377,17 @@ function lib:Window(text, preset, closebind)
             DropLayout.Name = "DropLayout"
             DropLayout.Parent = DropItemHolder
             DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+            -- Save config element
+            ConfigElements[elementId] = {
+                Type = "Dropdown",
+                Value = currentValue,
+                LoadValue = function(value)
+                    currentValue = value
+                    DropdownTitle.Text = text .. " - " .. tostring(value)
+                    pcall(callback, value)
+                end
+            }
 
             DropdownBtn.MouseButton1Click:Connect(
                 function()
@@ -1309,6 +1474,8 @@ function lib:Window(text, preset, closebind)
                     function()
                         droptog = not droptog
                         DropdownTitle.Text = text .. " - " .. v
+                        currentValue = v
+                        ConfigElements[elementId].Value = currentValue
                         pcall(callback, v)
                         Dropdown:TweenSize(
                             UDim2.new(0, 363, 0, 42),
@@ -1339,7 +1506,7 @@ function lib:Window(text, preset, closebind)
 
             Label.Name = "Button"
             Label.Parent = Tab
-            Label.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+            Label.BackgroundColor3 = Color3.fromRGB(26, 26, 26) -- Darker background for sections
             Label.Size = UDim2.new(0, 363, 0, 42)
             Label.AutoButtonColor = false
             Label.Font = Enum.Font.SourceSans
@@ -1367,6 +1534,10 @@ function lib:Window(text, preset, closebind)
         end
         
         function tabcontent:Textbox(text, disapper, callback)
+            elementIdCounter = elementIdCounter + 1
+            local elementId = "Textbox_" .. elementIdCounter
+            local currentValue = ""
+            
             local Textbox = Instance.new("Frame")
             local TextboxCorner = Instance.new("UICorner")
             local TextboxTitle = Instance.new("TextLabel")
@@ -1416,6 +1587,28 @@ function lib:Window(text, preset, closebind)
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
 
+            -- Save config element
+            ConfigElements[elementId] = {
+                Type = "Textbox",
+                Value = currentValue,
+                LoadValue = function(value)
+                    currentValue = value or ""
+                    TextBox.Text = currentValue
+                    pcall(callback, currentValue)
+                end
+            }
+
+            -- Track text changes
+            TextBox:GetPropertyChangedSignal("Text"):Connect(function()
+                currentValue = TextBox.Text
+                ConfigElements[elementId].Value = currentValue
+                
+                -- Special handling for config name input
+                if text == "Config Name" then
+                    CurrentConfigTextbox = currentValue
+                end
+            end)
+
             TextBox.FocusLost:Connect(
                 function(ep)
                     if ep then
@@ -1423,6 +1616,8 @@ function lib:Window(text, preset, closebind)
                             pcall(callback, TextBox.Text)
                             if disapper then
                                 TextBox.Text = ""
+                                currentValue = ""
+                                ConfigElements[elementId].Value = ""
                             end
                         end
                     end
@@ -1432,8 +1627,12 @@ function lib:Window(text, preset, closebind)
         end
         
         function tabcontent:Bind(text, keypreset, callback)
+            elementIdCounter = elementIdCounter + 1
+            local elementId = "Bind_" .. elementIdCounter
             local binding = false
             local Key = keypreset.Name
+            local currentKey = keypreset
+            
             local Bind = Instance.new("TextButton")
             local BindCorner = Instance.new("UICorner")
             local BindTitle = Instance.new("TextLabel")
@@ -1477,6 +1676,23 @@ function lib:Window(text, preset, closebind)
             BindText.TextSize = 14.000
             BindText.TextXAlignment = Enum.TextXAlignment.Right
 
+            -- Save config element
+            ConfigElements[elementId] = {
+                Type = "Bind",
+                Value = Key,
+                LoadValue = function(value)
+                    Key = value
+                    BindText.Text = value
+                    -- Try to find the actual KeyCode from the name
+                    for _, keyCode in pairs(Enum.KeyCode:GetEnumItems()) do
+                        if keyCode.Name == value then
+                            currentKey = keyCode
+                            break
+                        end
+                    end
+                end
+            }
+
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
             Bind.MouseButton1Click:Connect(
@@ -1492,7 +1708,11 @@ function lib:Window(text, preset, closebind)
                     if inputwait.KeyCode.Name ~= "Unknown" then
                         BindText.Text = inputwait.KeyCode.Name
                         Key = inputwait.KeyCode.Name
-                        lib:SetToggleKey(inputwait.KeyCode)
+                        currentKey = inputwait.KeyCode
+                        ConfigElements[elementId].Value = Key
+                        if text:lower():find("toggle") or text:lower():find("ui") then
+                            lib:SetToggleKey(inputwait.KeyCode)
+                        end
                         binding = false
                         pcall(callback)
                     else
