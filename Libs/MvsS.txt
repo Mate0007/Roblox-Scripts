@@ -9,7 +9,8 @@ local CloseBind = Enum.KeyCode.RightControl
 
 -- Config saving system with persistent storage
 local HttpService = game:GetService("HttpService")
-local ConfigFolder = "MvsSConfigs"
+local ConfigFolder = "Forsee Library"
+local ConfigSubfolder = "Default"
 local ConfigElements = {}
 local CurrentConfigName = ""
 
@@ -27,6 +28,20 @@ local DropdownRefreshCallbacks = {}
 -- Create config folder if it doesn't exist
 if not isfolder(ConfigFolder) then
     makefolder(ConfigFolder)
+end
+
+-- Function to get full config path
+local function GetFullConfigPath()
+    local path = ConfigFolder .. "/" .. ConfigSubfolder
+    if not isfolder(path) then
+        makefolder(path)
+    end
+    return path
+end
+
+-- Function to set config subfolder
+function lib:SetConfigFolder(name)
+    ConfigSubfolder = name or "Default"
 end
 
 local function SaveConfig(name)
@@ -57,7 +72,7 @@ local function SaveConfig(name)
 
     local success, err = pcall(function()
         local json = HttpService:JSONEncode(configData)
-        writefile(ConfigFolder .. "/" .. name .. ".json", json)
+        writefile(GetFullConfigPath() .. "/" .. name .. ".json", json)
     end)
 
     if success then
@@ -72,7 +87,7 @@ local function LoadConfig(name)
         return false, "Config name cannot be empty"
     end
 
-    local filePath = ConfigFolder .. "/" .. name .. ".json"
+    local filePath = GetFullConfigPath() .. "/" .. name .. ".json"
     
     if not isfile(filePath) then
         return false, "Config '" .. name .. "' not found"
@@ -124,7 +139,7 @@ local function DeleteConfig(name)
         return false, "Config name cannot be empty"
     end
 
-    local filePath = ConfigFolder .. "/" .. name .. ".json"
+    local filePath = GetFullConfigPath() .. "/" .. name .. ".json"
     
     if not isfile(filePath) then
         return false, "Config '" .. name .. "' not found"
@@ -143,14 +158,10 @@ end
 
 local function GetAllConfigs()
     local configs = {}
-    
-    if not isfolder(ConfigFolder) then
-        makefolder(ConfigFolder)
-        return configs
-    end
+    local path = GetFullConfigPath()
 
     local success, files = pcall(function()
-        return listfiles(ConfigFolder)
+        return listfiles(path)
     end)
 
     if success then
@@ -247,115 +258,93 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- SMOOTH FADE IN ANIMATION - FIXED VERSION
+-- SMOOTH FADE IN ANIMATION - FIXED TO FADE EVERYTHING TOGETHER
 local function FadeInUI(main)
     main.Visible = true
     
     local tweens = {}
+    local fadeTime = 0.3
     
     -- Fade main frame
     table.insert(tweens, TweenService:Create(
         main,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 0}
     ))
     
-    -- Fade all descendants
+    -- Fade all descendants uniformly
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 0}
             ))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
         elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- Determine target transparency based on element type
-            local targetTrans = 1
-            
-            if descendant.Name == "FrameToggle3" then
-                -- Keep special toggle frame transparent
-                targetTrans = 1
-            elseif descendant.Name == "SlideFrame" or descendant.Name == "CurrentValueFrame" then
-                -- Slider frames should be visible
-                targetTrans = 0
-            elseif descendant.Name == "FrameToggle1" or descendant.Name == "FrameToggle2" or 
-                   descendant.Name == "FrameToggleCircle" or descendant.Name == "TextboxFrame" then
-                -- Toggle and textbox frames should be visible
-                targetTrans = 0
-            elseif descendant.Name:find("Separator") or descendant.Name == "TitleSeparator" or descendant.Name == "SeparatorLine" then
-                -- Separators should be visible
-                targetTrans = 0
-            elseif descendant.Parent and descendant.Parent.Name == "Tab" then
-                -- Main tab content should stay transparent background
-                targetTrans = 1
-            elseif descendant.Name:match("Toggle") or descendant.Name:match("Button") or 
-                   descendant.Name:match("Slider") or descendant.Name:match("Dropdown") or 
-                   descendant.Name:match("Textbox") or descendant.Name:match("Bind") or 
-                   descendant.Name:match("Label") then
-                -- Element backgrounds should be visible
-                targetTrans = 0
+            -- Only fade frames that are meant to be visible (not fully transparent)
+            if descendant.BackgroundTransparency < 1 then
+                table.insert(tweens, TweenService:Create(
+                    descendant,
+                    TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0}
+                ))
             end
-            
-            table.insert(tweens, TweenService:Create(
-                descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = targetTrans}
-            ))
         end
     end
     
-    -- Play all tweens
+    -- Play all tweens simultaneously
     for _, tween in pairs(tweens) do
         tween:Play()
     end
 end
 
--- SMOOTH FADE OUT ANIMATION - FIXED VERSION
+-- SMOOTH FADE OUT ANIMATION - FIXED TO FADE EVERYTHING TOGETHER
 local function FadeOutUI(main)
     local tweens = {}
+    local fadeTime = 0.3
     
     -- Fade main frame
     table.insert(tweens, TweenService:Create(
         main,
-        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 1}
     ))
     
-    -- Fade all descendants
+    -- Fade all descendants uniformly
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 1}
             ))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 1}
             ))
         elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
             table.insert(tweens, TweenService:Create(
                 descendant,
-                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {BackgroundTransparency = 1}
             ))
         end
     end
     
-    -- Play all tweens
+    -- Play all tweens simultaneously
     for _, tween in pairs(tweens) do
         tween:Play()
     end
     
-    wait(0.3)
+    wait(fadeTime)
     main.Visible = false
 end
 
@@ -478,7 +467,11 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    FadeInUI(Main)
+    -- Delay fade-in to allow tabs to be created first
+    delay(0.1, function()
+        FadeInUI(Main)
+    end)
+    
     MakeDraggable(DragFrame, Main)
 
     MinimizeBtn.MouseEnter:Connect(function()
