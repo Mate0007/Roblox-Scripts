@@ -21,8 +21,8 @@ local NotificationCallback = nil
 local uiEnabled = true
 local uitoggled = false
 
--- Store original transparencies for smooth fading
-local originalTransparencies = {}
+-- Dropdown refresh callbacks
+local DropdownRefreshCallbacks = {}
 
 -- Create config folder if it doesn't exist
 if not isfolder(ConfigFolder) then
@@ -247,42 +247,97 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- Improved fade animations
+-- SMOOTH FADE IN ANIMATION
 local function FadeInUI(main)
     main.Visible = true
     
-    -- Fade in all elements simultaneously
+    local tweens = {}
+    
+    -- Fade main frame
+    table.insert(tweens, TweenService:Create(
+        main,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 0}
+    ))
+    
+    -- Fade all descendants
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-            descendant.TextTransparency = originalTransparencies[descendant] or 0
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 0}
+            ))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-            descendant.ImageTransparency = originalTransparencies[descendant] or 0
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            descendant.BackgroundTransparency = originalTransparencies[descendant] or descendant.BackgroundTransparency
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {ImageTransparency = 0}
+            ))
+        elseif (descendant:IsA("Frame") or descendant:IsA("ScrollingFrame")) and descendant.Name ~= "FrameToggle3" then
+            if descendant.BackgroundTransparency ~= 1 then
+                local targetTrans = 0
+                if descendant.Name == "SlideFrame" or descendant.Name == "CurrentValueFrame" then
+                    targetTrans = 0
+                elseif descendant.Name:find("Toggle") or descendant.Name:find("Separator") then
+                    targetTrans = descendant.BackgroundTransparency
+                end
+                
+                table.insert(tweens, TweenService:Create(
+                    descendant,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = targetTrans}
+                ))
+            end
         end
     end
     
-    main.BackgroundTransparency = originalTransparencies[main] or 0
+    -- Play all tweens
+    for _, tween in pairs(tweens) do
+        tween:Play()
+    end
 end
 
+-- SMOOTH FADE OUT ANIMATION
 local function FadeOutUI(main)
-    -- Store originals and make transparent
-    originalTransparencies[main] = main.BackgroundTransparency
-    main.BackgroundTransparency = 1
+    local tweens = {}
     
+    -- Fade main frame
+    table.insert(tweens, TweenService:Create(
+        main,
+        TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {BackgroundTransparency = 1}
+    ))
+    
+    -- Fade all descendants
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-            originalTransparencies[descendant] = descendant.TextTransparency
-            descendant.TextTransparency = 1
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {TextTransparency = 1}
+            ))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-            originalTransparencies[descendant] = descendant.ImageTransparency
-            descendant.ImageTransparency = 1
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {ImageTransparency = 1}
+            ))
         elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            originalTransparencies[descendant] = descendant.BackgroundTransparency
-            descendant.BackgroundTransparency = 1
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ))
         end
     end
     
+    -- Play all tweens
+    for _, tween in pairs(tweens) do
+        tween:Play()
+    end
+    
+    wait(0.3)
     main.Visible = false
 end
 
@@ -319,6 +374,7 @@ function lib:Window(text, preset, closebind)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
     Main.Visible = true
+    Main.BackgroundTransparency = 1
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
@@ -342,6 +398,7 @@ function lib:Window(text, preset, closebind)
     MinimizeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     MinimizeBtn.TextSize = 18.000
     MinimizeBtn.TextWrapped = true
+    MinimizeBtn.TextTransparency = 1
 
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
@@ -354,6 +411,7 @@ function lib:Window(text, preset, closebind)
     CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     CloseBtn.TextSize = 16.000
     CloseBtn.TextWrapped = true
+    CloseBtn.TextTransparency = 1
 
     TabHold.Name = "TabHold"
     TabHold.Parent = Main
@@ -378,6 +436,7 @@ function lib:Window(text, preset, closebind)
     Title.TextColor3 = Color3.fromRGB(120, 120, 120)
     Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.TextTransparency = 1
 
     TitleSeparator.Name = "TitleSeparator"
     TitleSeparator.Parent = Main
@@ -385,6 +444,7 @@ function lib:Window(text, preset, closebind)
     TitleSeparator.BorderSizePixel = 0
     TitleSeparator.Position = UDim2.new(0.0339285731, 0, 0.137, 0)
     TitleSeparator.Size = UDim2.new(0, 520, 0, 1)
+    TitleSeparator.BackgroundTransparency = 1
 
     SeparatorLine.Name = "SeparatorLine"
     SeparatorLine.Parent = Main
@@ -392,6 +452,7 @@ function lib:Window(text, preset, closebind)
     SeparatorLine.BorderSizePixel = 0
     SeparatorLine.Position = UDim2.new(0.28, 0, 0.167, 0)
     SeparatorLine.Size = UDim2.new(0, 1, 0, 254)
+    SeparatorLine.BackgroundTransparency = 1
 
     DragFrame.Name = "DragFrame"
     DragFrame.Parent = Main
@@ -449,7 +510,7 @@ function lib:Window(text, preset, closebind)
 
     CloseBtn.MouseButton1Click:Connect(function()
         FadeOutUI(Main)
-        wait(0.1)
+        wait(0.35)
         ui:Destroy()
     end)
 
@@ -718,10 +779,11 @@ function lib:Window(text, preset, closebind)
         end
     end
 
-    -- Updated Config Tab with Dropdown and Delete
+    -- Updated Config Tab with REAL-TIME Dropdown refresh
     function lib:ConfigTab(tab)
         local configTab = tab
         local selectedConfig = ""
+        local configDropdown = nil
 
         -- Config name input for saving NEW configs
         configTab:Textbox("New Config Name", false, function(text)
@@ -735,8 +797,11 @@ function lib:Window(text, preset, closebind)
                 local success, msg = SaveConfig(configName)
                 if success then
                     lib:Notification("Success", msg, "Okay")
-                    -- Refresh dropdown options if it exists
+                    -- REFRESH DROPDOWN AFTER SAVING
                     wait(0.1)
+                    if configDropdown then
+                        configDropdown.Refresh()
+                    end
                 else
                     lib:Notification("Error", msg, "Okay")
                 end
@@ -747,13 +812,14 @@ function lib:Window(text, preset, closebind)
 
         configTab:Label("Load/Delete Configs")
 
-        -- Dropdown for selecting config
-        local configList = GetAllConfigs()
-        if #configList == 0 then
-            table.insert(configList, "No Configs")
-        end
-
-        configTab:Dropdown("Select Config", configList, function(selected)
+        -- Dynamic dropdown for selecting config with refresh capability
+        configDropdown = configTab:Dropdown("Select Config", function()
+            local configList = GetAllConfigs()
+            if #configList == 0 then
+                return {"No Configs"}
+            end
+            return configList
+        end, function(selected)
             selectedConfig = selected
         end)
 
@@ -793,6 +859,12 @@ function lib:Window(text, preset, closebind)
                                 wait(0.2)
                                 if success then
                                     lib:Notification("Success", msg, "Okay")
+                                    -- REFRESH DROPDOWN AFTER DELETING
+                                    wait(0.1)
+                                    if configDropdown then
+                                        configDropdown.Refresh()
+                                    end
+                                    selectedConfig = ""
                                 else
                                     lib:Notification("Error", msg, "Okay")
                                 end
@@ -805,9 +877,12 @@ function lib:Window(text, preset, closebind)
             end
         end)
 
-        -- Refresh configs button
+        -- Manual refresh button (optional, dropdown auto-refreshes now)
         configTab:Button("Refresh Config List", function()
-            lib:Notification("Info", "Please reopen the UI to see updated config list", "Okay")
+            if configDropdown then
+                configDropdown.Refresh()
+                lib:Notification("Refreshed", "Config list has been updated!", "Okay")
+            end
         end)
     end
 
@@ -848,6 +923,7 @@ function lib:Window(text, preset, closebind)
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabTitle.TextSize = 14.000
         TabTitle.TextXAlignment = Enum.TextXAlignment.Left
+        TabTitle.TextTransparency = 1
 
         TabBtnIndicator.Name = "TabBtnIndicator"
         TabBtnIndicator.Parent = TabBtn
@@ -855,6 +931,7 @@ function lib:Window(text, preset, closebind)
         TabBtnIndicator.BorderSizePixel = 0
         TabBtnIndicator.Position = UDim2.new(0, 0, 1, 0)
         TabBtnIndicator.Size = UDim2.new(0, 0, 0, 2)
+        TabBtnIndicator.BackgroundTransparency = 1
 
         TabBtnIndicatorCorner.Name = "TabBtnIndicatorCorner"
         TabBtnIndicatorCorner.Parent = TabBtnIndicator
@@ -1428,13 +1505,15 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        function tabcontent:Dropdown(text, list, callback)
+        -- DYNAMIC DROPDOWN WITH REAL-TIME REFRESH
+        function tabcontent:Dropdown(text, listOrFunction, callback)
             elementIdCounter = elementIdCounter + 1
             local elementId = "Dropdown_" .. elementIdCounter
             local droptog = false
             local framesize = 0
             local itemcount = 0
             local currentValue = nil
+            local isDynamic = type(listOrFunction) == "function"
 
             local Dropdown = Instance.new("Frame")
             local DropdownCorner = Instance.new("UICorner")
@@ -1511,9 +1590,113 @@ function lib:Window(text, preset, closebind)
                 end
             }
 
+            local function populateItems(list)
+                -- Clear existing items
+                for _, child in pairs(DropItemHolder:GetChildren()) do
+                    if child:IsA("TextButton") then
+                        child:Destroy()
+                    end
+                end
+
+                framesize = 0
+                itemcount = 0
+
+                for i, v in next, list do
+                    itemcount = itemcount + 1
+                    if itemcount <= 3 then
+                        framesize = framesize + 26
+                        DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
+                    end
+                    
+                    local Item = Instance.new("TextButton")
+                    local ItemCorner = Instance.new("UICorner")
+
+                    Item.Name = "Item"
+                    Item.Parent = DropItemHolder
+                    Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                    Item.ClipsDescendants = true
+                    Item.Size = UDim2.new(0, 335, 0, 25)
+                    Item.AutoButtonColor = false
+                    Item.Font = Enum.Font.Gotham
+                    Item.Text = v
+                    Item.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    Item.TextSize = 15.000
+
+                    ItemCorner.CornerRadius = UDim.new(0, 6)
+                    ItemCorner.Name = "ItemCorner"
+                    ItemCorner.Parent = Item
+
+                    Item.MouseEnter:Connect(
+                        function()
+                            TweenService:Create(
+                                Item,
+                                TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
+                            ):Play()
+                        end
+                    )
+
+                    Item.MouseLeave:Connect(
+                        function()
+                            TweenService:Create(
+                                Item,
+                                TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
+                            ):Play()
+                        end
+                    )
+
+                    Item.MouseButton1Click:Connect(
+                        function()
+                            droptog = not droptog
+                            DropdownTitle.Text = text .. " - " .. v
+                            currentValue = v
+                            ConfigElements[elementId].Value = currentValue
+                            pcall(callback, v)
+                            Dropdown:TweenSize(
+                                UDim2.new(0, 363, 0, 42),
+                                Enum.EasingDirection.Out,
+                                Enum.EasingStyle.Quart,
+                                .2,
+                                true
+                            )
+                            TweenService:Create(
+                                ArrowImg,
+                                TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                {Rotation = 0}
+                            ):Play()
+                            wait(.2)
+                            Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+                        end
+                    )
+
+                    DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+                end
+            end
+
+            -- Initial population
+            local initialList = isDynamic and listOrFunction() or listOrFunction
+            populateItems(initialList)
+
+            -- Refresh function for dynamic dropdowns
+            local dropdownObj = {}
+            function dropdownObj.Refresh()
+                if isDynamic then
+                    local newList = listOrFunction()
+                    populateItems(newList)
+                    print("Dropdown '" .. text .. "' refreshed with " .. #newList .. " items")
+                end
+            end
+
+            -- Auto-refresh when dropdown is opened (for dynamic lists)
             DropdownBtn.MouseButton1Click:Connect(
                 function()
                     if droptog == false then
+                        -- Refresh list before opening if dynamic
+                        if isDynamic then
+                            dropdownObj.Refresh()
+                        end
+                        
                         Dropdown:TweenSize(
                             UDim2.new(0, 363, 0, 55 + framesize),
                             Enum.EasingDirection.Out,
@@ -1548,77 +1731,9 @@ function lib:Window(text, preset, closebind)
                 end
             )
 
-            for i, v in next, list do
-                itemcount = itemcount + 1
-                if itemcount <= 3 then
-                    framesize = framesize + 26
-                    DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
-                end
-                local Item = Instance.new("TextButton")
-                local ItemCorner = Instance.new("UICorner")
-
-                Item.Name = "Item"
-                Item.Parent = DropItemHolder
-                Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-                Item.ClipsDescendants = true
-                Item.Size = UDim2.new(0, 335, 0, 25)
-                Item.AutoButtonColor = false
-                Item.Font = Enum.Font.Gotham
-                Item.Text = v
-                Item.TextColor3 = Color3.fromRGB(255, 255, 255)
-                Item.TextSize = 15.000
-
-                ItemCorner.CornerRadius = UDim.new(0, 6)
-                ItemCorner.Name = "ItemCorner"
-                ItemCorner.Parent = Item
-
-                Item.MouseEnter:Connect(
-                    function()
-                        TweenService:Create(
-                            Item,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-                        ):Play()
-                    end
-                )
-
-                Item.MouseLeave:Connect(
-                    function()
-                        TweenService:Create(
-                            Item,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
-                        ):Play()
-                    end
-                )
-
-                Item.MouseButton1Click:Connect(
-                    function()
-                        droptog = not droptog
-                        DropdownTitle.Text = text .. " - " .. v
-                        currentValue = v
-                        ConfigElements[elementId].Value = currentValue
-                        pcall(callback, v)
-                        Dropdown:TweenSize(
-                            UDim2.new(0, 363, 0, 42),
-                            Enum.EasingDirection.Out,
-                            Enum.EasingStyle.Quart,
-                            .2,
-                            true
-                        )
-                        TweenService:Create(
-                            ArrowImg,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {Rotation = 0}
-                        ):Play()
-                        wait(.2)
-                        Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
-                    end
-                )
-
-                DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
-            end
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+            
+            return dropdownObj
         end
 
         function tabcontent:Label(text)
