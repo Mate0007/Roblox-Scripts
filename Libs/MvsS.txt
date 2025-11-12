@@ -1,3 +1,4 @@
+-- Forsee Library v2.0 - Complete UI Library with Config System
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -9,7 +10,7 @@ local CloseBind = Enum.KeyCode.RightControl
 
 -- Config saving system with persistent storage
 local HttpService = game:GetService("HttpService")
-local ConfigFolder = "MvsSConfigs"
+local ConfigFolder = "ForseeConfigs"
 local ConfigElements = {}
 local CurrentConfigName = ""
 
@@ -166,7 +167,7 @@ local function GetAllConfigs()
 end
 
 local ui = Instance.new("ScreenGui")
-ui.Name = "ui"
+ui.Name = "ForseeUI"
 ui.Parent = game.CoreGui
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
@@ -247,13 +248,13 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- SMOOTH FADE IN ANIMATION
+-- IMPROVED SMOOTH FADE IN ANIMATION
 local function FadeInUI(main)
     main.Visible = true
-    
     local tweens = {}
     
     -- Fade main frame
+    main.BackgroundTransparency = 1
     table.insert(tweens, TweenService:Create(
         main,
         TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -263,32 +264,50 @@ local function FadeInUI(main)
     -- Fade all descendants
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+            descendant.TextTransparency = 1
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 0}
             ))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+            descendant.ImageTransparency = 1
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
-        elseif (descendant:IsA("Frame") or descendant:IsA("ScrollingFrame")) and descendant.Name ~= "FrameToggle3" then
-            if descendant.BackgroundTransparency ~= 1 then
-                local targetTrans = 0
-                if descendant.Name == "SlideFrame" or descendant.Name == "CurrentValueFrame" then
-                    targetTrans = 0
-                elseif descendant.Name:find("Toggle") or descendant.Name:find("Separator") then
-                    targetTrans = descendant.BackgroundTransparency
-                end
-                
-                table.insert(tweens, TweenService:Create(
-                    descendant,
-                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = targetTrans}
-                ))
+        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Determine the correct target transparency for each frame type
+            local targetTrans = 0
+            
+            -- Separators and lines should be visible
+            if descendant.Name == "SeparatorLine" or descendant.Name == "TitleSeparator" then
+                targetTrans = 0
+            -- Toggle/Slider internal frames with specific transparency
+            elseif descendant.Name == "FrameToggle1" or descendant.Name == "FrameToggle2" then
+                targetTrans = 0
+            elseif descendant.Name == "FrameToggle3" or descendant.Name == "CurrentValueFrame" then
+                targetTrans = 0
+            elseif descendant.Name == "SlideFrame" then
+                targetTrans = 0
+            -- Main UI frames (sections, toggles, sliders, etc)
+            elseif descendant.Parent and (descendant.Parent.Name == "Tab" or descendant.Parent.Name == "TabFolder") then
+                targetTrans = 0
+            -- Fully transparent frames (backgrounds)
+            elseif descendant.Name:find("Holder") or descendant.Name:find("Container") then
+                targetTrans = 1
+            -- Default for unknown frames
+            else
+                targetTrans = 0
             end
+            
+            descendant.BackgroundTransparency = 1
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = targetTrans}
+            ))
         end
     end
     
@@ -298,7 +317,7 @@ local function FadeInUI(main)
     end
 end
 
--- SMOOTH FADE OUT ANIMATION
+-- IMPROVED SMOOTH FADE OUT ANIMATION
 local function FadeOutUI(main)
     local tweens = {}
     
@@ -324,6 +343,7 @@ local function FadeOutUI(main)
                 {ImageTransparency = 1}
             ))
         elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Fade ALL frames to transparent when hiding
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -398,7 +418,7 @@ function lib:Window(text, preset, closebind)
     MinimizeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     MinimizeBtn.TextSize = 18.000
     MinimizeBtn.TextWrapped = true
-    MinimizeBtn.TextTransparency = 1
+    MinimizeBtn.TextTransparency = 0
 
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
@@ -411,7 +431,7 @@ function lib:Window(text, preset, closebind)
     CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     CloseBtn.TextSize = 16.000
     CloseBtn.TextWrapped = true
-    CloseBtn.TextTransparency = 1
+    CloseBtn.TextTransparency = 0
 
     TabHold.Name = "TabHold"
     TabHold.Parent = Main
@@ -436,7 +456,7 @@ function lib:Window(text, preset, closebind)
     Title.TextColor3 = Color3.fromRGB(120, 120, 120)
     Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.TextTransparency = 1
+    Title.TextTransparency = 0
 
     TitleSeparator.Name = "TitleSeparator"
     TitleSeparator.Parent = Main
@@ -444,7 +464,7 @@ function lib:Window(text, preset, closebind)
     TitleSeparator.BorderSizePixel = 0
     TitleSeparator.Position = UDim2.new(0.0339285731, 0, 0.137, 0)
     TitleSeparator.Size = UDim2.new(0, 520, 0, 1)
-    TitleSeparator.BackgroundTransparency = 1
+    TitleSeparator.BackgroundTransparency = 0
 
     SeparatorLine.Name = "SeparatorLine"
     SeparatorLine.Parent = Main
@@ -452,7 +472,7 @@ function lib:Window(text, preset, closebind)
     SeparatorLine.BorderSizePixel = 0
     SeparatorLine.Position = UDim2.new(0.28, 0, 0.167, 0)
     SeparatorLine.Size = UDim2.new(0, 1, 0, 254)
-    SeparatorLine.BackgroundTransparency = 1
+    SeparatorLine.BackgroundTransparency = 0
 
     DragFrame.Name = "DragFrame"
     DragFrame.Parent = Main
@@ -877,7 +897,7 @@ function lib:Window(text, preset, closebind)
             end
         end)
 
-        -- Manual refresh button (optional, dropdown auto-refreshes now)
+        -- Manual refresh button
         configTab:Button("Refresh Config List", function()
             if configDropdown then
                 configDropdown.Refresh()
@@ -923,7 +943,7 @@ function lib:Window(text, preset, closebind)
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabTitle.TextSize = 14.000
         TabTitle.TextXAlignment = Enum.TextXAlignment.Left
-        TabTitle.TextTransparency = 1
+        TabTitle.TextTransparency = 0
 
         TabBtnIndicator.Name = "TabBtnIndicator"
         TabBtnIndicator.Parent = TabBtn
@@ -931,7 +951,7 @@ function lib:Window(text, preset, closebind)
         TabBtnIndicator.BorderSizePixel = 0
         TabBtnIndicator.Position = UDim2.new(0, 0, 1, 0)
         TabBtnIndicator.Size = UDim2.new(0, 0, 0, 2)
-        TabBtnIndicator.BackgroundTransparency = 1
+        TabBtnIndicator.BackgroundTransparency = 0
 
         TabBtnIndicatorCorner.Name = "TabBtnIndicatorCorner"
         TabBtnIndicatorCorner.Parent = TabBtnIndicator
