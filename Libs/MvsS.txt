@@ -258,21 +258,21 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- SMOOTH FADE IN ANIMATION - FIXED TO FADE EVERYTHING TOGETHER
+-- FIXED SMOOTH FADE IN ANIMATION - Uniform timing for all elements
 local function FadeInUI(main)
     main.Visible = true
     
-    local tweens = {}
     local fadeTime = 0.3
+    local tweens = {}
     
-    -- Fade main frame
+    -- Fade main container
     table.insert(tweens, TweenService:Create(
         main,
         TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 0}
     ))
     
-    -- Fade all descendants uniformly
+    -- Fade all text and images uniformly
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
@@ -286,16 +286,8 @@ local function FadeInUI(main)
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- Only fade frames that are meant to be visible (not fully transparent)
-            if descendant.BackgroundTransparency < 1 then
-                table.insert(tweens, TweenService:Create(
-                    descendant,
-                    TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 0}
-                ))
-            end
         end
+        -- Skip fading frames to preserve UI structure
     end
     
     -- Play all tweens simultaneously
@@ -304,19 +296,19 @@ local function FadeInUI(main)
     end
 end
 
--- SMOOTH FADE OUT ANIMATION - FIXED TO FADE EVERYTHING TOGETHER
+-- FIXED SMOOTH FADE OUT ANIMATION - Uniform timing for all elements
 local function FadeOutUI(main)
-    local tweens = {}
     local fadeTime = 0.3
+    local tweens = {}
     
-    -- Fade main frame
+    -- Fade main container
     table.insert(tweens, TweenService:Create(
         main,
         TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
         {BackgroundTransparency = 1}
     ))
     
-    -- Fade all descendants uniformly
+    -- Fade all text and images uniformly
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
@@ -330,13 +322,8 @@ local function FadeOutUI(main)
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 1}
             ))
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            table.insert(tweens, TweenService:Create(
-                descendant,
-                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = 1}
-            ))
         end
+        -- Skip fading frames to preserve UI structure
     end
     
     -- Play all tweens simultaneously
@@ -467,7 +454,7 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- Delay fade-in to allow tabs to be created first
+    -- Delay fade-in to ensure UI is ready
     delay(0.1, function()
         FadeInUI(Main)
     end)
@@ -1168,13 +1155,14 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
             FrameToggleCircleCorner.Parent = FrameToggleCircle
 
-            -- Save config element
+            -- FIXED: Save config element with proper state management
             ConfigElements[elementId] = {
                 Type = "Toggle",
                 Value = toggled,
                 LoadValue = function(value)
+                    toggled = value  -- Update internal state
                     if value then
-                        toggled = true
+                        -- Set visual ON state
                         TweenService:Create(
                             Toggle,
                             TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -1201,9 +1189,8 @@ function lib:Window(text, preset, closebind)
                             {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
                         ):Play()
                         FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
-                        pcall(callback, toggled)
                     else
-                        toggled = false
+                        -- Set visual OFF state
                         TweenService:Create(
                             Toggle,
                             TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -1230,8 +1217,8 @@ function lib:Window(text, preset, closebind)
                             {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
                         ):Play()
                         FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
-                        pcall(callback, toggled)
                     end
+                    pcall(callback, toggled)  -- Call callback to enable/disable feature
                 end
             }
 
