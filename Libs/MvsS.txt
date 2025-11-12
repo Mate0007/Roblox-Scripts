@@ -14,6 +14,9 @@ local ConfigSubfolder = "Default"
 local ConfigElements = {}
 local CurrentConfigName = ""
 
+-- Global element ID counter to ensure uniqueness across all tabs
+local globalElementIdCounter = 0
+
 -- Notification management
 local CurrentNotification = nil
 local NotificationCallback = nil
@@ -258,7 +261,7 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- FIXED SMOOTH FADE IN ANIMATION - Uniform timing for all elements
+-- FIXED SMOOTH FADE IN ANIMATION - Uniform timing for ALL elements including backgrounds
 local function FadeInUI(main)
     main.Visible = true
     
@@ -272,7 +275,7 @@ local function FadeInUI(main)
         {BackgroundTransparency = 0}
     ))
     
-    -- Fade all text and images uniformly
+    -- Fade ALL descendants uniformly - text, images, AND frames
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
@@ -286,8 +289,16 @@ local function FadeInUI(main)
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
+        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Fade ALL frames to visible state (0) if they're not already invisible
+            if descendant.BackgroundTransparency < 1 then
+                table.insert(tweens, TweenService:Create(
+                    descendant,
+                    TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0}
+                ))
+            end
         end
-        -- Skip fading frames to preserve UI structure
     end
     
     -- Play all tweens simultaneously
@@ -296,7 +307,7 @@ local function FadeInUI(main)
     end
 end
 
--- FIXED SMOOTH FADE OUT ANIMATION - Uniform timing for all elements
+-- FIXED SMOOTH FADE OUT ANIMATION - Uniform timing for ALL elements including backgrounds
 local function FadeOutUI(main)
     local fadeTime = 0.3
     local tweens = {}
@@ -308,7 +319,7 @@ local function FadeOutUI(main)
         {BackgroundTransparency = 1}
     ))
     
-    -- Fade all text and images uniformly
+    -- Fade ALL descendants uniformly - text, images, AND frames
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
@@ -322,8 +333,14 @@ local function FadeOutUI(main)
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 1}
             ))
+        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Fade ALL frames to invisible state (1)
+            table.insert(tweens, TweenService:Create(
+                descendant,
+                TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {BackgroundTransparency = 1}
+            ))
         end
-        -- Skip fading frames to preserve UI structure
     end
     
     -- Play all tweens simultaneously
@@ -1009,9 +1026,11 @@ function lib:Window(text, preset, closebind)
         )
 
         local tabcontent = {}
-        local elementIdCounter = 0
 
         function tabcontent:Button(text, callback)
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Button_" .. globalElementIdCounter
+
             local Button = Instance.new("TextButton")
             local ButtonCorner = Instance.new("UICorner")
             local ButtonTitle = Instance.new("TextLabel")
@@ -1072,8 +1091,8 @@ function lib:Window(text, preset, closebind)
         end
 
         function tabcontent:Toggle(text,default, callback)
-            elementIdCounter = elementIdCounter + 1
-            local elementId = "Toggle_" .. elementIdCounter
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Toggle_" .. globalElementIdCounter
             local toggled = false
 
             local Toggle = Instance.new("TextButton")
@@ -1218,7 +1237,7 @@ function lib:Window(text, preset, closebind)
                         ):Play()
                         FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
                     end
-                    pcall(callback, toggled)  -- Call callback to enable/disable feature
+                    pcall(callback, value)  -- Call callback to enable/disable feature
                 end
             }
 
@@ -1346,8 +1365,8 @@ function lib:Window(text, preset, closebind)
         end
 
         function tabcontent:Slider(text, min, max, start, callback)
-            elementIdCounter = elementIdCounter + 1
-            local elementId = "Slider_" .. elementIdCounter
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Slider_" .. globalElementIdCounter
             local dragging = false
             local currentValue = start or 0
 
@@ -1505,8 +1524,8 @@ function lib:Window(text, preset, closebind)
 
         -- DYNAMIC DROPDOWN WITH REAL-TIME REFRESH
         function tabcontent:Dropdown(text, listOrFunction, callback)
-            elementIdCounter = elementIdCounter + 1
-            local elementId = "Dropdown_" .. elementIdCounter
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Dropdown_" .. globalElementIdCounter
             local droptog = false
             local framesize = 0
             local itemcount = 0
@@ -1735,6 +1754,9 @@ function lib:Window(text, preset, closebind)
         end
 
         function tabcontent:Label(text)
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Label_" .. globalElementIdCounter
+
             local Label = Instance.new("TextButton")
             local LabelCorner = Instance.new("UICorner")
             local LabelTitle = Instance.new("TextLabel")
@@ -1769,8 +1791,8 @@ function lib:Window(text, preset, closebind)
         end
 
         function tabcontent:Textbox(text, disapper, callback)
-            elementIdCounter = elementIdCounter + 1
-            local elementId = "Textbox_" .. elementIdCounter
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Textbox_" .. globalElementIdCounter
             local currentValue = ""
 
             local Textbox = Instance.new("Frame")
@@ -1865,8 +1887,8 @@ function lib:Window(text, preset, closebind)
         end
 
         function tabcontent:Bind(text, keypreset, callback)
-            elementIdCounter = elementIdCounter + 1
-            local elementId = "Bind_" .. elementIdCounter
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "Bind_" .. globalElementIdCounter
             local binding = false
             local Key = keypreset.Name
             local currentKey = keypreset
