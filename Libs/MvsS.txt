@@ -277,17 +277,6 @@ TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 
 -- Fade ALL descendants uniformly - text, images, AND frames
 for _, descendant in pairs(main:GetDescendants()) do
--- Store original transparency values to restore correctly
-local originalTransparency = nil
-if descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-originalTransparency = descendant:GetAttribute("OriginalTransparency")
-if originalTransparency == nil then
--- First time - store current transparency as original
-descendant:SetAttribute("OriginalTransparency", descendant.BackgroundTransparency)
-originalTransparency = descendant.BackgroundTransparency
-end
-end
-
 if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
 table.insert(tweens, TweenService:Create(
 descendant,
@@ -301,11 +290,17 @@ TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 {ImageTransparency = 0}
 ))
 elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
--- Restore to original transparency
+-- Get the original transparency or default to 0 for colored backgrounds
+local targetTransparency = 0
+-- Check if this is supposed to be fully transparent (like separators that are meant to be invisible)
+if descendant.Name == "TabHold" or descendant.Name == "ButtonsContainer" or descendant.BackgroundColor3 == Color3.fromRGB(255, 255, 255) then
+targetTransparency = 1
+end
+-- Fade to target transparency
 table.insert(tweens, TweenService:Create(
 descendant,
 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-{BackgroundTransparency = originalTransparency}
+{BackgroundTransparency = targetTransparency}
 ))
 end
 end
@@ -328,7 +323,7 @@ TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 {BackgroundTransparency = 1}
 ))
 
--- Fade ALL descendants uniformly - text, images, AND frames
+-- Fade ALL descendants uniformly - text, images, AND frames INCLUDING COLORED BACKGROUNDS
 for _, descendant in pairs(main:GetDescendants()) do
 if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
 table.insert(tweens, TweenService:Create(
@@ -343,7 +338,7 @@ TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 {ImageTransparency = 1}
 ))
 elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
--- Fade ALL frames to invisible state (1)
+-- Fade ALL frames to invisible state (1) - THIS INCLUDES TOGGLE BACKGROUNDS AND SECTIONS
 table.insert(tweens, TweenService:Create(
 descendant,
 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
