@@ -225,7 +225,7 @@ local function MakeDraggable(topbarobject, object)
     end)
 end
 
--- FIXED FADE FUNCTIONS - Now properly restores all background colors
+-- FIXED FADE FUNCTIONS - Just change transparency, don't mess with colors
 local function FadeInUI(main)
     main.Visible = true
     local fadeTime = 0.3
@@ -234,45 +234,15 @@ local function FadeInUI(main)
     -- Fade main container
     table.insert(tweens, TweenService:Create(main, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}))
 
-    -- Fade ALL descendants and restore proper background colors
+    -- Fade ALL descendants - JUST change transparency, don't touch colors
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}))
         elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}))
         elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- RESTORE PROPER BACKGROUND COLORS FOR ALL ELEMENTS
-            if descendant.Name == "Button" or descendant.Name == "Toggle" or descendant.Name == "Slider" or descendant.Name == "Dropdown" or descendant.Name == "Textbox" or descendant.Name == "Bind" then
-                -- Main element backgrounds (dark gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34), BackgroundTransparency = 0}))
-            elseif descendant.Name == "FrameToggle1" then
-                -- Toggle outer frame (light gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 50, 50), BackgroundTransparency = 0}))
-            elseif descendant.Name == "FrameToggle2" then
-                -- Toggle inner frame (dark gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34), BackgroundTransparency = 0}))
-            elseif descendant.Name == "FrameToggle3" then
-                -- Toggle active color (preset color)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = PresetColor, BackgroundTransparency = 1})) -- Starts transparent
-            elseif descendant.Name == "FrameToggleCircle" then
-                -- Toggle circle (gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 50, 50), BackgroundTransparency = 0}))
-            elseif descendant.Name == "SlideFrame" then
-                -- Slider track (light gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 50, 50), BackgroundTransparency = 0}))
-            elseif descendant.Name == "CurrentValueFrame" then
-                -- Slider fill (preset color)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = PresetColor, BackgroundTransparency = 0}))
-            elseif descendant.Name == "TextboxFrame" then
-                -- Textbox background (medium gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37), BackgroundTransparency = 0}))
-            elseif descendant.Name == "Item" then
-                -- Dropdown items (dark gray)
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34), BackgroundTransparency = 0}))
-            else
-                -- Default for other frames
-                table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}))
-            end
+            -- JUST FADE TRANSPARENCY - DON'T CHANGE COLORS
+            table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}))
         end
     end
 
@@ -289,7 +259,7 @@ local function FadeOutUI(main)
     -- Fade main container
     table.insert(tweens, TweenService:Create(main, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}))
 
-    -- Fade ALL descendants uniformly
+    -- Fade ALL descendants uniformly - JUST change transparency
     for _, descendant in pairs(main:GetDescendants()) do
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(descendant, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}))
@@ -919,6 +889,7 @@ function lib:Window(text, preset, closebind)
             Button.Text = ""
             Button.TextColor3 = Color3.fromRGB(0, 0, 0)
             Button.TextSize = 14.000
+            Button.BackgroundTransparency = 1
 
             ButtonCorner.CornerRadius = UDim.new(0, 6)
             ButtonCorner.Name = "ButtonCorner"
@@ -935,6 +906,7 @@ function lib:Window(text, preset, closebind)
             ButtonTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             ButtonTitle.TextSize = 14.000
             ButtonTitle.TextXAlignment = Enum.TextXAlignment.Left
+            ButtonTitle.TextTransparency = 1
 
             Button.MouseEnter:Connect(function()
                 TweenService:Create(Button, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
@@ -978,6 +950,7 @@ function lib:Window(text, preset, closebind)
             Toggle.Text = ""
             Toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
             Toggle.TextSize = 14.000
+            Toggle.BackgroundTransparency = 1
 
             ToggleCorner.CornerRadius = UDim.new(0, 6)
             ToggleCorner.Name = "ToggleCorner"
@@ -994,12 +967,14 @@ function lib:Window(text, preset, closebind)
             ToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             ToggleTitle.TextSize = 14.000
             ToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleTitle.TextTransparency = 1
 
             FrameToggle1.Name = "FrameToggle1"
             FrameToggle1.Parent = Toggle
             FrameToggle1.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             FrameToggle1.Position = UDim2.new(0.859504104, 0, 0.285714298, 0)
             FrameToggle1.Size = UDim2.new(0, 37, 0, 18)
+            FrameToggle1.BackgroundTransparency = 1
 
             FrameToggle1Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle1Corner.Name = "FrameToggle1Corner"
@@ -1010,6 +985,7 @@ function lib:Window(text, preset, closebind)
             FrameToggle2.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
             FrameToggle2.Position = UDim2.new(0.0489999987, 0, 0.0930000022, 0)
             FrameToggle2.Size = UDim2.new(0, 33, 0, 14)
+            FrameToggle2.BackgroundTransparency = 1
 
             FrameToggle2Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle2Corner.Name = "FrameToggle2Corner"
@@ -1020,6 +996,7 @@ function lib:Window(text, preset, closebind)
             FrameToggle3.BackgroundColor3 = PresetColor
             FrameToggle3.BackgroundTransparency = 1.000
             FrameToggle3.Size = UDim2.new(0, 37, 0, 18)
+            FrameToggle3.BackgroundTransparency = 1
 
             FrameToggle3Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle3Corner.Name = "FrameToggle3Corner"
@@ -1030,6 +1007,7 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
             FrameToggleCircle.Size = UDim2.new(0, 10, 0, 10)
+            FrameToggleCircle.BackgroundTransparency = 1
 
             FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
@@ -1124,6 +1102,7 @@ function lib:Window(text, preset, closebind)
             Slider.Text = ""
             Slider.TextColor3 = Color3.fromRGB(0, 0, 0)
             Slider.TextSize = 14.000
+            Slider.BackgroundTransparency = 1
 
             SliderCorner.CornerRadius = UDim.new(0, 6)
             SliderCorner.Name = "SliderCorner"
@@ -1140,6 +1119,7 @@ function lib:Window(text, preset, closebind)
             SliderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             SliderTitle.TextSize = 14.000
             SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+            SliderTitle.TextTransparency = 1
 
             SliderValue.Name = "SliderValue"
             SliderValue.Parent = Slider
@@ -1152,6 +1132,7 @@ function lib:Window(text, preset, closebind)
             SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
             SliderValue.TextSize = 14.000
             SliderValue.TextXAlignment = Enum.TextXAlignment.Right
+            SliderValue.TextTransparency = 1
 
             SlideFrame.Name = "SlideFrame"
             SlideFrame.Parent = Slider
@@ -1159,6 +1140,7 @@ function lib:Window(text, preset, closebind)
             SlideFrame.BorderSizePixel = 0
             SlideFrame.Position = UDim2.new(0.0342647657, 0, 0.686091602, 0)
             SlideFrame.Size = UDim2.new(0, 335, 0, 3)
+            SlideFrame.BackgroundTransparency = 1
 
             local SlideFrameCorner = Instance.new("UICorner")
             SlideFrameCorner.CornerRadius = UDim.new(1, 0)
@@ -1169,6 +1151,7 @@ function lib:Window(text, preset, closebind)
             CurrentValueFrame.BackgroundColor3 = PresetColor
             CurrentValueFrame.BorderSizePixel = 0
             CurrentValueFrame.Size = UDim2.new((start or 0) / max, 0, 0, 3)
+            CurrentValueFrame.BackgroundTransparency = 1
 
             local CurrentValueCorner = Instance.new("UICorner")
             CurrentValueCorner.CornerRadius = UDim.new(1, 0)
@@ -1182,6 +1165,7 @@ function lib:Window(text, preset, closebind)
             SlideCircle.Size = UDim2.new(0, 11, 0, 11)
             SlideCircle.Image = "rbxassetid://3570695787"
             SlideCircle.ImageColor3 = PresetColor
+            SlideCircle.ImageTransparency = 1
 
             ConfigElements[elementId] = {
                 Type = "Slider",
@@ -1260,6 +1244,7 @@ function lib:Window(text, preset, closebind)
             Dropdown.ClipsDescendants = true
             Dropdown.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Dropdown.Size = UDim2.new(0, 363, 0, 42)
+            Dropdown.BackgroundTransparency = 1
 
             DropdownCorner.CornerRadius = UDim.new(0, 6)
             DropdownCorner.Name = "DropdownCorner"
@@ -1286,6 +1271,7 @@ function lib:Window(text, preset, closebind)
             DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             DropdownTitle.TextSize = 14.000
             DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+            DropdownTitle.TextTransparency = 1
 
             ArrowImg.Name = "ArrowImg"
             ArrowImg.Parent = DropdownTitle
@@ -1294,6 +1280,7 @@ function lib:Window(text, preset, closebind)
             ArrowImg.Position = UDim2.new(1.65240645, 0, 0.190476194, 0)
             ArrowImg.Size = UDim2.new(0, 26, 0, 26)
             ArrowImg.Image = "http://www.roblox.com/asset/?id=6034818375"
+            ArrowImg.ImageTransparency = 1
 
             DropItemHolder.Name = "DropItemHolder"
             DropItemHolder.Parent = DropdownTitle
@@ -1350,6 +1337,8 @@ function lib:Window(text, preset, closebind)
                     Item.Text = v
                     Item.TextColor3 = Color3.fromRGB(255, 255, 255)
                     Item.TextSize = 15.000
+                    Item.BackgroundTransparency = 1
+                    Item.TextTransparency = 1
 
                     ItemCorner.CornerRadius = UDim.new(0, 6)
                     ItemCorner.Name = "ItemCorner"
@@ -1431,6 +1420,7 @@ function lib:Window(text, preset, closebind)
             Label.Text = ""
             Label.TextColor3 = Color3.fromRGB(0, 0, 0)
             Label.TextSize = 14.000
+            Label.BackgroundTransparency = 1
 
             LabelCorner.CornerRadius = UDim.new(0, 6)
             LabelCorner.Name = "ButtonCorner"
@@ -1447,6 +1437,7 @@ function lib:Window(text, preset, closebind)
             LabelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             LabelTitle.TextSize = 14.000
             LabelTitle.TextXAlignment = Enum.TextXAlignment.Left
+            LabelTitle.TextTransparency = 1
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
@@ -1469,6 +1460,7 @@ function lib:Window(text, preset, closebind)
             Textbox.ClipsDescendants = true
             Textbox.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Textbox.Size = UDim2.new(0, 363, 0, 42)
+            Textbox.BackgroundTransparency = 1
 
             TextboxCorner.CornerRadius = UDim.new(0, 6)
             TextboxCorner.Name = "TextboxCorner"
@@ -1485,12 +1477,14 @@ function lib:Window(text, preset, closebind)
             TextboxTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextboxTitle.TextSize = 14.000
             TextboxTitle.TextXAlignment = Enum.TextXAlignment.Left
+            TextboxTitle.TextTransparency = 1
 
             TextboxFrame.Name = "TextboxFrame"
             TextboxFrame.Parent = TextboxTitle
             TextboxFrame.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
             TextboxFrame.Position = UDim2.new(1.28877008, 0, 0.214285716, 0)
             TextboxFrame.Size = UDim2.new(0, 100, 0, 23)
+            TextboxFrame.BackgroundTransparency = 1
 
             TextboxFrameCorner.CornerRadius = UDim.new(0, 6)
             TextboxFrameCorner.Name = "TextboxFrameCorner"
@@ -1504,6 +1498,7 @@ function lib:Window(text, preset, closebind)
             TextBox.Text = ""
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
+            TextBox.TextTransparency = 1
 
             ConfigElements[elementId] = {
                 Type = "Textbox",
@@ -1562,6 +1557,7 @@ function lib:Window(text, preset, closebind)
             Bind.Text = ""
             Bind.TextColor3 = Color3.fromRGB(0, 0, 0)
             Bind.TextSize = 14.000
+            Bind.BackgroundTransparency = 1
 
             BindCorner.CornerRadius = UDim.new(0, 6)
             BindCorner.Name = "BindCorner"
@@ -1578,6 +1574,7 @@ function lib:Window(text, preset, closebind)
             BindTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             BindTitle.TextSize = 14.000
             BindTitle.TextXAlignment = Enum.TextXAlignment.Left
+            BindTitle.TextTransparency = 1
 
             BindText.Name = "BindText"
             BindText.Parent = Bind
@@ -1590,6 +1587,7 @@ function lib:Window(text, preset, closebind)
             BindText.TextColor3 = Color3.fromRGB(255, 255, 255)
             BindText.TextSize = 14.000
             BindText.TextXAlignment = Enum.TextXAlignment.Right
+            BindText.TextTransparency = 1
 
             ConfigElements[elementId] = {
                 Type = "Bind",
