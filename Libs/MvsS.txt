@@ -262,7 +262,7 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- FIXED FADE IN/OUT ANIMATION - Captures and restores state for all elements
+-- FIXED FADE IN/OUT ANIMATION - Captures and restores state for all elements, including instant scrollbar hide
 local function FadeOutUI(main)
     local fadeTime = 0.3
     local tweens = {}
@@ -291,10 +291,18 @@ local function FadeOutUI(main)
                 propsToFade.ImageTransparency = 1
             end
             
-            -- If we have anything to fade, store its state and create a tween
-            if next(propsToFade) then
+            -- FIX: Handle scrollbar state
+            if obj:IsA("ScrollingFrame") then
+                stateToSave.ScrollBarImageTransparency = obj.ScrollBarImageTransparency
+                obj.ScrollBarImageTransparency = 1 -- Hide instantly!
+            end
+
+            -- If we have anything to fade OR state to save (like the scrollbar), store it
+            if next(propsToFade) or stateToSave.ScrollBarImageTransparency ~= nil then
                 uiElementStates[obj] = stateToSave
-                table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), propsToFade))
+                if next(propsToFade) then -- Only create a tween if there are properties to animate
+                    table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), propsToFade))
+                end
             end
         end
     end
@@ -320,6 +328,8 @@ local function FadeInUI(main)
             if storedState.BackgroundTransparency ~= nil then obj.BackgroundTransparency = 1 end
             if storedState.TextTransparency ~= nil then obj.TextTransparency = 1 end
             if storedState.ImageTransparency ~= nil then obj.ImageTransparency = 1 end
+            -- FIX: Also set scrollbar to fully transparent before tweening
+            if storedState.ScrollBarImageTransparency ~= nil then obj.ScrollBarImageTransparency = 1 end
             
             -- Create the fade-in tween
             table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), storedState))
@@ -364,7 +374,7 @@ function lib:Window(text, preset, closebind)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
     Main.Visible = false -- Start invisible, let FadeInUI handle it
-    Main.BackgroundTransparency = 1
+    Main.BackgroundTransparency = 0 -- FIX: Main background is opaque when visible
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
@@ -373,14 +383,14 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Name = "ButtonsContainer"
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    ButtonsContainer.BackgroundTransparency = 1.000
+    ButtonsContainer.BackgroundTransparency = 1.000 -- This is correct (transparent container)
     ButtonsContainer.Position = UDim2.new(0.88, 0, 0.0264263314, 0)
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     MinimizeBtn.Name = "MinimizeBtn"
     MinimizeBtn.Parent = ButtonsContainer
     MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    MinimizeBtn.BackgroundTransparency = 1.000
+    MinimizeBtn.BackgroundTransparency = 1.000 -- This is correct (transparent button background)
     MinimizeBtn.Position = UDim2.new(0, 0, 0, 0)
     MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
     MinimizeBtn.Font = Enum.Font.GothamSemibold
@@ -392,7 +402,7 @@ function lib:Window(text, preset, closebind)
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
     CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.BackgroundTransparency = 1.000
+    CloseBtn.BackgroundTransparency = 1.000 -- This is correct (transparent button background)
     CloseBtn.Position = UDim2.new(0.5, 0, 0, 0)
     CloseBtn.Size = UDim2.new(0, 30, 0, 30)
     CloseBtn.Font = Enum.Font.GothamSemibold
@@ -416,7 +426,7 @@ function lib:Window(text, preset, closebind)
     Title.Name = "Title"
     Title.Parent = Main
     Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Title.BackgroundTransparency = 1.000
+    Title.BackgroundTransparency = 1.000 -- This is correct (transparent title background)
     Title.Position = UDim2.new(0.0339285731, 0, 0.0264263314, 0)
     Title.Size = UDim2.new(0, 200, 0, 30)
     Title.Font = Enum.Font.GothamSemibold
@@ -444,45 +454,18 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
-
-    -- Capture initial state for the first fade-in
-    uitoggled = true -- Set to true so first toggle action is to fade in
-    local allInitialObjects = Main:GetDescendants()
-    table.insert(allInitialObjects, 1, Main)
-    for _, obj in ipairs(allInitialObjects) do
-        if obj:IsA("GuiObject") then
-            -- Set all transparencies to 0 to define the "visible" state
-            if pcall(function() obj.BackgroundTransparency = obj.BackgroundTransparency end) then obj.BackgroundTransparency = 0 end
-            if pcall(function() obj.TextTransparency = obj.TextTransparency end) then obj.TextTransparency = 0 end
-            if pcall(function() obj.ImageTransparency = obj.ImageTransparency end) then obj.ImageTransparency = 0 end
-            
-            -- Manually set transparencies for elements that should be transparent by design
-            if obj.Name == "DragFrame" or obj.Name == "TabHold" or obj.Name == "ButtonsContainer" or obj.Name == "Tab" or obj.Name == "DropItemHolder" then
-                obj.BackgroundTransparency = 1
-            end
-            if obj.Name == "FrameToggle3" then obj.BackgroundTransparency = 1 end -- Start in off state visually
-        end
-    end
-    -- Set main window background
-    Main.BackgroundTransparency = 0
-    -- Set separator lines
-    TitleSeparator.BackgroundTransparency = 0
-    SeparatorLine.BackgroundTransparency = 0
-    -- Manually set title/button text
-    Title.TextTransparency = 0
-    MinimizeBtn.TextTransparency = 0
-    CloseBtn.TextTransparency = 0
-
-    -- Delay fade-in to ensure UI is ready
+    
+    -- FIX: Removed faulty initialization block. The UI is now created with its correct "visible" state
+    -- properties, and the fade functions will handle capturing and animating them properly.
+    
+    -- Perform initial fade-in animation
     delay(0.1, function()
-        uitoggled = false
-        FadeOutUI(Main) -- Perform an initial fade out to capture state and hide UI
+        FadeOutUI(Main) -- This captures the initial state and hides the UI
         wait(0.4)
-        uitoggled = false -- Reset toggle state
-        FadeInUI(Main) -- Then fade it in for the first time
+        uitoggled = false
+        FadeInUI(Main) -- This fades the UI in for the first time
     end)
-
-
+    
     MakeDraggable(DragFrame, Main)
 
     MinimizeBtn.MouseEnter:Connect(function()
