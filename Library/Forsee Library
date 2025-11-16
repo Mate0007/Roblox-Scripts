@@ -10,8 +10,8 @@ local CloseBind = Enum.KeyCode.RightControl
 -- Config saving system with persistent storage
 local HttpService = game:GetService("HttpService")
 local ConfigFolder = "Forsee Library"
-local StartupSettingsFile = ConfigFolder .. "/startup_settings.json" -- For remembering startup config
-local ConfigSubfolder = "Default"
+-- FIX 2: ScriptContextName will be set by the Window title (e.g., "Murderer VS Sheriff")
+local ScriptContextName = "Default" 
 local ConfigElements = {}
 local CurrentConfigName = ""
 
@@ -30,23 +30,34 @@ local uiElementStates = {} -- Stores original transparency values for fade anima
 -- Dropdown refresh callbacks
 local DropdownRefreshCallbacks = {}
 
--- Create config folder if it doesn't exist
+-- Create base config folder if it doesn't exist
 if not isfolder(ConfigFolder) then
     makefolder(ConfigFolder)
 end
 
--- Function to get full config path
+-- FIX 2: This function now gets the path specific to the current script context
 local function GetFullConfigPath()
-    local path = ConfigFolder .. "/" .. ConfigSubfolder
+    local path = ConfigFolder .. "/" .. ScriptContextName
     if not isfolder(path) then
         makefolder(path)
     end
     return path
 end
 
--- Function to set config subfolder
-function lib:SetConfigFolder(name)
-    ConfigSubfolder = name or "Default"
+-- FIX 2: This function now gets the startup settings path specific to the current script context
+local function GetStartupSettingsPath()
+    local folderPath = ConfigFolder .. "/" .. ScriptContextName
+    if not isfolder(folderPath) then
+        makefolder(folderPath)
+    end
+    return folderPath .. "/startup_settings.json"
+end
+
+-- FIX 2: This function is now used to set the script-specific folder for configs.
+-- It's called automatically by lib:Window()
+function lib:SetScriptContext(name)
+    -- Sanitize the name to be a valid folder name
+    ScriptContextName = name:gsub("[/\\?%*:|\"<>']", "") or "Default"
 end
 
 local function SaveConfig(name)
@@ -161,9 +172,6 @@ local function DeleteConfig(name)
     end
 end
 
--- ===================================
--- ||          THE FIX IS HERE          ||
--- ===================================
 local function GetAllConfigs()
     local configs = {}
     local path = GetFullConfigPath()
@@ -174,8 +182,6 @@ local function GetAllConfigs()
 
     if success then
         for _, file in pairs(files) do
-            -- FIXED: Match and extract the filename, handling both '/' and '\' separators.
-            -- This prevents the full path from being displayed in the UI.
             local fileName = file:match("([^/\\]+)%.json$")
             if fileName then
                 table.insert(configs, fileName)
@@ -185,50 +191,34 @@ local function GetAllConfigs()
 
     return configs
 end
--- ===================================
--- ||       END OF FIX SECTION        ||
--- ===================================
 
--- NEW: Functions to manage startup configuration persistence
+-- FIX 2: Updated to use the script-specific path
 local function LoadStartupSettings()
-    if not isfile(StartupSettingsFile) then
-        return { enabled = false, configName = nil } -- Default values if file doesn't exist
+    local path = GetStartupSettingsPath()
+    if not isfile(path) then
+        return { enabled = false, configName = nil }
     end
 
     local success, result = pcall(function()
-        local json = readfile(StartupSettingsFile)
+        local json = readfile(path)
         return HttpService:JSONDecode(json)
     end)
 
     if success and type(result) == "table" then
         return result
     else
-        -- Return defaults on error (e.g., corrupted file)
         return { enabled = false, configName = nil }
     end
 end
 
+-- FIX 2: Updated to use the script-specific path
 local function SaveStartupSettings(settings)
     pcall(function()
-        if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
+        local path = GetStartupSettingsPath()
         local json = HttpService:JSONEncode(settings)
-        writefile(StartupSettingsFile, json)
+        writefile(path, json)
     end)
 end
-
--- NEW: Auto-load startup config on script execution
-local startupSettings = LoadStartupSettings()
-if startupSettings.enabled and startupSettings.configName and startupSettings.configName ~= "" then
-    task.delay(0.1, function()
-        local success, msg = LoadConfig(startupSettings.configName)
-        if not success then
-            warn("[Startup Config] Failed to load '" .. startupSettings.configName .. "': " .. msg)
-        else
-            print("[Startup Config] Successfully loaded '".. startupSettings.configName .. "'.")
-        end
-    end)
-end
-
 
 local ui = Instance.new("ScreenGui")
 ui.Name = "ui"
@@ -312,7 +302,6 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- FIXED FADE IN/OUT ANIMATION - Captures and restores state for all elements, including instant scrollbar hide
 local function FadeOutUI(main)
     local fadeTime = 0.3
     local tweens = {}
@@ -392,6 +381,9 @@ local function FadeInUI(main)
 end
 
 function lib:Window(text, preset, closebind)
+    -- FIX 2: Set the script context name based on the window title. This scopes all configs.
+    lib:SetScriptContext(text)
+
     CloseBind = closebind or Enum.KeyCode.RightControl
     PresetColor = preset or Color3.fromRGB(44, 120, 224)
     fs = false
@@ -434,9 +426,15 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ButtonsContainer.BackgroundTransparency = 1.000
-    -- FIX 3: Repositioned buttons to align with the title separator line's end
-    -- Calculation: Title separator ends at 539px. Container is 70px wide. New X start pos = 539 - 70 = 469. New scale = 469/560 = 0.8375
-    ButtonsContainer.Position = UDim2.new(0.8375, 0, 0.0264263314, 0)
+    
+    -- =================================================================================
+    -- FIX 1: BUTTON POSITIONING
+    -- To move the buttons left or right, change the pixel value '490.5'.
+    -- A smaller number moves them left, a larger number moves them right.
+    -- The calculation is (Pixel_Offset / Window_Width), e.g., (490.5 / 560).
+    ButtonsContainer.Position = UDim2.new(490.5 / 560, 0, 0.0264263314, 0)
+    -- =================================================================================
+
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     MinimizeBtn.Name = "MinimizeBtn"
@@ -507,12 +505,26 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- Perform initial fade-in animation
+    -- FIX 2: Moved startup logic here to run after the UI is ready.
     delay(0.1, function()
-        FadeOutUI(Main) -- This captures the initial state and hides the UI
+        FadeOutUI(Main)
         wait(0.4)
         uitoggled = false
-        FadeInUI(Main) -- This fades the UI in for the first time
+        FadeInUI(Main)
+        
+        -- Wait for fade-in animation to complete
+        wait(0.35) 
+
+        -- Load startup config now that the UI is fully visible and initialized
+        local startupSettings = LoadStartupSettings()
+        if startupSettings.enabled and startupSettings.configName and startupSettings.configName ~= "" then
+            local success, msg = LoadConfig(startupSettings.configName)
+            if not success then
+                warn("[Startup Config] Failed to load '" .. startupSettings.configName .. "': " .. msg)
+            else
+                print("[Startup Config] Successfully loaded '".. startupSettings.configName .. "'.")
+            end
+        end
     end)
 
     MakeDraggable(DragFrame, Main)
@@ -562,7 +574,6 @@ function lib:Window(text, preset, closebind)
         ui.Enabled = false
     end)
 
-    -- FIX 3: Added confirmation dialog on close button click
     CloseBtn.MouseButton1Click:Connect(function()
         lib:Notification(
             "Are you sure?",
@@ -571,7 +582,7 @@ function lib:Window(text, preset, closebind)
                 {
                     Text = "Cancel",
                     Color = Color3.fromRGB(60, 60, 60),
-                    Callback = function() end -- Does nothing, just closes notification
+                    Callback = function() end
                 },
                 {
                     Text = "Unload",
@@ -777,9 +788,7 @@ function lib:Window(text, preset, closebind)
             end
         end
 
-        -- Handle different button configurations
         if type(buttons) == "string" then
-            -- Single button (old behavior)
             local OkayBtn = Instance.new("TextButton")
             local OkayBtnCorner = Instance.new("UICorner")
 
@@ -807,7 +816,6 @@ function lib:Window(text, preset, closebind)
 
             OkayBtn.MouseButton1Click:Connect(CloseNotification)
         elseif type(buttons) == "table" then
-            -- Multiple buttons with callbacks
             for _, btnData in ipairs(buttons) do
                 local Btn = Instance.new("TextButton")
                 local BtnCorner = Instance.new("UICorner")
@@ -849,25 +857,21 @@ function lib:Window(text, preset, closebind)
         end
     end
 
-    -- Updated Config Tab with REAL-TIME Dropdown refresh
     function lib:ConfigTab(tab)
         local configTab = tab
         local selectedConfig = ""
         local configDropdown = nil
 
-        -- FIX 1: The 'isConfigurable' argument is added as false, so this textbox isn't saved in configs.
         configTab:Textbox("New Config Name", false, function(text)
             CurrentConfigName = text
-        end, false) -- ADDED: isConfigurable = false
+        end, false)
 
-        -- Save config button
         configTab:Button("Save Config", function()
             local configName = CurrentConfigName
             if configName and configName ~= "" then
                 local success, msg = SaveConfig(configName)
                 if success then
                     lib:Notification("Success", msg, "Okay")
-                    -- REFRESH DROPDOWN AFTER SAVING
                     wait(0.1)
                     if configDropdown then
                         configDropdown.Refresh()
@@ -882,7 +886,6 @@ function lib:Window(text, preset, closebind)
 
         configTab:Label("Load/Delete Configs")
 
-        -- FIX 1: The 'isConfigurable' argument is added as false, so this dropdown isn't saved in configs.
         configDropdown = configTab:Dropdown("Select Config", function()
             local configList = GetAllConfigs()
             if #configList == 0 then
@@ -891,9 +894,8 @@ function lib:Window(text, preset, closebind)
             return configList
         end, function(selected)
             selectedConfig = selected
-        end, nil, false) -- ADDED: isConfigurable = false
+        end, nil, false)
 
-        -- Load config button
         configTab:Button("Load Config", function()
             if selectedConfig and selectedConfig ~= "" and selectedConfig ~= "No Configs" then
                 local success, msg = LoadConfig(selectedConfig)
@@ -907,7 +909,6 @@ function lib:Window(text, preset, closebind)
             end
         end)
 
-        -- Delete config button with confirmation
         configTab:Button("Delete Config", function()
             if selectedConfig and selectedConfig ~= "" and selectedConfig ~= "No Configs" then
                 lib:Notification(
@@ -918,7 +919,6 @@ function lib:Window(text, preset, closebind)
                             Text = "Cancel",
                             Color = Color3.fromRGB(60, 60, 60),
                             Callback = function()
-                                -- Just close
                             end
                         },
                         {
@@ -929,7 +929,6 @@ function lib:Window(text, preset, closebind)
                                 wait(0.2)
                                 if success then
                                     lib:Notification("Success", msg, "Okay")
-                                    -- REFRESH DROPDOWN AFTER DELETING
                                     wait(0.1)
                                     if configDropdown then
                                         configDropdown.Refresh()
@@ -947,7 +946,6 @@ function lib:Window(text, preset, closebind)
             end
         end)
 
-        -- Manual refresh button (optional, dropdown auto-refreshes now)
         configTab:Button("Refresh Config List", function()
             if configDropdown then
                 configDropdown.Refresh()
@@ -955,29 +953,26 @@ function lib:Window(text, preset, closebind)
             end
         end)
     end
-
-    -- NEW: Function to create the Startup Config UI
+    
     function lib:StartupConfigTab(tab)
         local currentSettings = LoadStartupSettings()
-
+    
         local startupEnabled = currentSettings.enabled
         local startupConfigName = currentSettings.configName
-
-        -- Create the toggle to enable/disable the startup config feature
+    
         tab:Toggle("Enable Startup Config", startupEnabled, function(state)
             startupEnabled = state
             SaveStartupSettings({ enabled = startupEnabled, configName = startupConfigName })
         end)
-
-        -- Create the dropdown to select which config to load on startup
+    
         tab:Dropdown("Startup Configs", function()
             local configs = GetAllConfigs()
-            table.insert(configs, 1, "None") -- Add "None" option to disable
+            table.insert(configs, 1, "None")
             return configs
         end, function(selected)
             startupConfigName = (selected == "None") and nil or selected
             SaveStartupSettings({ enabled = startupEnabled, configName = startupConfigName })
-        end, startupConfigName or "None") -- The 4th argument sets the default selected value
+        end, startupConfigName or "None")
     end
 
     function lib:SetToggleKey(key)
@@ -1254,7 +1249,6 @@ function lib:Window(text, preset, closebind)
             ConfigElements[elementId] = {
                 Type = "Toggle",
                 Value = toggled,
-                -- FIX 2: Replaced tweens with direct property setting for instant and reliable state change on config load.
                 LoadValue = function(value)
                     toggled = value
                     if value then
@@ -1362,40 +1356,15 @@ function lib:Window(text, preset, closebind)
             )
 
             if default == true then
-                TweenService:Create(
-                    Toggle,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-                ):Play()
-                TweenService:Create(
-                    FrameToggle1,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    FrameToggle2,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 1}
-                ):Play()
-                TweenService:Create(
-                    FrameToggle3,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = 0}
-                ):Play()
-                TweenService:Create(
-                    FrameToggleCircle,
-                    TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
-                ):Play()
-                FrameToggleCircle:TweenPosition(
-                    UDim2.new(0.587, 0, 0.222000003, 0),
-                    Enum.EasingDirection.Out,
-                    Enum.EasingStyle.Quart,
-                    .2,
-                    true
-                )
-                toggled = not toggled
-                ConfigElements[elementId].Value = toggled
+                toggled = true
+                ConfigElements[elementId].Value = true
+
+                Toggle.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
+                FrameToggle1.BackgroundTransparency = 1
+                FrameToggle2.BackgroundTransparency = 1
+                FrameToggle3.BackgroundTransparency = 0
+                FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
             end
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
@@ -1484,7 +1453,6 @@ function lib:Window(text, preset, closebind)
             SlideCircle.Image = "rbxassetid://3570695787"
             SlideCircle.ImageColor3 = PresetColor
 
-            -- Save config element
             ConfigElements[elementId] = {
                 Type = "Slider",
                 Value = currentValue,
@@ -1559,17 +1527,15 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- MODIFIED: Dropdown now accepts a 5th argument 'isConfigurable'
         function tabcontent:Dropdown(text, listOrFunction, callback, default, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Dropdown_" .. globalElementIdCounter
             local droptog = false
             local framesize = 0
             local itemcount = 0
-            local currentValue = default or nil -- Use default if provided
+            local currentValue = default or nil
             local isDynamic = type(listOrFunction) == "function"
             
-            -- FIX 1: Default isConfigurable to true if not provided
             if isConfigurable == nil then
                 isConfigurable = true
             end
@@ -1614,7 +1580,6 @@ function lib:Window(text, preset, closebind)
             DropdownTitle.TextSize = 14.000
             DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-            -- Set initial title text based on if a default is provided
             if currentValue then
                 DropdownTitle.Text = text .. " - " .. tostring(currentValue)
             else
@@ -1644,19 +1609,17 @@ function lib:Window(text, preset, closebind)
             DropLayout.Parent = DropItemHolder
             DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-            -- FIX 1: Only add to ConfigElements if it's a configurable element
             if isConfigurable then
                 ConfigElements[elementId] = {
                     Type = "Dropdown",
                     Value = currentValue,
-                    -- FIX 1: Gracefully handle nil values on load to prevent showing "- nil"
                     LoadValue = function(value)
                         currentValue = value
-                        ConfigElements[elementId].Value = value -- Update internal state
+                        ConfigElements[elementId].Value = value
                         if value ~= nil then
                             DropdownTitle.Text = text .. " - " .. tostring(value)
                         else
-                            DropdownTitle.Text = text -- Reset to default text if value is nil
+                            DropdownTitle.Text = text
                         end
                         pcall(callback, value)
                     end
@@ -1664,7 +1627,6 @@ function lib:Window(text, preset, closebind)
             end
 
             local function populateItems(list)
-                -- Clear existing items
                 for _, child in pairs(DropItemHolder:GetChildren()) do
                     if child:IsA("TextButton") then
                         child:Destroy()
@@ -1724,7 +1686,6 @@ function lib:Window(text, preset, closebind)
                             droptog = not droptog
                             DropdownTitle.Text = text .. " - " .. v
                             currentValue = v
-                            -- FIX 1: Only update config value if the element is configurable
                             if isConfigurable then
                                 ConfigElements[elementId].Value = currentValue
                             end
@@ -1750,11 +1711,9 @@ function lib:Window(text, preset, closebind)
                 end
             end
 
-            -- Initial population
             local initialList = isDynamic and listOrFunction() or listOrFunction
             populateItems(initialList)
 
-            -- Refresh function for dynamic dropdowns
             local dropdownObj = {}
             function dropdownObj.Refresh()
                 if isDynamic then
@@ -1763,11 +1722,9 @@ function lib:Window(text, preset, closebind)
                 end
             end
 
-            -- Auto-refresh when dropdown is opened (for dynamic lists)
             DropdownBtn.MouseButton1Click:Connect(
                 function()
                     if droptog == false then
-                        -- Refresh list before opening if dynamic
                         if isDynamic then
                             dropdownObj.Refresh()
                         end
@@ -1848,13 +1805,11 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- MODIFIED: Textbox now accepts a 4th argument 'isConfigurable'
         function tabcontent:Textbox(text, disapper, callback, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Textbox_" .. globalElementIdCounter
             local currentValue = ""
 
-            -- FIX 1: Default isConfigurable to true if not provided
             if isConfigurable == nil then
                 isConfigurable = true
             end
@@ -1908,7 +1863,6 @@ function lib:Window(text, preset, closebind)
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
 
-            -- FIX 1: Only add to ConfigElements if it's a configurable element
             if isConfigurable then
                 ConfigElements[elementId] = {
                     Type = "Textbox",
@@ -1921,15 +1875,12 @@ function lib:Window(text, preset, closebind)
                 }
             end
 
-            -- Track text changes continuously
             TextBox:GetPropertyChangedSignal("Text"):Connect(function()
                 currentValue = TextBox.Text
-                -- FIX 1: Only update config value if the element is configurable
                 if isConfigurable then
                     ConfigElements[elementId].Value = currentValue
                 end
 
-                -- Special handling for config name input
                 if text == "New Config Name" then
                     CurrentConfigName = currentValue
                 end
@@ -2007,14 +1958,12 @@ function lib:Window(text, preset, closebind)
             BindText.TextSize = 14.000
             BindText.TextXAlignment = Enum.TextXAlignment.Right
 
-            -- Save config element
             ConfigElements[elementId] = {
                 Type = "Bind",
                 Value = Key,
                 LoadValue = function(value)
                     Key = value
                     BindText.Text = value
-                    -- Try to find the actual KeyCode from the name
                     for _, keyCode in pairs(Enum.KeyCode:GetEnumItems()) do
                         if keyCode.Name == value then
                             currentKey = keyCode
