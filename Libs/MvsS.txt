@@ -1,4 +1,4 @@
-ye so u didint fucking fix it u dumb bitch the color ISNT FADING STILL THE TEXT DOES AND THE TOGGLE DOES BUT WHY IS THE COLOR NOT ACTUALLY it does it right with the dropdowns and hte input box ones so just copy those ALSO AFTER I TOGGLE THE UI BACK ON A LOT OF SHI ARE STILL HIDDEN LIKE THE TOGGLES YK THAT ICON IT HAS ITS JUST FULLY HIDEN LIKE FIX IT SO THOS COME BACK TO LIFE BRU also colors should fade in and FADE OUT like the background of the toggles sections buttons YKYKYKYKYKYKYK
+
 
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
