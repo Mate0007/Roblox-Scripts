@@ -432,7 +432,7 @@ function lib:Window(text, preset, closebind)
     -- To move the buttons left or right, change the pixel value '490.5'.
     -- A smaller number moves them left, a larger number moves them right.
     -- The calculation is (Pixel_Offset / Window_Width), e.g., (490.5 / 560).
-    ButtonsContainer.Position = UDim2.new(490.5 / 560, 0, 0.0264263314, 0)
+    ButtonsContainer.Position = UDim2.new(475.5 / 560, 0, 0.0264263314, 0)
     -- =================================================================================
 
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
