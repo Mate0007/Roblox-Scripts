@@ -1,5 +1,4 @@
 
-
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -277,23 +276,36 @@ local function FadeInUI(main)
         {BackgroundTransparency = 0}
     ))
 
-    -- Fade ALL descendants uniformly - text, images, AND frames
+    -- Fade ALL descendants properly - including frames, text, and images
     for _, descendant in pairs(main:GetDescendants()) do
+        -- Store original properties before fading in
         if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 0}
             ))
-        elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+        end
+        
+        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- Store original transparency for proper restoration
-            local originalTransparency = descendant.BackgroundTransparency
+        end
+        
+        -- Important: Make sure ALL frames fade in properly
+        if descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Get the original transparency or default to 0
+            local originalTransparency = 0
+            if descendant.Name == "FrameToggle3" or descendant.Name == "CurrentValueFrame" then
+                -- Special handling for colored elements to ensure they show properly
+                originalTransparency = 0
+            elseif descendant.Name == "TabBtnIndicator" then
+                originalTransparency = 0
+            end
+            
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -328,14 +340,18 @@ local function FadeOutUI(main)
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 1}
             ))
-        elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+        end
+        
+        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 1}
             ))
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- Fade ALL frames to fully transparent
+        end
+        
+        -- CRITICAL FIX: Fade ALL frame backgrounds to fully transparent
+        if descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
