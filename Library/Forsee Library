@@ -176,7 +176,7 @@ local function GetAllConfigs()
         for _, file in pairs(files) do
             -- FIXED: Match and extract the filename, handling both '/' and '\' separators.
             -- This prevents the full path from being displayed in the UI.
-            local fileName = file:match("([^/\\]+)%.json$") 
+            local fileName = file:match("([^/\\]+)%.json$")
             if fileName then
                 table.insert(configs, fileName)
             end
@@ -204,7 +204,7 @@ local function LoadStartupSettings()
         return result
     else
         -- Return defaults on error (e.g., corrupted file)
-        return { enabled = false, configName = nil } 
+        return { enabled = false, configName = nil }
     end
 end
 
@@ -340,7 +340,7 @@ local function FadeOutUI(main)
                 stateToSave.ImageTransparency = obj.ImageTransparency
                 propsToFade.ImageTransparency = 1
             end
-            
+
             -- FIX: Handle scrollbar state
             if obj:IsA("ScrollingFrame") then
                 stateToSave.ScrollBarImageTransparency = obj.ScrollBarImageTransparency
@@ -373,19 +373,19 @@ local function FadeInUI(main)
     -- Create tweens to restore all objects to their saved state
     for obj, storedState in pairs(uiElementStates) do
         -- Check if the object hasn't been destroyed (e.g., dropdown item that was removed)
-        if obj and obj.Parent then 
+        if obj and obj.Parent then
             -- Instantly set to faded-out state before tweening to prevent visual pops
             if storedState.BackgroundTransparency ~= nil then obj.BackgroundTransparency = 1 end
             if storedState.TextTransparency ~= nil then obj.TextTransparency = 1 end
             if storedState.ImageTransparency ~= nil then obj.ImageTransparency = 1 end
             -- FIX: Also set scrollbar to fully transparent before tweening
             if storedState.ScrollBarImageTransparency ~= nil then obj.ScrollBarImageTransparency = 1 end
-            
+
             -- Create the fade-in tween
             table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), storedState))
         end
     end
-    
+
     for _, tween in ipairs(tweens) do
         tween:Play()
     end
@@ -424,7 +424,7 @@ function lib:Window(text, preset, closebind)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
     Main.Visible = false -- Start invisible, let FadeInUI handle it
-    Main.BackgroundTransparency = 0 
+    Main.BackgroundTransparency = 0
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
@@ -434,7 +434,9 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ButtonsContainer.BackgroundTransparency = 1.000
-    ButtonsContainer.Position = UDim2.new(0.88, 0, 0.0264263314, 0)
+    -- FIX 3: Repositioned buttons to align with the title separator line's end
+    -- Calculation: Title separator ends at 539px. Container is 70px wide. New X start pos = 539 - 70 = 469. New scale = 469/560 = 0.8375
+    ButtonsContainer.Position = UDim2.new(0.8375, 0, 0.0264263314, 0)
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     MinimizeBtn.Name = "MinimizeBtn"
@@ -504,7 +506,7 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
-    
+
     -- Perform initial fade-in animation
     delay(0.1, function()
         FadeOutUI(Main) -- This captures the initial state and hides the UI
@@ -512,7 +514,7 @@ function lib:Window(text, preset, closebind)
         uitoggled = false
         FadeInUI(Main) -- This fades the UI in for the first time
     end)
-    
+
     MakeDraggable(DragFrame, Main)
 
     MinimizeBtn.MouseEnter:Connect(function()
@@ -560,10 +562,28 @@ function lib:Window(text, preset, closebind)
         ui.Enabled = false
     end)
 
+    -- FIX 3: Added confirmation dialog on close button click
     CloseBtn.MouseButton1Click:Connect(function()
-        FadeOutUI(Main)
-        wait(0.35)
-        ui:Destroy()
+        lib:Notification(
+            "Are you sure?",
+            "This action will fully unload the UI.",
+            {
+                {
+                    Text = "Cancel",
+                    Color = Color3.fromRGB(60, 60, 60),
+                    Callback = function() end -- Does nothing, just closes notification
+                },
+                {
+                    Text = "Unload",
+                    Color = Color3.fromRGB(200, 50, 50),
+                    Callback = function()
+                        FadeOutUI(Main)
+                        task.wait(0.35)
+                        ui:Destroy()
+                    end
+                }
+            }
+        )
     end)
 
     if isMobile then
@@ -624,9 +644,9 @@ function lib:Window(text, preset, closebind)
                         uitoggled = false
                         uiEnabled = true
                         ui.Enabled = true
-                        if isMobile then 
+                        if isMobile then
                             if mobileToggleButton then
-                                mobileToggleButton.Text = "Close" 
+                                mobileToggleButton.Text = "Close"
                             end
                         end
 
@@ -835,10 +855,10 @@ function lib:Window(text, preset, closebind)
         local selectedConfig = ""
         local configDropdown = nil
 
-        -- Config name input for saving NEW configs
+        -- FIX 1: The 'isConfigurable' argument is added as false, so this textbox isn't saved in configs.
         configTab:Textbox("New Config Name", false, function(text)
             CurrentConfigName = text
-        end)
+        end, false) -- ADDED: isConfigurable = false
 
         -- Save config button
         configTab:Button("Save Config", function()
@@ -862,7 +882,7 @@ function lib:Window(text, preset, closebind)
 
         configTab:Label("Load/Delete Configs")
 
-        -- Dynamic dropdown for selecting config with refresh capability
+        -- FIX 1: The 'isConfigurable' argument is added as false, so this dropdown isn't saved in configs.
         configDropdown = configTab:Dropdown("Select Config", function()
             local configList = GetAllConfigs()
             if #configList == 0 then
@@ -871,7 +891,7 @@ function lib:Window(text, preset, closebind)
             return configList
         end, function(selected)
             selectedConfig = selected
-        end)
+        end, nil, false) -- ADDED: isConfigurable = false
 
         -- Load config button
         configTab:Button("Load Config", function()
@@ -935,20 +955,20 @@ function lib:Window(text, preset, closebind)
             end
         end)
     end
-    
+
     -- NEW: Function to create the Startup Config UI
     function lib:StartupConfigTab(tab)
         local currentSettings = LoadStartupSettings()
-    
+
         local startupEnabled = currentSettings.enabled
         local startupConfigName = currentSettings.configName
-    
+
         -- Create the toggle to enable/disable the startup config feature
         tab:Toggle("Enable Startup Config", startupEnabled, function(state)
             startupEnabled = state
             SaveStartupSettings({ enabled = startupEnabled, configName = startupConfigName })
         end)
-    
+
         -- Create the dropdown to select which config to load on startup
         tab:Dropdown("Startup Configs", function()
             local configs = GetAllConfigs()
@@ -1231,70 +1251,30 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
             FrameToggleCircleCorner.Parent = FrameToggleCircle
 
-            -- FIXED: Save config element with proper state management
             ConfigElements[elementId] = {
                 Type = "Toggle",
                 Value = toggled,
+                -- FIX 2: Replaced tweens with direct property setting for instant and reliable state change on config load.
                 LoadValue = function(value)
-                    toggled = value  -- Update internal state
+                    toggled = value
                     if value then
-                        -- Set visual ON state
-                        TweenService:Create(
-                            Toggle,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle1,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 1}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle2,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 1}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle3,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 0}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggleCircle,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
-                        ):Play()
+                        -- Set visual ON state instantly
+                        Toggle.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
+                        FrameToggle1.BackgroundTransparency = 1
+                        FrameToggle2.BackgroundTransparency = 1
+                        FrameToggle3.BackgroundTransparency = 0
+                        FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                         FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
                     else
-                        -- Set visual OFF state
-                        TweenService:Create(
-                            Toggle,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle1,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 0}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle2,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 0}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggle3,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundTransparency = 1}
-                        ):Play()
-                        TweenService:Create(
-                            FrameToggleCircle,
-                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                            {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
-                        ):Play()
+                        -- Set visual OFF state instantly
+                        Toggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                        FrameToggle1.BackgroundTransparency = 0
+                        FrameToggle2.BackgroundTransparency = 0
+                        FrameToggle3.BackgroundTransparency = 1
+                        FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
                         FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
                     end
-                    pcall(callback, value)  -- Call callback to enable/disable feature
+                    pcall(callback, value)
                 end
             }
 
@@ -1579,8 +1559,8 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- MODIFIED: Dropdown now accepts a 4th argument for the default value
-        function tabcontent:Dropdown(text, listOrFunction, callback, default)
+        -- MODIFIED: Dropdown now accepts a 5th argument 'isConfigurable'
+        function tabcontent:Dropdown(text, listOrFunction, callback, default, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Dropdown_" .. globalElementIdCounter
             local droptog = false
@@ -1588,6 +1568,11 @@ function lib:Window(text, preset, closebind)
             local itemcount = 0
             local currentValue = default or nil -- Use default if provided
             local isDynamic = type(listOrFunction) == "function"
+            
+            -- FIX 1: Default isConfigurable to true if not provided
+            if isConfigurable == nil then
+                isConfigurable = true
+            end
 
             local Dropdown = Instance.new("Frame")
             local DropdownCorner = Instance.new("UICorner")
@@ -1659,16 +1644,24 @@ function lib:Window(text, preset, closebind)
             DropLayout.Parent = DropItemHolder
             DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
-            -- Save config element
-            ConfigElements[elementId] = {
-                Type = "Dropdown",
-                Value = currentValue,
-                LoadValue = function(value)
-                    currentValue = value
-                    DropdownTitle.Text = text .. " - " .. tostring(value)
-                    pcall(callback, value)
-                end
-            }
+            -- FIX 1: Only add to ConfigElements if it's a configurable element
+            if isConfigurable then
+                ConfigElements[elementId] = {
+                    Type = "Dropdown",
+                    Value = currentValue,
+                    -- FIX 1: Gracefully handle nil values on load to prevent showing "- nil"
+                    LoadValue = function(value)
+                        currentValue = value
+                        ConfigElements[elementId].Value = value -- Update internal state
+                        if value ~= nil then
+                            DropdownTitle.Text = text .. " - " .. tostring(value)
+                        else
+                            DropdownTitle.Text = text -- Reset to default text if value is nil
+                        end
+                        pcall(callback, value)
+                    end
+                }
+            end
 
             local function populateItems(list)
                 -- Clear existing items
@@ -1731,7 +1724,10 @@ function lib:Window(text, preset, closebind)
                             droptog = not droptog
                             DropdownTitle.Text = text .. " - " .. v
                             currentValue = v
-                            ConfigElements[elementId].Value = currentValue
+                            -- FIX 1: Only update config value if the element is configurable
+                            if isConfigurable then
+                                ConfigElements[elementId].Value = currentValue
+                            end
                             pcall(callback, v)
                             Dropdown:TweenSize(
                                 UDim2.new(0, 363, 0, 42),
@@ -1852,11 +1848,17 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        function tabcontent:Textbox(text, disapper, callback)
+        -- MODIFIED: Textbox now accepts a 4th argument 'isConfigurable'
+        function tabcontent:Textbox(text, disapper, callback, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Textbox_" .. globalElementIdCounter
             local currentValue = ""
 
+            -- FIX 1: Default isConfigurable to true if not provided
+            if isConfigurable == nil then
+                isConfigurable = true
+            end
+            
             local Textbox = Instance.new("Frame")
             local TextboxCorner = Instance.new("UICorner")
             local TextboxTitle = Instance.new("TextLabel")
@@ -1906,21 +1908,26 @@ function lib:Window(text, preset, closebind)
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
 
-            -- Save config element
-            ConfigElements[elementId] = {
-                Type = "Textbox",
-                Value = currentValue,
-                LoadValue = function(value)
-                    currentValue = value or ""
-                    TextBox.Text = currentValue
-                    pcall(callback, currentValue)
-                end
-            }
+            -- FIX 1: Only add to ConfigElements if it's a configurable element
+            if isConfigurable then
+                ConfigElements[elementId] = {
+                    Type = "Textbox",
+                    Value = currentValue,
+                    LoadValue = function(value)
+                        currentValue = value or ""
+                        TextBox.Text = currentValue
+                        pcall(callback, currentValue)
+                    end
+                }
+            end
 
             -- Track text changes continuously
             TextBox:GetPropertyChangedSignal("Text"):Connect(function()
                 currentValue = TextBox.Text
-                ConfigElements[elementId].Value = currentValue
+                -- FIX 1: Only update config value if the element is configurable
+                if isConfigurable then
+                    ConfigElements[elementId].Value = currentValue
+                end
 
                 -- Special handling for config name input
                 if text == "New Config Name" then
@@ -1936,7 +1943,9 @@ function lib:Window(text, preset, closebind)
                             if disapper then
                                 TextBox.Text = ""
                                 currentValue = ""
-                                ConfigElements[elementId].Value = ""
+                                if isConfigurable then
+                                    ConfigElements[elementId].Value = ""
+                                end
                                 if text == "New Config Name" then
                                     CurrentConfigName = ""
                                 end
