@@ -433,8 +433,7 @@ function lib:Window(text, preset, closebind)
     -- A smaller number moves them left, a larger number moves them right.
     -- The calculation is (Pixel_Offset / Window_Width), e.g., (490.5 / 560).
     -- Adjustable pixel offset
-    local Pixel_Offset = 550  -- Change this to move left/right
-    ButtonsContainer.Position = UDim2.new(Pixel_Offset / 560, 0, 0.0264263314, 0)
+    ButtonsContainer.Position = UDim2.new(400 / 560, 0, 0.0264263314, 0)
     -- =================================================================================
 
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
