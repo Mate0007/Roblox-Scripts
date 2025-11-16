@@ -10,6 +10,7 @@ local CloseBind = Enum.KeyCode.RightControl
 -- Config saving system with persistent storage
 local HttpService = game:GetService("HttpService")
 local ConfigFolder = "Forsee Library"
+local StartupSettingsFile = ConfigFolder .. "/startup_settings.json" -- For remembering startup config
 local ConfigSubfolder = "Default"
 local ConfigElements = {}
 local CurrentConfigName = ""
@@ -170,6 +171,7 @@ local function GetAllConfigs()
 
     if success then
         for _, file in pairs(files) do
+            -- Match and extract the filename without the .json extension
             local fileName = file:match("([^/]+)%.json$")
             if fileName then
                 table.insert(configs, fileName)
@@ -179,6 +181,47 @@ local function GetAllConfigs()
 
     return configs
 end
+
+-- NEW: Functions to manage startup configuration persistence
+local function LoadStartupSettings()
+    if not isfile(StartupSettingsFile) then
+        return { enabled = false, configName = nil } -- Default values if file doesn't exist
+    end
+
+    local success, result = pcall(function()
+        local json = readfile(StartupSettingsFile)
+        return HttpService:JSONDecode(json)
+    end)
+
+    if success and type(result) == "table" then
+        return result
+    else
+        -- Return defaults on error (e.g., corrupted file)
+        return { enabled = false, configName = nil } 
+    end
+end
+
+local function SaveStartupSettings(settings)
+    pcall(function()
+        if not isfolder(ConfigFolder) then makefolder(ConfigFolder) end
+        local json = HttpService:JSONEncode(settings)
+        writefile(StartupSettingsFile, json)
+    end)
+end
+
+-- NEW: Auto-load startup config on script execution
+local startupSettings = LoadStartupSettings()
+if startupSettings.enabled and startupSettings.configName and startupSettings.configName ~= "" then
+    task.delay(0.1, function()
+        local success, msg = LoadConfig(startupSettings.configName)
+        if not success then
+            warn("[Startup Config] Failed to load '" .. startupSettings.configName .. "': " .. msg)
+        else
+            print("[Startup Config] Successfully loaded '".. startupSettings.configName .. "'.")
+        end
+    end)
+end
+
 
 local ui = Instance.new("ScreenGui")
 ui.Name = "ui"
@@ -374,7 +417,7 @@ function lib:Window(text, preset, closebind)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
     Main.Visible = false -- Start invisible, let FadeInUI handle it
-    Main.BackgroundTransparency = 0 -- FIX: Main background is opaque when visible
+    Main.BackgroundTransparency = 0 
 
     local MainCorner = Instance.new("UICorner")
     MainCorner.CornerRadius = UDim.new(0, 8)
@@ -383,14 +426,14 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Name = "ButtonsContainer"
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    ButtonsContainer.BackgroundTransparency = 1.000 -- This is correct (transparent container)
+    ButtonsContainer.BackgroundTransparency = 1.000
     ButtonsContainer.Position = UDim2.new(0.88, 0, 0.0264263314, 0)
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     MinimizeBtn.Name = "MinimizeBtn"
     MinimizeBtn.Parent = ButtonsContainer
     MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    MinimizeBtn.BackgroundTransparency = 1.000 -- This is correct (transparent button background)
+    MinimizeBtn.BackgroundTransparency = 1.000
     MinimizeBtn.Position = UDim2.new(0, 0, 0, 0)
     MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
     MinimizeBtn.Font = Enum.Font.GothamSemibold
@@ -402,7 +445,7 @@ function lib:Window(text, preset, closebind)
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
     CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    CloseBtn.BackgroundTransparency = 1.000 -- This is correct (transparent button background)
+    CloseBtn.BackgroundTransparency = 1.000
     CloseBtn.Position = UDim2.new(0.5, 0, 0, 0)
     CloseBtn.Size = UDim2.new(0, 30, 0, 30)
     CloseBtn.Font = Enum.Font.GothamSemibold
@@ -426,7 +469,7 @@ function lib:Window(text, preset, closebind)
     Title.Name = "Title"
     Title.Parent = Main
     Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Title.BackgroundTransparency = 1.000 -- This is correct (transparent title background)
+    Title.BackgroundTransparency = 1.000
     Title.Position = UDim2.new(0.0339285731, 0, 0.0264263314, 0)
     Title.Size = UDim2.new(0, 200, 0, 30)
     Title.Font = Enum.Font.GothamSemibold
@@ -454,9 +497,6 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
-    
-    -- FIX: Removed faulty initialization block. The UI is now created with its correct "visible" state
-    -- properties, and the fade functions will handle capturing and animating them properly.
     
     -- Perform initial fade-in animation
     delay(0.1, function()
@@ -887,6 +927,30 @@ function lib:Window(text, preset, closebind)
                 lib:Notification("Refreshed", "Config list has been updated!", "Okay")
             end
         end)
+    end
+    
+    -- NEW: Function to create the Startup Config UI
+    function lib:StartupConfigTab(tab)
+        local currentSettings = LoadStartupSettings()
+    
+        local startupEnabled = currentSettings.enabled
+        local startupConfigName = currentSettings.configName
+    
+        -- Create the toggle to enable/disable the startup config feature
+        tab:Toggle("Enable Startup Config", startupEnabled, function(state)
+            startupEnabled = state
+            SaveStartupSettings({ enabled = startupEnabled, configName = startupConfigName })
+        end)
+    
+        -- Create the dropdown to select which config to load on startup
+        tab:Dropdown("Startup Configs", function()
+            local configs = GetAllConfigs()
+            table.insert(configs, 1, "None") -- Add "None" option to disable
+            return configs
+        end, function(selected)
+            startupConfigName = (selected == "None") and nil or selected
+            SaveStartupSettings({ enabled = startupEnabled, configName = startupConfigName })
+        end, startupConfigName or "None") -- The 4th argument sets the default selected value
     end
 
     function lib:SetToggleKey(key)
@@ -1508,14 +1572,14 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- DYNAMIC DROPDOWN WITH REAL-TIME REFRESH
-        function tabcontent:Dropdown(text, listOrFunction, callback)
+        -- MODIFIED: Dropdown now accepts a 4th argument for the default value
+        function tabcontent:Dropdown(text, listOrFunction, callback, default)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Dropdown_" .. globalElementIdCounter
             local droptog = false
             local framesize = 0
             local itemcount = 0
-            local currentValue = nil
+            local currentValue = default or nil -- Use default if provided
             local isDynamic = type(listOrFunction) == "function"
 
             local Dropdown = Instance.new("Frame")
@@ -1554,10 +1618,16 @@ function lib:Window(text, preset, closebind)
             DropdownTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
             DropdownTitle.Size = UDim2.new(0, 187, 0, 42)
             DropdownTitle.Font = Enum.Font.Gotham
-            DropdownTitle.Text = text
             DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             DropdownTitle.TextSize = 14.000
             DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+            -- Set initial title text based on if a default is provided
+            if currentValue then
+                DropdownTitle.Text = text .. " - " .. tostring(currentValue)
+            else
+                DropdownTitle.Text = text
+            end
 
             ArrowImg.Name = "ArrowImg"
             ArrowImg.Parent = DropdownTitle
@@ -1687,7 +1757,6 @@ function lib:Window(text, preset, closebind)
                 if isDynamic then
                     local newList = listOrFunction()
                     populateItems(newList)
-                    print("Dropdown '" .. text .. "' refreshed with " .. #newList .. " items")
                 end
             end
 
