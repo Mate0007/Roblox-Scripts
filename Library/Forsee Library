@@ -161,6 +161,9 @@ local function DeleteConfig(name)
     end
 end
 
+-- ===================================
+-- ||          THE FIX IS HERE          ||
+-- ===================================
 local function GetAllConfigs()
     local configs = {}
     local path = GetFullConfigPath()
@@ -171,8 +174,9 @@ local function GetAllConfigs()
 
     if success then
         for _, file in pairs(files) do
-            -- Match and extract the filename without the .json extension
-            local fileName = file:match("([^/]+)%.json$")
+            -- FIXED: Match and extract the filename, handling both '/' and '\' separators.
+            -- This prevents the full path from being displayed in the UI.
+            local fileName = file:match("([^/\\]+)%.json$") 
             if fileName then
                 table.insert(configs, fileName)
             end
@@ -181,6 +185,9 @@ local function GetAllConfigs()
 
     return configs
 end
+-- ===================================
+-- ||       END OF FIX SECTION        ||
+-- ===================================
 
 -- NEW: Functions to manage startup configuration persistence
 local function LoadStartupSettings()
