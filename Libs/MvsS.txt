@@ -1,3 +1,5 @@
+ye so u didint fucking fix it u dumb bitch the color ISNT FADING STILL THE TEXT DOES AND THE TOGGLE DOES BUT WHY IS THE COLOR NOT ACTUALLY it does it right with the dropdowns and hte input box ones so just copy those ALSO AFTER I TOGGLE THE UI BACK ON A LOT OF SHI ARE STILL HIDDEN LIKE THE TOGGLES YK THAT ICON IT HAS ITS JUST FULLY HIDEN LIKE FIX IT SO THOS COME BACK TO LIFE BRU also colors should fade in and FADE OUT like the background of the toggles sections buttons YKYKYKYKYKYKYK
+
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -27,9 +29,6 @@ local uitoggled = false
 
 -- Dropdown refresh callbacks
 local DropdownRefreshCallbacks = {}
-
--- Store original transparency values for proper fade restoration
-local OriginalTransparencies = {}
 
 -- Create config folder if it doesn't exist
 if not isfolder(ConfigFolder) then
@@ -264,24 +263,7 @@ local function MakeDraggable(topbarobject, object)
     )
 end
 
--- Store original transparency values for ALL descendants
-local function StoreOriginalTransparencies(main)
-    for _, descendant in pairs(main:GetDescendants()) do
-        if descendant:IsA("GuiObject") then
-            OriginalTransparencies[descendant] = {
-                BackgroundTransparency = descendant.BackgroundTransparency,
-                TextTransparency = descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox"),
-                ImageTransparency = descendant:IsA("ImageLabel") or descendant:IsA("ImageButton")
-            }
-        end
-    end
-    -- Store main container transparency
-    OriginalTransparencies[main] = {
-        BackgroundTransparency = main.BackgroundTransparency
-    }
-end
-
--- FULLY FIXED FADE IN - ALL elements including colored backgrounds
+-- FIXED SMOOTH FADE IN ANIMATION - Proper transparency handling for ALL elements
 local function FadeInUI(main)
     main.Visible = true
 
@@ -289,40 +271,33 @@ local function FadeInUI(main)
     local tweens = {}
 
     -- Fade main container
-    local mainOriginalTrans = OriginalTransparencies[main] and OriginalTransparencies[main].BackgroundTransparency or 0
     table.insert(tweens, TweenService:Create(
         main,
         TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {BackgroundTransparency = mainOriginalTrans}
+        {BackgroundTransparency = 0}
     ))
 
-    -- Fade ALL descendants with proper transparency restoration
+    -- Fade ALL descendants uniformly - text, images, AND frames
     for _, descendant in pairs(main:GetDescendants()) do
-        local originalData = OriginalTransparencies[descendant]
-        
-        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 0}
             ))
-        end
-        
-        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+        elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 0}
             ))
-        end
-        
-        if descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- Restore to ORIGINAL transparency (including colored backgrounds)
-            local targetTrans = originalData and originalData.BackgroundTransparency or 0
+        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Store original transparency for proper restoration
+            local originalTransparency = descendant.BackgroundTransparency
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = targetTrans}
+                {BackgroundTransparency = originalTransparency}
             ))
         end
     end
@@ -333,7 +308,7 @@ local function FadeInUI(main)
     end
 end
 
--- FULLY FIXED FADE OUT - ALL elements including colored backgrounds
+-- FIXED SMOOTH FADE OUT ANIMATION - Proper transparency handling for ALL elements
 local function FadeOutUI(main)
     local fadeTime = 0.3
     local tweens = {}
@@ -345,26 +320,22 @@ local function FadeOutUI(main)
         {BackgroundTransparency = 1}
     ))
 
-    -- Fade ALL descendants to fully transparent
+    -- Fade ALL descendants uniformly - text, images, AND frames
     for _, descendant in pairs(main:GetDescendants()) do
-        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
+        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {TextTransparency = 1}
             ))
-        end
-        
-        if descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+        elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                 {ImageTransparency = 1}
             ))
-        end
-        
-        if descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            -- FADE ALL FRAMES including colored backgrounds
+        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
+            -- Fade ALL frames to fully transparent
             table.insert(tweens, TweenService:Create(
                 descendant,
                 TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -414,7 +385,7 @@ function lib:Window(text, preset, closebind)
     Main.Position = UDim2.new(0.5, 0, 0.5, 0)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
-    Main.Visible = false
+    Main.Visible = true
     Main.BackgroundTransparency = 1
 
     local MainCorner = Instance.new("UICorner")
@@ -439,7 +410,7 @@ function lib:Window(text, preset, closebind)
     MinimizeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     MinimizeBtn.TextSize = 18.000
     MinimizeBtn.TextWrapped = true
-    MinimizeBtn.TextTransparency = 0
+    MinimizeBtn.TextTransparency = 1
 
     CloseBtn.Name = "CloseBtn"
     CloseBtn.Parent = ButtonsContainer
@@ -452,7 +423,7 @@ function lib:Window(text, preset, closebind)
     CloseBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
     CloseBtn.TextSize = 16.000
     CloseBtn.TextWrapped = true
-    CloseBtn.TextTransparency = 0
+    CloseBtn.TextTransparency = 1
 
     TabHold.Name = "TabHold"
     TabHold.Parent = Main
@@ -477,7 +448,7 @@ function lib:Window(text, preset, closebind)
     Title.TextColor3 = Color3.fromRGB(120, 120, 120)
     Title.TextSize = 14.000
     Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.TextTransparency = 0
+    Title.TextTransparency = 1
 
     TitleSeparator.Name = "TitleSeparator"
     TitleSeparator.Parent = Main
@@ -485,7 +456,7 @@ function lib:Window(text, preset, closebind)
     TitleSeparator.BorderSizePixel = 0
     TitleSeparator.Position = UDim2.new(0.0339285731, 0, 0.137, 0)
     TitleSeparator.Size = UDim2.new(0, 520, 0, 1)
-    TitleSeparator.BackgroundTransparency = 0
+    TitleSeparator.BackgroundTransparency = 1
 
     SeparatorLine.Name = "SeparatorLine"
     SeparatorLine.Parent = Main
@@ -493,7 +464,7 @@ function lib:Window(text, preset, closebind)
     SeparatorLine.BorderSizePixel = 0
     SeparatorLine.Position = UDim2.new(0.28, 0, 0.167, 0)
     SeparatorLine.Size = UDim2.new(0, 1, 0, 254)
-    SeparatorLine.BackgroundTransparency = 0
+    SeparatorLine.BackgroundTransparency = 1
 
     DragFrame.Name = "DragFrame"
     DragFrame.Parent = Main
@@ -501,23 +472,7 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- Set all elements to invisible initially for fade-in
-    Main.BackgroundTransparency = 1
-    for _, descendant in pairs(Main:GetDescendants()) do
-        if descendant:IsA("TextLabel") or descendant:IsA("TextButton") or descendant:IsA("TextBox") then
-            descendant.TextTransparency = 1
-        elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
-            descendant.ImageTransparency = 1
-        elseif descendant:IsA("Frame") or descendant:IsA("ScrollingFrame") then
-            descendant.BackgroundTransparency = 1
-        end
-    end
-
-    -- Store original transparency values AFTER setting them to correct values but BEFORE making invisible
-    StoreOriginalTransparencies(Main)
-
-    -- Make UI visible and start fade-in
-    Main.Visible = true
+    -- Delay fade-in to ensure UI is ready
     delay(0.1, function()
         FadeInUI(Main)
     end)
@@ -982,7 +937,7 @@ function lib:Window(text, preset, closebind)
         TabTitle.TextColor3 = Color3.fromRGB(150, 150, 150)
         TabTitle.TextSize = 14.000
         TabTitle.TextXAlignment = Enum.TextXAlignment.Left
-        TabTitle.TextTransparency = 0
+        TabTitle.TextTransparency = 1
 
         TabBtnIndicator.Name = "TabBtnIndicator"
         TabBtnIndicator.Parent = TabBtn
@@ -990,7 +945,7 @@ function lib:Window(text, preset, closebind)
         TabBtnIndicator.BorderSizePixel = 0
         TabBtnIndicator.Position = UDim2.new(0, 0, 1, 0)
         TabBtnIndicator.Size = UDim2.new(0, 0, 0, 2)
-        TabBtnIndicator.BackgroundTransparency = 0
+        TabBtnIndicator.BackgroundTransparency = 1
 
         TabBtnIndicatorCorner.Name = "TabBtnIndicatorCorner"
         TabBtnIndicatorCorner.Parent = TabBtnIndicator
@@ -1088,7 +1043,6 @@ function lib:Window(text, preset, closebind)
             Button.Text = ""
             Button.TextColor3 = Color3.fromRGB(0, 0, 0)
             Button.TextSize = 14.000
-            Button.BackgroundTransparency = 1
 
             ButtonCorner.CornerRadius = UDim.new(0, 6)
             ButtonCorner.Name = "ButtonCorner"
@@ -1105,17 +1059,6 @@ function lib:Window(text, preset, closebind)
             ButtonTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             ButtonTitle.TextSize = 14.000
             ButtonTitle.TextXAlignment = Enum.TextXAlignment.Left
-            ButtonTitle.TextTransparency = 0
-
-            -- Store transparency for this new element BEFORE making invisible
-            Button.BackgroundTransparency = 0
-            ButtonTitle.TextTransparency = 0
-            OriginalTransparencies[Button] = {BackgroundTransparency = 0}
-            OriginalTransparencies[ButtonTitle] = {TextTransparency = true}
-            
-            -- Now make invisible for fade-in
-            Button.BackgroundTransparency = 1
-            ButtonTitle.TextTransparency = 1
 
             Button.MouseEnter:Connect(
                 function()
@@ -1173,7 +1116,6 @@ function lib:Window(text, preset, closebind)
             Toggle.Text = ""
             Toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
             Toggle.TextSize = 14.000
-            Toggle.BackgroundTransparency = 1
 
             ToggleCorner.CornerRadius = UDim.new(0, 6)
             ToggleCorner.Name = "ToggleCorner"
@@ -1190,14 +1132,12 @@ function lib:Window(text, preset, closebind)
             ToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             ToggleTitle.TextSize = 14.000
             ToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
-            ToggleTitle.TextTransparency = 0
 
             FrameToggle1.Name = "FrameToggle1"
             FrameToggle1.Parent = Toggle
             FrameToggle1.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             FrameToggle1.Position = UDim2.new(0.859504104, 0, 0.285714298, 0)
             FrameToggle1.Size = UDim2.new(0, 37, 0, 18)
-            FrameToggle1.BackgroundTransparency = 0
 
             FrameToggle1Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle1Corner.Name = "FrameToggle1Corner"
@@ -1208,7 +1148,6 @@ function lib:Window(text, preset, closebind)
             FrameToggle2.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
             FrameToggle2.Position = UDim2.new(0.0489999987, 0, 0.0930000022, 0)
             FrameToggle2.Size = UDim2.new(0, 33, 0, 14)
-            FrameToggle2.BackgroundTransparency = 0
 
             FrameToggle2Corner.CornerRadius = UDim.new(0, 6)
             FrameToggle2Corner.Name = "FrameToggle2Corner"
@@ -1229,28 +1168,10 @@ function lib:Window(text, preset, closebind)
             FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
             FrameToggleCircle.Size = UDim2.new(0, 10, 0, 10)
-            FrameToggleCircle.BackgroundTransparency = 0
 
             FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5)
             FrameToggleCircleCorner.Name = "FrameToggleCircleCorner"
             FrameToggleCircleCorner.Parent = FrameToggleCircle
-
-            -- Store transparency for this new element BEFORE making invisible
-            Toggle.BackgroundTransparency = 0
-            ToggleTitle.TextTransparency = 0
-            OriginalTransparencies[Toggle] = {BackgroundTransparency = 0}
-            OriginalTransparencies[ToggleTitle] = {TextTransparency = true}
-            OriginalTransparencies[FrameToggle1] = {BackgroundTransparency = 0}
-            OriginalTransparencies[FrameToggle2] = {BackgroundTransparency = 0}
-            OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 1}
-            OriginalTransparencies[FrameToggleCircle] = {BackgroundTransparency = 0}
-            
-            -- Now make invisible for fade-in
-            Toggle.BackgroundTransparency = 1
-            ToggleTitle.TextTransparency = 1
-            FrameToggle1.BackgroundTransparency = 1
-            FrameToggle2.BackgroundTransparency = 1
-            FrameToggleCircle.BackgroundTransparency = 1
 
             -- FIXED: Save config element with proper state management
             ConfigElements[elementId] = {
@@ -1286,8 +1207,6 @@ function lib:Window(text, preset, closebind)
                             {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}
                         ):Play()
                         FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
-                        -- Update stored transparency
-                        OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 0}
                     else
                         -- Set visual OFF state
                         TweenService:Create(
@@ -1316,8 +1235,6 @@ function lib:Window(text, preset, closebind)
                             {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}
                         ):Play()
                         FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
-                        -- Update stored transparency
-                        OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 1}
                     end
                     pcall(callback, value)  -- Call callback to enable/disable feature
                 end
@@ -1366,8 +1283,6 @@ function lib:Window(text, preset, closebind)
                             .2,
                             true
                         )
-                        -- Update stored transparency
-                        OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 0}
                     else
                         TweenService:Create(
                             Toggle,
@@ -1401,8 +1316,6 @@ function lib:Window(text, preset, closebind)
                             .2,
                             true
                         )
-                        -- Update stored transparency
-                        OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 1}
                     end
                     toggled = not toggled
                     ConfigElements[elementId].Value = toggled
@@ -1445,7 +1358,6 @@ function lib:Window(text, preset, closebind)
                 )
                 toggled = not toggled
                 ConfigElements[elementId].Value = toggled
-                OriginalTransparencies[FrameToggle3] = {BackgroundTransparency = 0}
             end
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
@@ -1475,7 +1387,6 @@ function lib:Window(text, preset, closebind)
             Slider.Text = ""
             Slider.TextColor3 = Color3.fromRGB(0, 0, 0)
             Slider.TextSize = 14.000
-            Slider.BackgroundTransparency = 1
 
             SliderCorner.CornerRadius = UDim.new(0, 6)
             SliderCorner.Name = "SliderCorner"
@@ -1492,7 +1403,6 @@ function lib:Window(text, preset, closebind)
             SliderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             SliderTitle.TextSize = 14.000
             SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
-            SliderTitle.TextTransparency = 1
 
             SliderValue.Name = "SliderValue"
             SliderValue.Parent = Slider
@@ -1505,7 +1415,6 @@ function lib:Window(text, preset, closebind)
             SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
             SliderValue.TextSize = 14.000
             SliderValue.TextXAlignment = Enum.TextXAlignment.Right
-            SliderValue.TextTransparency = 0
 
             SlideFrame.Name = "SlideFrame"
             SlideFrame.Parent = Slider
@@ -1513,7 +1422,6 @@ function lib:Window(text, preset, closebind)
             SlideFrame.BorderSizePixel = 0
             SlideFrame.Position = UDim2.new(0.0342647657, 0, 0.686091602, 0)
             SlideFrame.Size = UDim2.new(0, 335, 0, 3)
-            SlideFrame.BackgroundTransparency = 0
 
             local SlideFrameCorner = Instance.new("UICorner")
             SlideFrameCorner.CornerRadius = UDim.new(1, 0)
@@ -1524,7 +1432,6 @@ function lib:Window(text, preset, closebind)
             CurrentValueFrame.BackgroundColor3 = PresetColor
             CurrentValueFrame.BorderSizePixel = 0
             CurrentValueFrame.Size = UDim2.new((start or 0) / max, 0, 0, 3)
-            CurrentValueFrame.BackgroundTransparency = 0
 
             local CurrentValueCorner = Instance.new("UICorner")
             CurrentValueCorner.CornerRadius = UDim.new(1, 0)
@@ -1538,27 +1445,6 @@ function lib:Window(text, preset, closebind)
             SlideCircle.Size = UDim2.new(0, 11, 0, 11)
             SlideCircle.Image = "rbxassetid://3570695787"
             SlideCircle.ImageColor3 = PresetColor
-            SlideCircle.ImageTransparency = 0
-
-            -- Store transparency for this new element BEFORE making invisible
-            Slider.BackgroundTransparency = 0
-            SliderTitle.TextTransparency = 0
-            SliderValue.TextTransparency = 0
-            SlideCircle.ImageTransparency = 0
-            OriginalTransparencies[Slider] = {BackgroundTransparency = 0}
-            OriginalTransparencies[SliderTitle] = {TextTransparency = true}
-            OriginalTransparencies[SliderValue] = {TextTransparency = true}
-            OriginalTransparencies[SlideFrame] = {BackgroundTransparency = 0}
-            OriginalTransparencies[CurrentValueFrame] = {BackgroundTransparency = 0}
-            OriginalTransparencies[SlideCircle] = {ImageTransparency = true}
-            
-            -- Now make invisible for fade-in
-            Slider.BackgroundTransparency = 1
-            SliderTitle.TextTransparency = 1
-            SliderValue.TextTransparency = 1
-            SlideFrame.BackgroundTransparency = 1
-            CurrentValueFrame.BackgroundTransparency = 1
-            SlideCircle.ImageTransparency = 1
 
             -- Save config element
             ConfigElements[elementId] = {
@@ -1659,7 +1545,6 @@ function lib:Window(text, preset, closebind)
             Dropdown.ClipsDescendants = true
             Dropdown.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Dropdown.Size = UDim2.new(0, 363, 0, 42)
-            Dropdown.BackgroundTransparency = 1
 
             DropdownCorner.CornerRadius = UDim.new(0, 6)
             DropdownCorner.Name = "DropdownCorner"
@@ -1686,7 +1571,6 @@ function lib:Window(text, preset, closebind)
             DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             DropdownTitle.TextSize = 14.000
             DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
-            DropdownTitle.TextTransparency = 0
 
             ArrowImg.Name = "ArrowImg"
             ArrowImg.Parent = DropdownTitle
@@ -1695,7 +1579,6 @@ function lib:Window(text, preset, closebind)
             ArrowImg.Position = UDim2.new(1.65240645, 0, 0.190476194, 0)
             ArrowImg.Size = UDim2.new(0, 26, 0, 26)
             ArrowImg.Image = "http://www.roblox.com/asset/?id=6034818375"
-            ArrowImg.ImageTransparency = 0
 
             DropItemHolder.Name = "DropItemHolder"
             DropItemHolder.Parent = DropdownTitle
@@ -1711,19 +1594,6 @@ function lib:Window(text, preset, closebind)
             DropLayout.Name = "DropLayout"
             DropLayout.Parent = DropItemHolder
             DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-            -- Store transparency for this new element BEFORE making invisible
-            Dropdown.BackgroundTransparency = 0
-            DropdownTitle.TextTransparency = 0
-            ArrowImg.ImageTransparency = 0
-            OriginalTransparencies[Dropdown] = {BackgroundTransparency = 0}
-            OriginalTransparencies[DropdownTitle] = {TextTransparency = true}
-            OriginalTransparencies[ArrowImg] = {ImageTransparency = true}
-            
-            -- Now make invisible for fade-in
-            Dropdown.BackgroundTransparency = 1
-            DropdownTitle.TextTransparency = 1
-            ArrowImg.ImageTransparency = 1
 
             -- Save config element
             ConfigElements[elementId] = {
@@ -1767,19 +1637,10 @@ function lib:Window(text, preset, closebind)
                     Item.Text = v
                     Item.TextColor3 = Color3.fromRGB(255, 255, 255)
                     Item.TextSize = 15.000
-                    Item.BackgroundTransparency = 0
-                    Item.TextTransparency = 0
 
                     ItemCorner.CornerRadius = UDim.new(0, 6)
                     ItemCorner.Name = "ItemCorner"
                     ItemCorner.Parent = Item
-
-                    -- Store transparency for dropdown items BEFORE making invisible
-                    OriginalTransparencies[Item] = {BackgroundTransparency = 0, TextTransparency = true}
-                    
-                    -- Make invisible for fade-in
-                    Item.BackgroundTransparency = 1
-                    Item.TextTransparency = 1
 
                     Item.MouseEnter:Connect(
                         function()
@@ -1908,7 +1769,6 @@ function lib:Window(text, preset, closebind)
             Label.Text = ""
             Label.TextColor3 = Color3.fromRGB(0, 0, 0)
             Label.TextSize = 14.000
-            Label.BackgroundTransparency = 1
 
             LabelCorner.CornerRadius = UDim.new(0, 6)
             LabelCorner.Name = "ButtonCorner"
@@ -1925,17 +1785,6 @@ function lib:Window(text, preset, closebind)
             LabelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             LabelTitle.TextSize = 14.000
             LabelTitle.TextXAlignment = Enum.TextXAlignment.Left
-            LabelTitle.TextTransparency = 0
-
-            -- Store transparency for this new element BEFORE making invisible
-            Label.BackgroundTransparency = 0
-            LabelTitle.TextTransparency = 0
-            OriginalTransparencies[Label] = {BackgroundTransparency = 0}
-            OriginalTransparencies[LabelTitle] = {TextTransparency = true}
-            
-            -- Make invisible for fade-in
-            Label.BackgroundTransparency = 1
-            LabelTitle.TextTransparency = 1
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
@@ -1958,7 +1807,6 @@ function lib:Window(text, preset, closebind)
             Textbox.ClipsDescendants = true
             Textbox.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
             Textbox.Size = UDim2.new(0, 363, 0, 42)
-            Textbox.BackgroundTransparency = 1
 
             TextboxCorner.CornerRadius = UDim.new(0, 6)
             TextboxCorner.Name = "TextboxCorner"
@@ -1975,14 +1823,12 @@ function lib:Window(text, preset, closebind)
             TextboxTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextboxTitle.TextSize = 14.000
             TextboxTitle.TextXAlignment = Enum.TextXAlignment.Left
-            TextboxTitle.TextTransparency = 0
 
             TextboxFrame.Name = "TextboxFrame"
             TextboxFrame.Parent = TextboxTitle
             TextboxFrame.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
             TextboxFrame.Position = UDim2.new(1.28877008, 0, 0.214285716, 0)
             TextboxFrame.Size = UDim2.new(0, 100, 0, 23)
-            TextboxFrame.BackgroundTransparency = 0
 
             TextboxFrameCorner.CornerRadius = UDim.new(0, 6)
             TextboxFrameCorner.Name = "TextboxFrameCorner"
@@ -1996,23 +1842,6 @@ function lib:Window(text, preset, closebind)
             TextBox.Text = ""
             TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             TextBox.TextSize = 14.000
-            TextBox.TextTransparency = 0
-
-            -- Store transparency for this new element BEFORE making invisible
-            Textbox.BackgroundTransparency = 0
-            TextboxTitle.TextTransparency = 0
-            TextboxFrame.BackgroundTransparency = 0
-            TextBox.TextTransparency = 0
-            OriginalTransparencies[Textbox] = {BackgroundTransparency = 0}
-            OriginalTransparencies[TextboxTitle] = {TextTransparency = true}
-            OriginalTransparencies[TextboxFrame] = {BackgroundTransparency = 0}
-            OriginalTransparencies[TextBox] = {TextTransparency = true}
-            
-            -- Make invisible for fade-in
-            Textbox.BackgroundTransparency = 1
-            TextboxTitle.TextTransparency = 1
-            TextboxFrame.BackgroundTransparency = 1
-            TextBox.TextTransparency = 1
 
             -- Save config element
             ConfigElements[elementId] = {
@@ -2077,7 +1906,6 @@ function lib:Window(text, preset, closebind)
             Bind.Text = ""
             Bind.TextColor3 = Color3.fromRGB(0, 0, 0)
             Bind.TextSize = 14.000
-            Bind.BackgroundTransparency = 1
 
             BindCorner.CornerRadius = UDim.new(0, 6)
             BindCorner.Name = "BindCorner"
@@ -2094,7 +1922,6 @@ function lib:Window(text, preset, closebind)
             BindTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
             BindTitle.TextSize = 14.000
             BindTitle.TextXAlignment = Enum.TextXAlignment.Left
-            BindTitle.TextTransparency = 1
 
             BindText.Name = "BindText"
             BindText.Parent = Bind
@@ -2107,20 +1934,6 @@ function lib:Window(text, preset, closebind)
             BindText.TextColor3 = Color3.fromRGB(255, 255, 255)
             BindText.TextSize = 14.000
             BindText.TextXAlignment = Enum.TextXAlignment.Right
-            BindText.TextTransparency = 0
-
-            -- Store transparency for this new element BEFORE making invisible
-            Bind.BackgroundTransparency = 0
-            BindTitle.TextTransparency = 0
-            BindText.TextTransparency = 0
-            OriginalTransparencies[Bind] = {BackgroundTransparency = 0}
-            OriginalTransparencies[BindTitle] = {TextTransparency = true}
-            OriginalTransparencies[BindText] = {TextTransparency = true}
-            
-            -- Make invisible for fade-in
-            Bind.BackgroundTransparency = 1
-            BindTitle.TextTransparency = 1
-            BindText.TextTransparency = 1
 
             -- Save config element
             ConfigElements[elementId] = {
