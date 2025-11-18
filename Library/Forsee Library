@@ -51,7 +51,7 @@ local function GetStartupSettingsPath()
     if not isfolder(folderPath) then
         makefolder(folderPath)
     end
-    return folderPath .. "/startup_settings.startup"
+    return folderPath .. "/startup_settings.json"
 end
 
 -- FIX 2: This function is now used to set the script-specific folder for configs.
