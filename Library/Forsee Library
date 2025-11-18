@@ -10,7 +10,6 @@ local CloseBind = Enum.KeyCode.RightControl
 -- Config saving system with persistent storage
 local HttpService = game:GetService("HttpService")
 local ConfigFolder = "Forsee Library"
--- FIX 2: ScriptContextName will be set by the Window title (e.g., "Murderer VS Sheriff")
 local ScriptContextName = "Default" 
 local ConfigElements = {}
 local CurrentConfigName = ""
@@ -25,7 +24,7 @@ local NotificationCallback = nil
 -- Track UI state
 local uiEnabled = true
 local uitoggled = false
-local uiElementStates = {} -- Stores original transparency values for fade animations
+local uiElementStates = {}
 
 -- Dropdown refresh callbacks
 local DropdownRefreshCallbacks = {}
@@ -35,7 +34,6 @@ if not isfolder(ConfigFolder) then
     makefolder(ConfigFolder)
 end
 
--- FIX 2: This function now gets the path specific to the current script context
 local function GetFullConfigPath()
     local path = ConfigFolder .. "/" .. ScriptContextName
     if not isfolder(path) then
@@ -44,19 +42,16 @@ local function GetFullConfigPath()
     return path
 end
 
--- FIX 2: This function now gets the startup settings path specific to the current script context
+-- CHANGED: Now uses .txt extension for startup settings
 local function GetStartupSettingsPath()
     local folderPath = ConfigFolder .. "/" .. ScriptContextName
     if not isfolder(folderPath) then
         makefolder(folderPath)
     end
-    return folderPath .. "/startup_settings.json"
+    return folderPath .. "/startup_settings.txt"
 end
 
--- FIX 2: This function is now used to set the script-specific folder for configs.
--- It's called automatically by lib:Window()
 function lib:SetScriptContext(name)
-    -- Sanitize the name to be a valid folder name
     ScriptContextName = name:gsub("[/\\?%*:|\"<>']", "") or "Default"
 end
 
@@ -71,7 +66,6 @@ local function SaveConfig(name)
         Elements = {}
     }
 
-    -- Save all tracked elements
     for id, element in pairs(ConfigElements) do
         if element.Type == "Toggle" then
             configData.Elements[id] = {Type = "Toggle", Value = element.Value}
@@ -120,7 +114,6 @@ local function LoadConfig(name)
 
     local config = result
 
-    -- Load preset color
     if config.PresetColor then
         PresetColor = Color3.new(config.PresetColor.R, config.PresetColor.G, config.PresetColor.B)
         if lib.ChangePresetColor then
@@ -128,7 +121,6 @@ local function LoadConfig(name)
         end
     end
 
-    -- Load keybind
     if config.CloseBind then
         for _, keyCode in pairs(Enum.KeyCode:GetEnumItems()) do
             if keyCode.Name == config.CloseBind then
@@ -138,7 +130,6 @@ local function LoadConfig(name)
         end
     end
 
-    -- Load all element values
     if config.Elements then
         for id, data in pairs(config.Elements) do
             if ConfigElements[id] and ConfigElements[id].LoadValue then
@@ -172,6 +163,7 @@ local function DeleteConfig(name)
     end
 end
 
+-- CHANGED: Now only returns .json files, ignoring .txt files
 local function GetAllConfigs()
     local configs = {}
     local path = GetFullConfigPath()
@@ -182,6 +174,7 @@ local function GetAllConfigs()
 
     if success then
         for _, file in pairs(files) do
+            -- Only match .json files, ignore .txt files
             local fileName = file:match("([^/\\]+)%.json$")
             if fileName then
                 table.insert(configs, fileName)
@@ -192,7 +185,6 @@ local function GetAllConfigs()
     return configs
 end
 
--- FIX 2: Updated to use the script-specific path
 local function LoadStartupSettings()
     local path = GetStartupSettingsPath()
     if not isfile(path) then
@@ -211,7 +203,6 @@ local function LoadStartupSettings()
     end
 end
 
--- FIX 2: Updated to use the script-specific path
 local function SaveStartupSettings(settings)
     pcall(function()
         local path = GetStartupSettingsPath()
@@ -306,17 +297,16 @@ local function FadeOutUI(main)
     local fadeTime = 0.3
     local tweens = {}
 
-    uiElementStates = {} -- Clear and recapture the UI's current visual state
+    uiElementStates = {}
 
     local allObjects = main:GetDescendants()
-    table.insert(allObjects, 1, main) -- Make sure to include the main frame itself
+    table.insert(allObjects, 1, main)
 
     for _, obj in ipairs(allObjects) do
         if obj:IsA("GuiObject") then
             local stateToSave = {}
             local propsToFade = {}
 
-            -- Check for properties that can be faded
             if obj:IsA("Frame") or obj:IsA("ScrollingFrame") or obj:IsA("TextButton") or obj:IsA("ImageButton") or obj:IsA("TextBox") or obj:IsA("ImageLabel") then
                 stateToSave.BackgroundTransparency = obj.BackgroundTransparency
                 propsToFade.BackgroundTransparency = 1
@@ -330,16 +320,14 @@ local function FadeOutUI(main)
                 propsToFade.ImageTransparency = 1
             end
 
-            -- FIX: Handle scrollbar state
             if obj:IsA("ScrollingFrame") then
                 stateToSave.ScrollBarImageTransparency = obj.ScrollBarImageTransparency
-                obj.ScrollBarImageTransparency = 1 -- Hide instantly!
+                obj.ScrollBarImageTransparency = 1
             end
 
-            -- If we have anything to fade OR state to save (like the scrollbar), store it
             if next(propsToFade) or stateToSave.ScrollBarImageTransparency ~= nil then
                 uiElementStates[obj] = stateToSave
-                if next(propsToFade) then -- Only create a tween if there are properties to animate
+                if next(propsToFade) then
                     table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), propsToFade))
                 end
             end
@@ -355,22 +343,17 @@ local function FadeOutUI(main)
 end
 
 local function FadeInUI(main)
-    main.Visible = true -- Make container visible first
+    main.Visible = true
     local fadeTime = 0.3
     local tweens = {}
 
-    -- Create tweens to restore all objects to their saved state
     for obj, storedState in pairs(uiElementStates) do
-        -- Check if the object hasn't been destroyed (e.g., dropdown item that was removed)
         if obj and obj.Parent then
-            -- Instantly set to faded-out state before tweening to prevent visual pops
             if storedState.BackgroundTransparency ~= nil then obj.BackgroundTransparency = 1 end
             if storedState.TextTransparency ~= nil then obj.TextTransparency = 1 end
             if storedState.ImageTransparency ~= nil then obj.ImageTransparency = 1 end
-            -- FIX: Also set scrollbar to fully transparent before tweening
             if storedState.ScrollBarImageTransparency ~= nil then obj.ScrollBarImageTransparency = 1 end
 
-            -- Create the fade-in tween
             table.insert(tweens, TweenService:Create(obj, TweenInfo.new(fadeTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), storedState))
         end
     end
@@ -381,7 +364,6 @@ local function FadeInUI(main)
 end
 
 function lib:Window(text, preset, closebind)
-    -- FIX 2: Set the script context name based on the window title. This scopes all configs.
     lib:SetScriptContext(text)
 
     CloseBind = closebind or Enum.KeyCode.RightControl
@@ -402,7 +384,6 @@ function lib:Window(text, preset, closebind)
     local SeparatorLine = Instance.new("Frame")
     local TitleSeparator = Instance.new("Frame")
 
-    -- Title bar buttons
     local MinimizeBtn = Instance.new("TextButton")
     local CloseBtn = Instance.new("TextButton")
     local ButtonsContainer = Instance.new("Frame")
@@ -415,7 +396,7 @@ function lib:Window(text, preset, closebind)
     Main.Position = UDim2.new(0.5, 0, 0.5, 0)
     Main.Size = UDim2.new(0, 560, 0, 329)
     Main.ClipsDescendants = true
-    Main.Visible = false -- Start invisible, let FadeInUI handle it
+    Main.Visible = false
     Main.BackgroundTransparency = 0
 
     local MainCorner = Instance.new("UICorner")
@@ -426,15 +407,7 @@ function lib:Window(text, preset, closebind)
     ButtonsContainer.Parent = Main
     ButtonsContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ButtonsContainer.BackgroundTransparency = 1.000
-    
-    -- =================================================================================
-    -- FIX 1: BUTTON POSITIONING
-    -- To move the buttons left or right, change the pixel value '490.5'.
-    -- A smaller number moves them left, a larger number moves them right.
-    -- The calculation is (Pixel_Offset / Window_Width), e.g., (490.5 / 560).
     ButtonsContainer.Position = UDim2.new(475.5 / 560, 0, 0.0264263314, 0)
-    -- =================================================================================
-
     ButtonsContainer.Size = UDim2.new(0, 70, 0, 30)
 
     MinimizeBtn.Name = "MinimizeBtn"
@@ -505,17 +478,14 @@ function lib:Window(text, preset, closebind)
     DragFrame.BackgroundTransparency = 1.000
     DragFrame.Size = UDim2.new(0, 560, 0, 50)
 
-    -- FIX 2: Moved startup logic here to run after the UI is ready.
     delay(0.1, function()
         FadeOutUI(Main)
         wait(0.4)
         uitoggled = false
         FadeInUI(Main)
         
-        -- Wait for fade-in animation to complete
         wait(0.35) 
 
-        -- Load startup config now that the UI is fully visible and initialized
         local startupSettings = LoadStartupSettings()
         if startupSettings.enabled and startupSettings.configName and startupSettings.configName ~= "" then
             local success, msg = LoadConfig(startupSettings.configName)
@@ -1252,7 +1222,6 @@ function lib:Window(text, preset, closebind)
                 LoadValue = function(value)
                     toggled = value
                     if value then
-                        -- Set visual ON state instantly
                         Toggle.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
                         FrameToggle1.BackgroundTransparency = 1
                         FrameToggle2.BackgroundTransparency = 1
@@ -1260,7 +1229,6 @@ function lib:Window(text, preset, closebind)
                         FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                         FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
                     else
-                        -- Set visual OFF state instantly
                         Toggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
                         FrameToggle1.BackgroundTransparency = 0
                         FrameToggle2.BackgroundTransparency = 0
