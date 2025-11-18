@@ -1,3 +1,10 @@
+⚠️ Known Issue with Keybind:
+The Forsee Library's :Bind() method doesn't seem to have a way to retrieve the currently set keybind or update your config variable. You may need to either:
+
+Check the library source to see if there's a return value or property you can access
+
+here is the library can u update it with that added so now we can do that keybind updating and shi and givem e back the entie lib code updated
+
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1943,6 +1950,39 @@ function lib:Window(text, preset, closebind)
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
+            -- Create the bind object to return
+            local bindObj = {}
+            
+            -- Method to get the current key
+            function bindObj:GetKey()
+                return currentKey
+            end
+            
+            -- Method to get the current key name
+            function bindObj:GetKeyName()
+                return Key
+            end
+            
+            -- Method to set the key programmatically
+            function bindObj:SetKey(newKey)
+                if typeof(newKey) == "EnumItem" and newKey.EnumType == Enum.KeyCode then
+                    currentKey = newKey
+                    Key = newKey.Name
+                    BindText.Text = Key
+                    ConfigElements[elementId].Value = Key
+                    
+                    -- Update UI toggle key if this is a UI toggle bind
+                    if text:lower():find("toggle") or text:lower():find("ui") then
+                        lib:SetToggleKey(newKey)
+                    end
+                    
+                    return true
+                else
+                    warn("Invalid key provided to Bind:SetKey()")
+                    return false
+                end
+            end
+
             Bind.MouseButton1Click:Connect(
                 function()
                     if isMobile then
@@ -1980,6 +2020,9 @@ function lib:Window(text, preset, closebind)
                     end
                 )
             end
+            
+            -- Return the bind object
+            return bindObj
         end
 
         return tabcontent
