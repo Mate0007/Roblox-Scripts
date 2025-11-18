@@ -1,9 +1,4 @@
-⚠️ Known Issue with Keybind:
-The Forsee Library's :Bind() method doesn't seem to have a way to retrieve the currently set keybind or update your config variable. You may need to either:
 
-Check the library source to see if there's a return value or property you can access
-
-here is the library can u update it with that added so now we can do that keybind updating and shi and givem e back the entie lib code updated
 
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
