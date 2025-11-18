@@ -45,7 +45,6 @@ local function GetFullConfigPath()
 end
 
 -- FIX 2: This function now gets the startup settings path specific to the current script context
--- Using .startup extension so it won't show up in config dropdowns
 local function GetStartupSettingsPath()
     local folderPath = ConfigFolder .. "/" .. ScriptContextName
     if not isfolder(folderPath) then
