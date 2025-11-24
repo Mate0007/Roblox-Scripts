@@ -1,4 +1,3 @@
-
 local lib = {RainbowColorValue = 0, HueSelectionPosition = 0}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -43,7 +42,6 @@ local function GetFullConfigPath()
     return path
 end
 
--- CHANGED: Now uses .txt extension for startup settings
 local function GetStartupSettingsPath()
     local folderPath = ConfigFolder .. "/" .. ScriptContextName
     if not isfolder(folderPath) then
@@ -68,17 +66,8 @@ local function SaveConfig(name)
     }
 
     for id, element in pairs(ConfigElements) do
-        if element.Type == "Toggle" then
-            configData.Elements[id] = {Type = "Toggle", Value = element.Value}
-        elseif element.Type == "Slider" then
-            configData.Elements[id] = {Type = "Slider", Value = element.Value}
-        elseif element.Type == "Dropdown" then
-            configData.Elements[id] = {Type = "Dropdown", Value = element.Value}
-        elseif element.Type == "Textbox" then
-            configData.Elements[id] = {Type = "Textbox", Value = element.Value}
-        elseif element.Type == "Bind" then
-            configData.Elements[id] = {Type = "Bind", Value = element.Value}
-        end
+        -- Universal saver for all types
+        configData.Elements[id] = {Type = element.Type, Value = element.Value}
     end
 
     local success, err = pcall(function()
@@ -164,7 +153,6 @@ local function DeleteConfig(name)
     end
 end
 
--- CHANGED: Now only returns .json files, ignoring .txt files
 local function GetAllConfigs()
     local configs = {}
     local path = GetFullConfigPath()
@@ -175,7 +163,6 @@ local function GetAllConfigs()
 
     if success then
         for _, file in pairs(files) do
-            -- Only match .json files, ignore .txt files
             local fileName = file:match("([^/\\]+)%.json$")
             if fileName then
                 table.insert(configs, fileName)
@@ -664,6 +651,8 @@ function lib:Window(text, preset, closebind)
                     element.BackgroundColor3 = toch
                 elseif element:IsA("Frame") and element.Name == "FrameRainbowToggle3" then
                     element.BackgroundColor3 = toch
+                elseif element:IsA("Frame") and element.Name == "MultiSelectIndicator" then
+                    element.BackgroundColor3 = toch
                 end
             end
         end
@@ -1069,6 +1058,497 @@ function lib:Window(text, preset, closebind)
         )
 
         local tabcontent = {}
+
+        -- ==================================================================================
+        -- START MULTIDROPDOWN
+        -- ==================================================================================
+        function tabcontent:MultiDropdown(text, list, callback, default, isConfigurable)
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "MultiDropdown_" .. globalElementIdCounter
+            local droptog = false
+            local framesize = 0
+            local itemcount = 0
+            local selectedItems = default or {}
+            
+            if isConfigurable == nil then isConfigurable = true end
+
+            local Dropdown = Instance.new("Frame")
+            local DropdownCorner = Instance.new("UICorner")
+            local DropdownBtn = Instance.new("TextButton")
+            local DropdownTitle = Instance.new("TextLabel")
+            local ArrowImg = Instance.new("ImageLabel")
+            local DropItemHolder = Instance.new("ScrollingFrame")
+            local DropLayout = Instance.new("UIListLayout")
+
+            Dropdown.Name = "MultiDropdown"
+            Dropdown.Parent = Tab
+            Dropdown.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+            Dropdown.ClipsDescendants = true
+            Dropdown.Size = UDim2.new(0, 363, 0, 42)
+
+            DropdownCorner.CornerRadius = UDim.new(0, 6)
+            DropdownCorner.Parent = Dropdown
+
+            DropdownBtn.Name = "DropdownBtn"
+            DropdownBtn.Parent = Dropdown
+            DropdownBtn.BackgroundTransparency = 1.000
+            DropdownBtn.Size = UDim2.new(0, 363, 0, 42)
+            DropdownBtn.Text = ""
+
+            DropdownTitle.Name = "DropdownTitle"
+            DropdownTitle.Parent = Dropdown
+            DropdownTitle.BackgroundTransparency = 1.000
+            DropdownTitle.Position = UDim2.new(0.0358, 0, 0, 0)
+            DropdownTitle.Size = UDim2.new(0, 187, 0, 42)
+            DropdownTitle.Font = Enum.Font.Gotham
+            DropdownTitle.Text = text .. " - (" .. #selectedItems .. ")"
+            DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DropdownTitle.TextSize = 14.000
+            DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+            ArrowImg.Name = "ArrowImg"
+            ArrowImg.Parent = DropdownTitle
+            ArrowImg.BackgroundTransparency = 1.000
+            ArrowImg.Position = UDim2.new(1.65, 0, 0.19, 0)
+            ArrowImg.Size = UDim2.new(0, 26, 0, 26)
+            ArrowImg.Image = "http://www.roblox.com/asset/?id=6034818375"
+
+            DropItemHolder.Name = "DropItemHolder"
+            DropItemHolder.Parent = DropdownTitle
+            DropItemHolder.BackgroundTransparency = 1.000
+            DropItemHolder.Position = UDim2.new(-0.004, 0, 1.05, 0)
+            DropItemHolder.Size = UDim2.new(0, 342, 0, 0)
+            DropItemHolder.ScrollBarThickness = 3
+            DropItemHolder.CanvasSize = UDim2.new(0,0,0,0)
+
+            DropLayout.Name = "DropLayout"
+            DropLayout.Parent = DropItemHolder
+            DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+            if isConfigurable then
+                ConfigElements[elementId] = {
+                    Type = "MultiDropdown",
+                    Value = selectedItems,
+                    LoadValue = function(value)
+                        selectedItems = value or {}
+                        DropdownTitle.Text = text .. " - (" .. #selectedItems .. ")"
+                        -- Refresh visual state of items if dropdown is open or next time it opens
+                        -- Trigger callback
+                        pcall(callback, selectedItems)
+                    end
+                }
+            end
+
+            local function updateVisuals()
+                DropdownTitle.Text = text .. " - (" .. #selectedItems .. ")"
+                for _, btn in pairs(DropItemHolder:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        if table.find(selectedItems, btn.Text) then
+                            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            btn.TextColor3 = PresetColor
+                        else
+                            btn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        end
+                    end
+                end
+            end
+
+            local function populateItems(itemList)
+                for _, child in pairs(DropItemHolder:GetChildren()) do
+                    if child:IsA("TextButton") then child:Destroy() end
+                end
+                framesize = 0
+                itemcount = 0
+
+                for _, v in pairs(itemList) do
+                    itemcount = itemcount + 1
+                    if itemcount <= 5 then
+                        framesize = framesize + 26
+                        DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
+                    end
+
+                    local Item = Instance.new("TextButton")
+                    local ItemCorner = Instance.new("UICorner")
+
+                    Item.Name = "Item"
+                    Item.Parent = DropItemHolder
+                    Item.BackgroundColor3 = table.find(selectedItems, v) and Color3.fromRGB(50,50,50) or Color3.fromRGB(34, 34, 34)
+                    Item.Size = UDim2.new(0, 335, 0, 25)
+                    Item.AutoButtonColor = false
+                    Item.Font = Enum.Font.Gotham
+                    Item.Text = v
+                    Item.TextColor3 = table.find(selectedItems, v) and PresetColor or Color3.fromRGB(255, 255, 255)
+                    Item.TextSize = 15.000
+
+                    ItemCorner.CornerRadius = UDim.new(0, 6)
+                    ItemCorner.Parent = Item
+
+                    Item.MouseButton1Click:Connect(function()
+                        if table.find(selectedItems, v) then
+                            for i, val in pairs(selectedItems) do
+                                if val == v then
+                                    table.remove(selectedItems, i)
+                                    break
+                                end
+                            end
+                            Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                            Item.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        else
+                            table.insert(selectedItems, v)
+                            Item.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                            Item.TextColor3 = PresetColor
+                        end
+                        
+                        DropdownTitle.Text = text .. " - (" .. #selectedItems .. ")"
+                        
+                        if isConfigurable then
+                            ConfigElements[elementId].Value = selectedItems
+                        end
+                        pcall(callback, selectedItems)
+                    end)
+                end
+                DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+            end
+
+            populateItems(list)
+
+            DropdownBtn.MouseButton1Click:Connect(function()
+                if droptog == false then
+                    Dropdown:TweenSize(UDim2.new(0, 363, 0, 55 + framesize), "Out", "Quart", .2, true)
+                    TweenService:Create(ArrowImg, TweenInfo.new(.3, Enum.EasingStyle.Quad), {Rotation = 270}):Play()
+                else
+                    Dropdown:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quart", .2, true)
+                    TweenService:Create(ArrowImg, TweenInfo.new(.3, Enum.EasingStyle.Quad), {Rotation = 0}):Play()
+                end
+                wait(.2)
+                Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+                droptog = not droptog
+            end)
+            
+            Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+        end
+        -- ==================================================================================
+        -- END MULTIDROPDOWN
+        -- ==================================================================================
+
+        -- ==================================================================================
+        -- START COLOR PICKER
+        -- ==================================================================================
+        function tabcontent:ColorPicker(text, default, callback)
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "ColorPicker_" .. globalElementIdCounter
+            
+            local h, s, v = (default or Color3.fromRGB(255,255,255)):ToHSV()
+            local color = default or Color3.fromRGB(255, 255, 255)
+            local transparency = 0
+            local rainbow = false
+            local rainbowConnection = nil
+            local picking = false
+
+            local PickerFrame = Instance.new("Frame")
+            local PickerBtn = Instance.new("TextButton")
+            local PickerTitle = Instance.new("TextLabel")
+            local ColorPreview = Instance.new("Frame")
+            local ColorPreviewCorner = Instance.new("UICorner")
+            
+            -- Expanded UI
+            local ExpandedFrame = Instance.new("Frame")
+            local SVBox = Instance.new("ImageButton") -- Saturation/Value
+            local SVCursor = Instance.new("Frame")
+            local HueBar = Instance.new("ImageButton") -- Hue
+            local HueCursor = Instance.new("Frame")
+            local AlphaBar = Instance.new("ImageButton") -- Transparency
+            local AlphaCursor = Instance.new("Frame")
+            local RainbowToggleBtn = Instance.new("TextButton")
+            local RainbowToggleTitle = Instance.new("TextLabel")
+
+            PickerFrame.Name = "PickerFrame"
+            PickerFrame.Parent = Tab
+            PickerFrame.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+            PickerFrame.Size = UDim2.new(0, 363, 0, 42)
+            PickerFrame.ClipsDescendants = true
+
+            local PickerCorner = Instance.new("UICorner")
+            PickerCorner.CornerRadius = UDim.new(0, 6)
+            PickerCorner.Parent = PickerFrame
+
+            PickerTitle.Name = "PickerTitle"
+            PickerTitle.Parent = PickerFrame
+            PickerTitle.BackgroundTransparency = 1
+            PickerTitle.Position = UDim2.new(0.036, 0, 0, 0)
+            PickerTitle.Size = UDim2.new(0, 200, 0, 42)
+            PickerTitle.Font = Enum.Font.Gotham
+            PickerTitle.Text = text
+            PickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+            PickerTitle.TextSize = 14
+            PickerTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+            ColorPreview.Name = "ColorPreview"
+            ColorPreview.Parent = PickerFrame
+            ColorPreview.Position = UDim2.new(0.85, 0, 0.25, 0)
+            ColorPreview.Size = UDim2.new(0, 30, 0, 20)
+            ColorPreview.BackgroundColor3 = color
+            
+            ColorPreviewCorner.CornerRadius = UDim.new(0, 4)
+            ColorPreviewCorner.Parent = ColorPreview
+
+            PickerBtn.Name = "PickerBtn"
+            PickerBtn.Parent = PickerFrame
+            PickerBtn.BackgroundTransparency = 1
+            PickerBtn.Size = UDim2.new(1, 0, 0, 42)
+            PickerBtn.Text = ""
+
+            -- Expanded Area
+            ExpandedFrame.Name = "ExpandedFrame"
+            ExpandedFrame.Parent = PickerFrame
+            ExpandedFrame.BackgroundTransparency = 1
+            ExpandedFrame.Position = UDim2.new(0, 0, 0, 42)
+            ExpandedFrame.Size = UDim2.new(1, 0, 0, 150)
+
+            -- Saturation/Value Box
+            SVBox.Name = "SVBox"
+            SVBox.Parent = ExpandedFrame
+            SVBox.Position = UDim2.new(0.05, 0, 0.1, 0)
+            SVBox.Size = UDim2.new(0, 150, 0, 120)
+            SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            SVBox.Image = "rbxassetid://4155801252" -- Saturation/Value Gradient
+            local SVCorner = Instance.new("UICorner")
+            SVCorner.CornerRadius = UDim.new(0,4)
+            SVCorner.Parent = SVBox
+
+            SVCursor.Name = "Cursor"
+            SVCursor.Parent = SVBox
+            SVCursor.Size = UDim2.new(0, 6, 0, 6)
+            SVCursor.Position = UDim2.new(s, -3, 1-v, -3)
+            SVCursor.BackgroundColor3 = Color3.new(1,1,1)
+            SVCursor.BorderColor3 = Color3.new(0,0,0)
+            local SVCursorCorner = Instance.new("UICorner")
+            SVCursorCorner.CornerRadius = UDim.new(1,0)
+            SVCursorCorner.Parent = SVCursor
+
+            -- Hue Slider
+            HueBar.Name = "HueBar"
+            HueBar.Parent = ExpandedFrame
+            HueBar.Position = UDim2.new(0.5, 0, 0.1, 0)
+            HueBar.Size = UDim2.new(0, 20, 0, 120)
+            HueBar.BackgroundColor3 = Color3.new(1,1,1)
+            local HueGradient = Instance.new("UIGradient")
+            HueGradient.Rotation = 90
+            HueGradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+                ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
+                ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
+                ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+                ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
+                ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
+                ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
+            }
+            HueGradient.Parent = HueBar
+            local HueCorner = Instance.new("UICorner")
+            HueCorner.CornerRadius = UDim.new(0,4)
+            HueCorner.Parent = HueBar
+
+            HueCursor.Name = "Cursor"
+            HueCursor.Parent = HueBar
+            HueCursor.Size = UDim2.new(1, 0, 0, 4)
+            HueCursor.Position = UDim2.new(0, 0, h, -2)
+            HueCursor.BackgroundColor3 = Color3.new(1,1,1)
+            HueCursor.BorderSizePixel = 1
+            HueCursor.BorderColor3 = Color3.new(0,0,0)
+
+            -- Transparency Slider
+            AlphaBar.Name = "AlphaBar"
+            AlphaBar.Parent = ExpandedFrame
+            AlphaBar.Position = UDim2.new(0.6, 0, 0.1, 0)
+            AlphaBar.Size = UDim2.new(0, 20, 0, 120)
+            AlphaBar.BackgroundColor3 = Color3.new(1,1,1)
+            AlphaBar.Image = "rbxassetid://3848883746" -- Checker pattern
+            AlphaBar.ScaleType = Enum.ScaleType.Tile
+            AlphaBar.TileSize = UDim2.new(0, 10, 0, 10)
+            local AlphaCorner = Instance.new("UICorner")
+            AlphaCorner.CornerRadius = UDim.new(0,4)
+            AlphaCorner.Parent = AlphaBar
+            
+            -- Alpha visual overlay (gradient from opaque to transparent)
+            local AlphaOverlay = Instance.new("Frame")
+            AlphaOverlay.Parent = AlphaBar
+            AlphaOverlay.Size = UDim2.new(1,0,1,0)
+            AlphaOverlay.BackgroundColor3 = color
+            AlphaOverlay.BorderSizePixel = 0
+            local AlphaGradient = Instance.new("UIGradient")
+            AlphaGradient.Rotation = 90
+            AlphaGradient.Transparency = NumberSequence.new{
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(1, 1)
+            }
+            AlphaGradient.Parent = AlphaOverlay
+
+            AlphaCursor.Name = "Cursor"
+            AlphaCursor.Parent = AlphaBar
+            AlphaCursor.Size = UDim2.new(1, 0, 0, 4)
+            AlphaCursor.Position = UDim2.new(0, 0, transparency, -2)
+            AlphaCursor.BackgroundColor3 = Color3.new(1,1,1)
+            AlphaCursor.BorderSizePixel = 1
+            AlphaCursor.BorderColor3 = Color3.new(0,0,0)
+
+            -- Rainbow Toggle
+            RainbowToggleBtn.Name = "RainbowBtn"
+            RainbowToggleBtn.Parent = ExpandedFrame
+            RainbowToggleBtn.Position = UDim2.new(0.7, 0, 0.1, 0)
+            RainbowToggleBtn.Size = UDim2.new(0, 80, 0, 25)
+            RainbowToggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+            RainbowToggleBtn.Text = ""
+            local RainbowCorner = Instance.new("UICorner")
+            RainbowCorner.CornerRadius = UDim.new(0,4)
+            RainbowCorner.Parent = RainbowToggleBtn
+
+            RainbowToggleTitle.Parent = RainbowToggleBtn
+            RainbowToggleTitle.Size = UDim2.new(1,0,1,0)
+            RainbowToggleTitle.BackgroundTransparency = 1
+            RainbowToggleTitle.Text = "Rainbow"
+            RainbowToggleTitle.TextColor3 = Color3.fromRGB(150,150,150)
+            RainbowToggleTitle.Font = Enum.Font.Gotham
+            RainbowToggleTitle.TextSize = 12
+
+            -- Functions
+            local function UpdateColor()
+                color = Color3.fromHSV(h, s, v)
+                ColorPreview.BackgroundColor3 = color
+                SVBox.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                AlphaOverlay.BackgroundColor3 = color
+                pcall(callback, color, transparency)
+                
+                -- Update Config
+                ConfigElements[elementId].Value = {
+                    R = color.R, G = color.G, B = color.B,
+                    A = transparency,
+                    Rainbow = rainbow
+                }
+            end
+
+            local function UpdateInputs(input, type)
+                if type == "SV" then
+                    local rX = (input.Position.X - SVBox.AbsolutePosition.X) / SVBox.AbsoluteSize.X
+                    local rY = (input.Position.Y - SVBox.AbsolutePosition.Y) / SVBox.AbsoluteSize.Y
+                    s = math.clamp(rX, 0, 1)
+                    v = 1 - math.clamp(rY, 0, 1)
+                    SVCursor.Position = UDim2.new(s, -3, 1-v, -3)
+                elseif type == "Hue" then
+                    local rY = (input.Position.Y - HueBar.AbsolutePosition.Y) / HueBar.AbsoluteSize.Y
+                    h = math.clamp(rY, 0, 1)
+                    HueCursor.Position = UDim2.new(0, 0, h, -2)
+                elseif type == "Alpha" then
+                    local rY = (input.Position.Y - AlphaBar.AbsolutePosition.Y) / AlphaBar.AbsoluteSize.Y
+                    transparency = math.clamp(rY, 0, 1)
+                    AlphaCursor.Position = UDim2.new(0, 0, transparency, -2)
+                end
+                UpdateColor()
+            end
+
+            -- Event Listeners
+            local draggingSV, draggingHue, draggingAlpha = false, false, false
+
+            SVBox.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingSV = true
+                    UpdateInputs(input, "SV")
+                end
+            end)
+            HueBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingHue = true
+                    UpdateInputs(input, "Hue")
+                end
+            end)
+            AlphaBar.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingAlpha = true
+                    UpdateInputs(input, "Alpha")
+                end
+            end)
+
+            UserInputService.InputChanged:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                    if draggingSV then UpdateInputs(input, "SV") end
+                    if draggingHue then UpdateInputs(input, "Hue") end
+                    if draggingAlpha then UpdateInputs(input, "Alpha") end
+                end
+            end)
+
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingSV, draggingHue, draggingAlpha = false, false, false
+                end
+            end)
+
+            -- Rainbow Logic
+            RainbowToggleBtn.MouseButton1Click:Connect(function()
+                rainbow = not rainbow
+                if rainbow then
+                    RainbowToggleTitle.TextColor3 = PresetColor
+                    rainbowConnection = RunService.Heartbeat:Connect(function()
+                        h = (tick() % 5) / 5
+                        HueCursor.Position = UDim2.new(0, 0, h, -2)
+                        UpdateColor()
+                    end)
+                else
+                    RainbowToggleTitle.TextColor3 = Color3.fromRGB(150,150,150)
+                    if rainbowConnection then rainbowConnection:Disconnect() end
+                end
+            end)
+
+            -- Collapse Logic
+            PickerBtn.MouseButton1Click:Connect(function()
+                picking = not picking
+                if picking then
+                    PickerFrame:TweenSize(UDim2.new(0, 363, 0, 180), "Out", "Quad", 0.2, true)
+                else
+                    PickerFrame:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quad", 0.2, true)
+                end
+                wait(0.2)
+                Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+            end)
+
+            -- Config Loading
+            ConfigElements[elementId] = {
+                Type = "ColorPicker",
+                Value = {R=color.R, G=color.G, B=color.B, A=transparency, Rainbow=rainbow},
+                LoadValue = function(val)
+                    local r,g,b = val.R, val.G, val.B
+                    transparency = val.A or 0
+                    rainbow = val.Rainbow or false
+                    
+                    color = Color3.new(r,g,b)
+                    h, s, v = color:ToHSV()
+                    
+                    -- Update UI Positions
+                    SVCursor.Position = UDim2.new(s, -3, 1-v, -3)
+                    HueCursor.Position = UDim2.new(0, 0, h, -2)
+                    AlphaCursor.Position = UDim2.new(0, 0, transparency, -2)
+                    
+                    if rainbow then
+                        RainbowToggleTitle.TextColor3 = PresetColor
+                        if rainbowConnection then rainbowConnection:Disconnect() end
+                        rainbowConnection = RunService.Heartbeat:Connect(function()
+                            h = (tick() % 5) / 5
+                            HueCursor.Position = UDim2.new(0, 0, h, -2)
+                            UpdateColor()
+                        end)
+                    else
+                        RainbowToggleTitle.TextColor3 = Color3.fromRGB(150,150,150)
+                        if rainbowConnection then rainbowConnection:Disconnect() end
+                    end
+                    
+                    UpdateColor()
+                end
+            }
+
+            Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+        end
+        -- ==================================================================================
+        -- END COLOR PICKER
+        -- ==================================================================================
 
         function tabcontent:Button(text, callback)
             globalElementIdCounter = globalElementIdCounter + 1
