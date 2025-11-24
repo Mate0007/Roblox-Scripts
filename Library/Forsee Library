@@ -1617,18 +1617,19 @@ function tabcontent:ColorPicker(text, preset, callback)
     ColorPickerShowCorner.CornerRadius = UDim.new(0, 6)
     ColorPickerShowCorner.Parent = ColorPickerShow
     
-    -- === CONTENT FRAME ===
+    -- === CONTENT FRAME (HIDDEN BY DEFAULT) ===
     ColorPickerFrame.Name = "ColorPickerFrame"
     ColorPickerFrame.Parent = ColorPickerBtn
     ColorPickerFrame.BackgroundTransparency = 1
-    ColorPickerFrame.Position = UDim2.new(0, 0, 0, 55)
-    ColorPickerFrame.Size = UDim2.new(0, 363, 0, 155)
+    ColorPickerFrame.Position = UDim2.new(0, 0, 0, 47)
+    ColorPickerFrame.Size = UDim2.new(0, 363, 0, 140)
+    ColorPickerFrame.Visible = false
     
     -- === SV PICKER (MAIN COLOR BOX) ===
     SVFrame.Name = "SVFrame"
     SVFrame.Parent = ColorPickerFrame
     SVFrame.BackgroundColor3 = Color3.fromHSV(Hue, 1, 1)
-    SVFrame.Position = UDim2.new(0.036, 0, 0, 5)
+    SVFrame.Position = UDim2.new(0.036, 0, 0, 0)
     SVFrame.Size = UDim2.new(0, 180, 0, 100)
     
     SVFrameCorner.CornerRadius = UDim.new(0, 4)
@@ -1660,7 +1661,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     -- === HUE BAR (VERTICAL RAINBOW) ===
     HueFrame.Name = "HueFrame"
     HueFrame.Parent = ColorPickerFrame
-    HueFrame.Position = UDim2.new(0, 211, 0, 5)
+    HueFrame.Position = UDim2.new(0, 211, 0, 0)
     HueFrame.Size = UDim2.new(0, 15, 0, 100)
     
     HueFrameCorner.CornerRadius = UDim.new(0, 4)
@@ -1682,7 +1683,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     TransBG.Name = "TransBG"
     TransBG.Parent = ColorPickerFrame
     TransBG.BackgroundTransparency = 1
-    TransBG.Position = UDim2.new(0.036, 0, 0, 115)
+    TransBG.Position = UDim2.new(0.036, 0, 0, 110)
     TransBG.Size = UDim2.new(0, 226, 0, 15)
     TransBG.Image = "rbxassetid://3887014957"
     TransBG.ScaleType = Enum.ScaleType.Tile
@@ -1706,15 +1707,16 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     TransGradient.Parent = TransFrame
     
-    -- === PREVIEW CUBE (RIGHT SIDE) ===
+    -- === PREVIEW CUBE (RIGHT SIDE - HIDDEN BY DEFAULT) ===
     PreviewBG.Name = "PreviewBG"
     PreviewBG.Parent = ColorPickerFrame
     PreviewBG.BackgroundTransparency = 1
-    PreviewBG.Position = UDim2.new(0, 250, 0, 20)
+    PreviewBG.Position = UDim2.new(0, 250, 0, 5)
     PreviewBG.Size = UDim2.new(0, 85, 0, 85)
     PreviewBG.Image = "rbxassetid://3887014957"
     PreviewBG.ScaleType = Enum.ScaleType.Tile
     PreviewBG.TileSize = UDim2.new(0, 10, 0, 10)
+    PreviewBG.Visible = false
     
     PreviewBGCorner.CornerRadius = UDim.new(0, 6)
     PreviewBGCorner.Parent = PreviewBG
@@ -1728,17 +1730,18 @@ function tabcontent:ColorPicker(text, preset, callback)
     PreviewCorner.CornerRadius = UDim.new(0, 6)
     PreviewCorner.Parent = PreviewColor
     
-    -- === RAINBOW BUTTON (BELOW CUBE) ===
+    -- === RAINBOW BUTTON (ALIGNED WITH TRANSPARENCY) ===
     RainbowBtn.Name = "RainbowBtn"
     RainbowBtn.Parent = ColorPickerFrame
-    RainbowBtn.Position = UDim2.new(0, 250, 0, 113)
-    RainbowBtn.Size = UDim2.new(0, 85, 0, 22)
+    RainbowBtn.Position = UDim2.new(0, 250, 0, 110)
+    RainbowBtn.Size = UDim2.new(0, 85, 0, 15)
     RainbowBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
     RainbowBtn.Font = Enum.Font.Gotham
     RainbowBtn.Text = "Rainbow"
     RainbowBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    RainbowBtn.TextSize = 13
+    RainbowBtn.TextSize = 12
     RainbowBtn.AutoButtonColor = false
+    RainbowBtn.Visible = false
     
     RainbowBtnCorner.CornerRadius = UDim.new(0, 4)
     RainbowBtnCorner.Parent = RainbowBtn
@@ -1897,22 +1900,59 @@ function tabcontent:ColorPicker(text, preset, callback)
         end
     end)
     
-    -- Toggle color picker (only header click)
+    -- Toggle color picker with smooth animation
     ColorPickerHeader.MouseButton1Click:Connect(function()
         ColorPickerToggled = not ColorPickerToggled
         if ColorPickerToggled then
-            ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 214), "Out", "Quart", 0.2, true)
-            ColorPickerShow:TweenSize(UDim2.new(0, 0, 0, 0), "Out", "Quart", 0.2, true)
+            -- Expand container
+            ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 190), "Out", "Quart", 0.2, true)
+            
+            -- Show content frame
+            ColorPickerFrame.Visible = true
+            PreviewBG.Visible = true
+            RainbowBtn.Visible = true
+            
+            -- Animate small square to cube position and size
+            local startPos = ColorPickerShow.Position
+            local startSize = ColorPickerShow.Size
+            
+            TweenService:Create(ColorPickerShow, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 292.5, 0, 52.5),
+                Size = UDim2.new(0, 85, 0, 85)
+            }):Play()
+            
+            task.wait(0.3)
+            -- Hide small square, show cube
+            ColorPickerShow.Visible = false
         else
+            -- Show small square at cube position
+            ColorPickerShow.Visible = true
+            ColorPickerShow.Position = UDim2.new(0, 292.5, 0, 52.5)
+            ColorPickerShow.Size = UDim2.new(0, 85, 0, 85)
+            
+            -- Animate back to small square
+            TweenService:Create(ColorPickerShow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Position = UDim2.new(0.86, 0, 0.286, 0),
+                Size = UDim2.new(0, 37, 0, 18)
+            }):Play()
+            
+            -- Collapse container
             ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quart", 0.2, true)
-            ColorPickerShow:TweenSize(UDim2.new(0, 37, 0, 18), "Out", "Quart", 0.2, true)
+            
+            task.wait(0.25)
+            -- Hide content frame
+            ColorPickerFrame.Visible = false
+            PreviewBG.Visible = false
+            RainbowBtn.Visible = false
         end
-        task.wait(0.2)
+        task.wait(0.05)
         Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
     end)
     
     Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 end
+
+
 
 
         function tabcontent:MultiDropdown(text, list, callback, default)
