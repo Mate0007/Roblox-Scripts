@@ -1606,6 +1606,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     ColorPickerShow.BackgroundColor3 = preset
     ColorPickerShow.Position = UDim2.new(0.86, 0, 0.286, 0)
     ColorPickerShow.Size = UDim2.new(0, 37, 0, 18)
+    ColorPickerShow.AnchorPoint = Vector2.new(0.5, 0.5)
     ColorPickerShow.ZIndex = 11
     
     ColorPickerShowCorner.CornerRadius = UDim.new(0, 6)
@@ -1614,14 +1615,14 @@ function tabcontent:ColorPicker(text, preset, callback)
     ColorPickerFrame.Name = "ColorPickerFrame"
     ColorPickerFrame.Parent = ColorPickerBtn
     ColorPickerFrame.BackgroundTransparency = 1
-    ColorPickerFrame.Position = UDim2.new(0, 0, 0, 45)
-    ColorPickerFrame.Size = UDim2.new(0, 363, 0, 165)
+    ColorPickerFrame.Position = UDim2.new(0, 0, 0, 50)  -- Moved down from 45 to 50
+    ColorPickerFrame.Size = UDim2.new(0, 363, 0, 160)
     
-    -- SV Picker (Main color box - left side)
+    -- SV Picker (Main color box - left side) - Moved down 10px
     SVFrame.Name = "SVFrame"
     SVFrame.Parent = ColorPickerFrame
     SVFrame.BackgroundColor3 = Color3.fromHSV(Hue, 1, 1)
-    SVFrame.Position = UDim2.new(0.036, 0, 0, 0)
+    SVFrame.Position = UDim2.new(0.036, 0, 0, 10)  -- Moved down from 0 to 10
     SVFrame.Size = UDim2.new(0, 180, 0, 100)
     
     SVFrameCorner.CornerRadius = UDim.new(0, 4)
@@ -1652,10 +1653,10 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     BrightGrad.Parent = Brightness
     
-    -- Hue Bar (with proper spacing - matches transparency slider gap)
+    -- Hue Bar (aligned with transparency slider end) - Moved down 10px
     HueFrame.Name = "HueFrame"
     HueFrame.Parent = ColorPickerFrame
-    HueFrame.Position = UDim2.new(0, 198, 0, 0)  -- Changed from 193 to 198 (5px more gap)
+    HueFrame.Position = UDim2.new(0, 211, 0, 10)  -- Changed from 198 to 211, moved down to 10
     HueFrame.Size = UDim2.new(0, 15, 0, 100)
     
     HueFrameCorner.CornerRadius = UDim.new(0, 4)
@@ -1673,12 +1674,12 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     HueGradient.Parent = HueFrame
     
-    -- Transparency slider (below SV picker)
+    -- Transparency slider (below SV picker) - Moved down 10px
     TransBG.Name = "TransBG"
     TransBG.Parent = ColorPickerFrame
     TransBG.BackgroundTransparency = 1
-    TransBG.Position = UDim2.new(0.036, 0, 0, 110)
-    TransBG.Size = UDim2.new(0, 213, 0, 15)  -- Adjusted to match new hue position
+    TransBG.Position = UDim2.new(0.036, 0, 0, 120)  -- Moved down from 110 to 120
+    TransBG.Size = UDim2.new(0, 226, 0, 15)  -- Extended width to 226 to align with hue
     TransBG.Image = "rbxassetid://3887014957"
     TransBG.ScaleType = Enum.ScaleType.Tile
     TransBG.TileSize = UDim2.new(0, 10, 0, 10)
@@ -1701,12 +1702,13 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     TransGradient.Parent = TransFrame
     
-    -- Preview Container (middle area - shows transparency effect)
+    -- Preview Container (middle area - shows transparency effect) - Moved down 10px
     PreviewContainer.Name = "PreviewContainer"
     PreviewContainer.Parent = ColorPickerFrame
     PreviewContainer.BackgroundTransparency = 1
-    PreviewContainer.Position = UDim2.new(0, 245, 0, 15)
+    PreviewContainer.Position = UDim2.new(0, 250, 0, 25)  -- Moved down from 15 to 25
     PreviewContainer.Size = UDim2.new(0, 85, 0, 85)
+    PreviewContainer.AnchorPoint = Vector2.new(0.5, 0.5)
     
     PreviewBG.Name = "PreviewBG"
     PreviewBG.Parent = PreviewContainer
@@ -1728,11 +1730,12 @@ function tabcontent:ColorPicker(text, preset, callback)
     PreviewCorner.CornerRadius = UDim.new(0, 6)
     PreviewCorner.Parent = PreviewColor
     
-    -- Rainbow button (below preview cube)
+    -- Rainbow button (below preview cube) - Moved down 10px
     RainbowBtn.Name = "RainbowBtn"
     RainbowBtn.Parent = ColorPickerFrame
-    RainbowBtn.Position = UDim2.new(0, 245, 0, 108)
+    RainbowBtn.Position = UDim2.new(0, 250, 0, 118)  -- Moved down from 108 to 118
     RainbowBtn.Size = UDim2.new(0, 85, 0, 22)
+    RainbowBtn.AnchorPoint = Vector2.new(0.5, 0.5)
     RainbowBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
     RainbowBtn.Font = Enum.Font.Gotham
     RainbowBtn.Text = "Rainbow"
@@ -1897,15 +1900,39 @@ function tabcontent:ColorPicker(text, preset, callback)
         end
     end)
     
-    -- Toggle color picker (ONLY when clicking header)
+    -- Toggle color picker (ONLY when clicking header) with smooth animation
     ColorPickerHeader.MouseButton1Click:Connect(function()
         ColorPickerToggled = not ColorPickerToggled
         if ColorPickerToggled then
+            -- Expand main container
             ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 214), "Out", "Quart", 0.2, true)
-            ColorPickerShow:TweenSize(UDim2.new(0, 0, 0, 0), "Out", "Quart", 0.2, true)
+            
+            -- Hide small preview
+            TweenService:Create(ColorPickerShow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 0, 0, 0)
+            }):Play()
+            
+            -- Show large preview with smooth scale animation
+            task.wait(0.1)
+            PreviewContainer.Size = UDim2.new(0, 0, 0, 0)
+            PreviewContainer.Visible = true
+            TweenService:Create(PreviewContainer, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 85, 0, 85)
+            }):Play()
         else
+            -- Collapse main container
             ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quart", 0.2, true)
-            ColorPickerShow:TweenSize(UDim2.new(0, 37, 0, 18), "Out", "Quart", 0.2, true)
+            
+            -- Hide large preview with smooth scale animation
+            TweenService:Create(PreviewContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2.new(0, 0, 0, 0)
+            }):Play()
+            
+            -- Show small preview
+            task.wait(0.1)
+            TweenService:Create(ColorPickerShow, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 37, 0, 18)
+            }):Play()
         end
         task.wait(0.2)
         Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
@@ -1913,6 +1940,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     
     Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 end
+
 
 
         function tabcontent:MultiDropdown(text, list, callback, default)
