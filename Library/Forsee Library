@@ -1530,8 +1530,9 @@ function tabcontent:ColorPicker(text, preset, callback)
     if Val == 0 then Val = 1 end
     local Transparency = 0
     
-    local ColorPickerBtn = Instance.new("TextButton")
+    local ColorPickerBtn = Instance.new("Frame")
     local ColorPickerBtnCorner = Instance.new("UICorner")
+    local ColorPickerHeader = Instance.new("TextButton")
     local ColorPickerTitle = Instance.new("TextLabel")
     local ColorPickerShow = Instance.new("Frame")
     local ColorPickerShowCorner = Instance.new("UICorner")
@@ -1566,20 +1567,29 @@ function tabcontent:ColorPicker(text, preset, callback)
     local RainbowBtn = Instance.new("TextButton")
     local RainbowBtnCorner = Instance.new("UICorner")
     
+    -- Main container (Frame instead of TextButton to prevent accidental clicks)
     ColorPickerBtn.Name = "ColorPickerBtn"
     ColorPickerBtn.Parent = Tab
     ColorPickerBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
     ColorPickerBtn.Size = UDim2.new(0, 363, 0, 42)
-    ColorPickerBtn.AutoButtonColor = false
-    ColorPickerBtn.Font = Enum.Font.SourceSans
-    ColorPickerBtn.Text = ""
     ColorPickerBtn.ClipsDescendants = true
     
     ColorPickerBtnCorner.CornerRadius = UDim.new(0, 6)
     ColorPickerBtnCorner.Parent = ColorPickerBtn
     
+    -- Header (clickable area ONLY for toggling)
+    ColorPickerHeader.Name = "ColorPickerHeader"
+    ColorPickerHeader.Parent = ColorPickerBtn
+    ColorPickerHeader.BackgroundTransparency = 1
+    ColorPickerHeader.Size = UDim2.new(1, 0, 0, 42)
+    ColorPickerHeader.Position = UDim2.new(0, 0, 0, 0)
+    ColorPickerHeader.Font = Enum.Font.SourceSans
+    ColorPickerHeader.Text = ""
+    ColorPickerHeader.AutoButtonColor = false
+    ColorPickerHeader.ZIndex = 10
+    
     ColorPickerTitle.Name = "ColorPickerTitle"
-    ColorPickerTitle.Parent = ColorPickerBtn
+    ColorPickerTitle.Parent = ColorPickerHeader
     ColorPickerTitle.BackgroundTransparency = 1
     ColorPickerTitle.Position = UDim2.new(0.036, 0, 0, 0)
     ColorPickerTitle.Size = UDim2.new(0, 187, 0, 42)
@@ -1588,14 +1598,15 @@ function tabcontent:ColorPicker(text, preset, callback)
     ColorPickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     ColorPickerTitle.TextSize = 14
     ColorPickerTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ColorPickerTitle.ZIndex = 11
     
     -- Small preview when closed
     ColorPickerShow.Name = "ColorPickerShow"
-    ColorPickerShow.Parent = ColorPickerBtn
+    ColorPickerShow.Parent = ColorPickerHeader
     ColorPickerShow.BackgroundColor3 = preset
     ColorPickerShow.Position = UDim2.new(0.86, 0, 0.286, 0)
     ColorPickerShow.Size = UDim2.new(0, 37, 0, 18)
-    ColorPickerShow.ZIndex = 2
+    ColorPickerShow.ZIndex = 11
     
     ColorPickerShowCorner.CornerRadius = UDim.new(0, 6)
     ColorPickerShowCorner.Parent = ColorPickerShow
@@ -1641,10 +1652,10 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     BrightGrad.Parent = Brightness
     
-    -- Hue Bar (next to SV picker)
+    -- Hue Bar (with proper spacing - matches transparency slider gap)
     HueFrame.Name = "HueFrame"
     HueFrame.Parent = ColorPickerFrame
-    HueFrame.Position = UDim2.new(0, 193, 0, 0)
+    HueFrame.Position = UDim2.new(0, 198, 0, 0)  -- Changed from 193 to 198 (5px more gap)
     HueFrame.Size = UDim2.new(0, 15, 0, 100)
     
     HueFrameCorner.CornerRadius = UDim.new(0, 4)
@@ -1667,7 +1678,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     TransBG.Parent = ColorPickerFrame
     TransBG.BackgroundTransparency = 1
     TransBG.Position = UDim2.new(0.036, 0, 0, 110)
-    TransBG.Size = UDim2.new(0, 208, 0, 15)
+    TransBG.Size = UDim2.new(0, 213, 0, 15)  -- Adjusted to match new hue position
     TransBG.Image = "rbxassetid://3887014957"
     TransBG.ScaleType = Enum.ScaleType.Tile
     TransBG.TileSize = UDim2.new(0, 10, 0, 10)
@@ -1694,7 +1705,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     PreviewContainer.Name = "PreviewContainer"
     PreviewContainer.Parent = ColorPickerFrame
     PreviewContainer.BackgroundTransparency = 1
-    PreviewContainer.Position = UDim2.new(0, 240, 0, 15)
+    PreviewContainer.Position = UDim2.new(0, 245, 0, 15)
     PreviewContainer.Size = UDim2.new(0, 85, 0, 85)
     
     PreviewBG.Name = "PreviewBG"
@@ -1720,7 +1731,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     -- Rainbow button (below preview cube)
     RainbowBtn.Name = "RainbowBtn"
     RainbowBtn.Parent = ColorPickerFrame
-    RainbowBtn.Position = UDim2.new(0, 240, 0, 108)
+    RainbowBtn.Position = UDim2.new(0, 245, 0, 108)
     RainbowBtn.Size = UDim2.new(0, 85, 0, 22)
     RainbowBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
     RainbowBtn.Font = Enum.Font.Gotham
@@ -1886,8 +1897,8 @@ function tabcontent:ColorPicker(text, preset, callback)
         end
     end)
     
-    -- Toggle color picker
-    ColorPickerBtn.MouseButton1Click:Connect(function()
+    -- Toggle color picker (ONLY when clicking header)
+    ColorPickerHeader.MouseButton1Click:Connect(function()
         ColorPickerToggled = not ColorPickerToggled
         if ColorPickerToggled then
             ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 214), "Out", "Quart", 0.2, true)
