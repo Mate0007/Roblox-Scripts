@@ -74,7 +74,6 @@ local function SaveConfig(name)
         elseif element.Type == "Bind" then
             configData.Elements[id] = {Type = "Bind", Value = element.Value}
         elseif element.Type == "ColorPicker" then
-            -- Save color as table
             configData.Elements[id] = {
                 Type = "ColorPicker", 
                 Value = {
@@ -139,7 +138,6 @@ local function LoadConfig(name)
         for id, data in pairs(config.Elements) do
             if ConfigElements[id] and ConfigElements[id].LoadValue then
                 if data.Type == "ColorPicker" and data.Value and data.Value.Color then
-                    -- Reconstruct Color3 from table
                     local c = data.Value.Color
                     local colorObj = Color3.new(c.R, c.G, c.B)
                     ConfigElements[id].LoadValue(colorObj, data.Value.Transparency or 0)
@@ -675,6 +673,23 @@ function lib:Window(text, preset, closebind)
                     element.BackgroundColor3 = toch
                 end
             end
+        end
+        -- Update dropdown text colors dynamically
+        for _, tab in pairs(TabFolder:GetChildren()) do
+             for _, element in pairs(tab:GetDescendants()) do
+                 if element.Name == "DropItemHolder" then
+                     for _, item in pairs(element:GetChildren()) do
+                         if item:IsA("TextButton") and item.Name == "Item" then
+                             -- We need to check if this item is currently selected to update its color
+                             -- But we don't have easy access to the dropdown's currentValue here easily.
+                             -- However, we can assume if it's NOT white, it was the selected color.
+                             if item.TextColor3 ~= Color3.fromRGB(255, 255, 255) then
+                                 item.TextColor3 = toch
+                             end
+                         end
+                     end
+                 end
+             end
         end
     end
 
@@ -1511,8 +1526,6 @@ function lib:Window(text, preset, closebind)
             local elementId = "ColorPicker_" .. globalElementIdCounter
             
             local ColorPickerToggled = false
-            local OldToggleColor = Color3.fromRGB(0, 0, 0)
-            local OldColor = Color3.fromRGB(0, 0, 0)
             local HSV = Color3.toHSV(preset)
             local H, S, V = HSV
             local Transparency = 0 -- 0 is visible, 1 is invisible
@@ -1801,7 +1814,7 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- UPDATED DROPDOWN (Text Color Change logic)
+        -- UPDATED DROPDOWN (Fixed breaking issue + Text Color logic)
         function tabcontent:Dropdown(text, listOrFunction, callback, default, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Dropdown_" .. globalElementIdCounter
@@ -1901,7 +1914,21 @@ function lib:Window(text, preset, closebind)
                 }
             end
 
+            local function UpdateSelectionVisuals()
+                for _, itemBtn in ipairs(DropItemHolder:GetChildren()) do
+                    if itemBtn:IsA("TextButton") then
+                        if itemBtn.Text == tostring(currentValue) then
+                            itemBtn.TextColor3 = PresetColor
+                        else
+                            itemBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        end
+                    end
+                end
+            end
+
             local function populateItems(list)
+                -- Only clear items if refreshing logic is needed, or if list changed.
+                -- Since this is the initial populate or hard refresh:
                 for _, child in pairs(DropItemHolder:GetChildren()) do
                     if child:IsA("TextButton") then
                         child:Destroy()
@@ -1930,20 +1957,13 @@ function lib:Window(text, preset, closebind)
                     Item.Font = Enum.Font.Gotham
                     Item.Text = v
                     Item.TextSize = 15.000
-
-                    -- Check if this is the selected item
-                    if v == currentValue then
-                        Item.TextColor3 = PresetColor -- Use the UI color for text
-                    else
-                        Item.TextColor3 = Color3.fromRGB(255, 255, 255) -- Standard white for others
-                    end
+                    Item.TextColor3 = Color3.fromRGB(255, 255, 255) -- Default white
 
                     ItemCorner.CornerRadius = UDim.new(0, 6)
                     ItemCorner.Name = "ItemCorner"
                     ItemCorner.Parent = Item
 
                     Item.MouseEnter:Connect(function()
-                        -- Only lighten the BG slightly on hover, regardless of selection
                         TweenService:Create(Item, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
                     end)
 
@@ -1958,10 +1978,10 @@ function lib:Window(text, preset, closebind)
                         if isConfigurable then
                             ConfigElements[elementId].Value = currentValue
                         end
-                        pcall(callback, v)
                         
-                        -- Re-populate to update the text colors immediately
-                        populateItems(list) 
+                        UpdateSelectionVisuals() -- JUST update colors, don't destroy buttons!
+                        
+                        pcall(callback, v)
 
                         Dropdown:TweenSize(
                             UDim2.new(0, 363, 0, 42),
@@ -1981,6 +2001,7 @@ function lib:Window(text, preset, closebind)
 
                     DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
                 end
+                UpdateSelectionVisuals()
             end
 
             local initialList = isDynamic and listOrFunction() or listOrFunction
@@ -1991,6 +2012,9 @@ function lib:Window(text, preset, closebind)
                 if isDynamic then
                     local newList = listOrFunction()
                     populateItems(newList)
+                else
+                    -- Just update colors if static list
+                    UpdateSelectionVisuals()
                 end
             end
 
@@ -1998,11 +2022,10 @@ function lib:Window(text, preset, closebind)
                 function()
                     if droptog == false then
                         if isDynamic then
-                            dropdownObj.Refresh()
-                        else
-                            -- Refresh purely to ensure text color is correct based on current PresetColor
-                            populateItems(initialList)
+                            local newList = listOrFunction()
+                            populateItems(newList)
                         end
+                        UpdateSelectionVisuals()
 
                         Dropdown:TweenSize(
                             UDim2.new(0, 363, 0, 55 + framesize),
