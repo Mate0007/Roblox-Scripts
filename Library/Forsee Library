@@ -19,7 +19,6 @@ local globalElementIdCounter = 0
 
 -- Notification management
 local CurrentNotification = nil
-local NotificationCallback = nil
 
 -- Track UI state
 local uiEnabled = true
@@ -69,6 +68,8 @@ local function SaveConfig(name)
             configData.Elements[id] = {Type = "Slider", Value = element.Value}
         elseif element.Type == "Dropdown" then
             configData.Elements[id] = {Type = "Dropdown", Value = element.Value}
+        elseif element.Type == "MultiDropdown" then
+            configData.Elements[id] = {Type = "MultiDropdown", Value = element.Value}
         elseif element.Type == "Textbox" then
             configData.Elements[id] = {Type = "Textbox", Value = element.Value}
         elseif element.Type == "Bind" then
@@ -674,15 +675,14 @@ function lib:Window(text, preset, closebind)
                 end
             end
         end
+        
         -- Update dropdown text colors dynamically
         for _, tab in pairs(TabFolder:GetChildren()) do
              for _, element in pairs(tab:GetDescendants()) do
                  if element.Name == "DropItemHolder" then
                      for _, item in pairs(element:GetChildren()) do
                          if item:IsA("TextButton") and item.Name == "Item" then
-                             -- We need to check if this item is currently selected to update its color
-                             -- But we don't have easy access to the dropdown's currentValue here easily.
-                             -- However, we can assume if it's NOT white, it was the selected color.
+                             -- Check current text color. If it's NOT white (meaning selected), update to new preset
                              if item.TextColor3 ~= Color3.fromRGB(255, 255, 255) then
                                  item.TextColor3 = toch
                              end
@@ -1520,7 +1520,7 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- UPDATED COLOR PICKER (Hue/Sat + Transparency + Rainbow)
+        -- REWRITTEN COLOR PICKER (Fixes visuals, adds Hue, fixes transparency, adds rainbow text/cube anim)
         function tabcontent:ColorPicker(text, preset, callback)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "ColorPicker_" .. globalElementIdCounter
@@ -1538,26 +1538,29 @@ function lib:Window(text, preset, closebind)
             
             -- Container for the actual pickers
             local ColorPickerFrame = Instance.new("Frame") 
-            local ColorPickerFrameCorner = Instance.new("UICorner")
             
-            -- Palette (Hue/Sat)
-            local Palette = Instance.new("ImageButton")
+            -- Pickers
+            local Palette = Instance.new("ImageButton") -- SV Square
             local PaletteCorner = Instance.new("UICorner")
             local PaletteCursor = Instance.new("Frame")
             local PaletteCursorCorner = Instance.new("UICorner")
             
-            -- Transparency Slider
-            local TranspSlider = Instance.new("ImageButton")
+            local HueSlider = Instance.new("ImageButton") -- Hue Slider (NEW)
+            local HueSliderCorner = Instance.new("UICorner")
+            local HueGradient = Instance.new("UIGradient")
+            local HueCursor = Instance.new("Frame")
+            local HueCursorCorner = Instance.new("UICorner")
+
+            local TranspSlider = Instance.new("ImageButton") -- Transparency Slider
             local TranspSliderCorner = Instance.new("UICorner")
             local TranspGradient = Instance.new("UIGradient")
             local TranspCursor = Instance.new("Frame")
             local TranspCursorCorner = Instance.new("UICorner")
-            local TranspBackground = Instance.new("ImageLabel") -- Checkerboard
+            local TranspBackground = Instance.new("ImageLabel") 
             
-            -- Rainbow Button
+            -- Rainbow Text Button
             local RainbowToggle = Instance.new("TextButton")
             local RainbowToggleCorner = Instance.new("UICorner")
-            local RainbowIcon = Instance.new("ImageLabel")
 
             ColorPickerBtn.Name = "ColorPickerBtn"
             ColorPickerBtn.Parent = Tab
@@ -1568,7 +1571,7 @@ function lib:Window(text, preset, closebind)
             ColorPickerBtn.Text = ""
             ColorPickerBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
             ColorPickerBtn.TextSize = 14.000
-            ColorPickerBtn.ClipsDescendants = true -- Important for animation
+            ColorPickerBtn.ClipsDescendants = true 
 
             ColorPickerBtnCorner.CornerRadius = UDim.new(0, 6)
             ColorPickerBtnCorner.Parent = ColorPickerBtn
@@ -1585,6 +1588,7 @@ function lib:Window(text, preset, closebind)
             ColorPickerTitle.TextSize = 14.000
             ColorPickerTitle.TextXAlignment = Enum.TextXAlignment.Left
 
+            -- The Preview Box
             ColorPickerShow.Name = "ColorPickerShow"
             ColorPickerShow.Parent = ColorPickerBtn
             ColorPickerShow.BackgroundColor3 = preset
@@ -1600,15 +1604,15 @@ function lib:Window(text, preset, closebind)
             ColorPickerFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             ColorPickerFrame.BackgroundTransparency = 1
             ColorPickerFrame.Position = UDim2.new(0, 0, 0, 45)
-            ColorPickerFrame.Size = UDim2.new(0, 363, 0, 150) -- Height of open picker
+            ColorPickerFrame.Size = UDim2.new(0, 363, 0, 140) -- Height of open picker area
 
-            -- 1. Main Palette (Hue & Saturation)
+            -- 1. SV Square (Saturation / Value)
             Palette.Name = "Palette"
             Palette.Parent = ColorPickerFrame
-            Palette.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Palette.BackgroundColor3 = Color3.fromHSV(H, 1, 1) -- Important: Hue sets BG
             Palette.Position = UDim2.new(0.036, 0, 0, 0)
-            Palette.Size = UDim2.new(0, 260, 0, 100)
-            Palette.Image = "rbxassetid://4155801252" -- Color Wheel / Square map
+            Palette.Size = UDim2.new(0, 100, 0, 100)
+            Palette.Image = "rbxassetid://4155801252" -- White to transparent/black overlay
             
             PaletteCorner.CornerRadius = UDim.new(0, 4)
             PaletteCorner.Parent = Palette
@@ -1619,19 +1623,56 @@ function lib:Window(text, preset, closebind)
             PaletteCursor.BorderColor3 = Color3.fromRGB(0,0,0)
             PaletteCursor.Size = UDim2.new(0, 6, 0, 6)
             PaletteCursor.AnchorPoint = Vector2.new(0.5, 0.5)
-            PaletteCursor.Position = UDim2.new(0, 0, 0, 0) -- Needs calculation
+            PaletteCursor.Position = UDim2.new(S, 0, 1-V, 0) 
 
             PaletteCursorCorner.CornerRadius = UDim.new(1, 0)
             PaletteCursorCorner.Parent = PaletteCursor
 
-            -- 2. Transparency Slider (The "Bi Picker" replacement)
-            -- Checkerboard background to show transparency
+            -- 2. Hue Slider
+            HueSlider.Name = "HueSlider"
+            HueSlider.Parent = ColorPickerFrame
+            HueSlider.Position = UDim2.new(0.036, 0, 0, 110)
+            HueSlider.Size = UDim2.new(0, 100, 0, 10)
+            HueSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            HueSlider.AutoButtonColor = false
+            HueSlider.Image = "" 
+
+            HueSliderCorner.CornerRadius = UDim.new(0, 4)
+            HueSliderCorner.Parent = HueSlider
+
+            HueGradient.Color = ColorSequence.new{
+                ColorSequenceKeypoint.new(0, Color3.fromHSV(1,1,1)),
+                ColorSequenceKeypoint.new(0.1, Color3.fromHSV(0.9,1,1)),
+                ColorSequenceKeypoint.new(0.2, Color3.fromHSV(0.8,1,1)),
+                ColorSequenceKeypoint.new(0.3, Color3.fromHSV(0.7,1,1)),
+                ColorSequenceKeypoint.new(0.4, Color3.fromHSV(0.6,1,1)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromHSV(0.5,1,1)),
+                ColorSequenceKeypoint.new(0.6, Color3.fromHSV(0.4,1,1)),
+                ColorSequenceKeypoint.new(0.7, Color3.fromHSV(0.3,1,1)),
+                ColorSequenceKeypoint.new(0.8, Color3.fromHSV(0.2,1,1)),
+                ColorSequenceKeypoint.new(0.9, Color3.fromHSV(0.1,1,1)),
+                ColorSequenceKeypoint.new(1, Color3.fromHSV(0,1,1))
+            }
+            HueGradient.Parent = HueSlider
+
+            HueCursor.Name = "Cursor"
+            HueCursor.Parent = HueSlider
+            HueCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            HueCursor.BorderColor3 = Color3.fromRGB(0,0,0)
+            HueCursor.Size = UDim2.new(0, 2, 1, 0)
+            HueCursor.AnchorPoint = Vector2.new(0.5, 0)
+            HueCursor.Position = UDim2.new(1-H, 0, 0, 0)
+
+            HueCursorCorner.CornerRadius = UDim.new(0, 2)
+            HueCursorCorner.Parent = HueCursor
+
+            -- 3. Transparency Slider
             TranspBackground.Name = "TranspBackground"
             TranspBackground.Parent = ColorPickerFrame
-            TranspBackground.Position = UDim2.new(0.036, 0, 0, 110)
-            TranspBackground.Size = UDim2.new(0, 260, 0, 20)
-            TranspBackground.Image = "rbxassetid://3887014957" -- Checkerboard texture
-            TranspBackground.TileSize = UDim2.new(0, 10, 0, 10)
+            TranspBackground.Position = UDim2.new(0.036, 0, 0, 130)
+            TranspBackground.Size = UDim2.new(0, 100, 0, 10)
+            TranspBackground.Image = "rbxassetid://3887014957" -- Checkerboard
+            TranspBackground.TileSize = UDim2.new(0, 5, 0, 5)
             TranspBackground.ScaleType = Enum.ScaleType.Tile
             
             local TranspBgCorner = Instance.new("UICorner")
@@ -1639,11 +1680,11 @@ function lib:Window(text, preset, closebind)
             TranspBgCorner.Parent = TranspBackground
 
             TranspSlider.Name = "TranspSlider"
-            TranspSlider.Parent = TranspBackground -- Parented to checkerboard
+            TranspSlider.Parent = TranspBackground 
             TranspSlider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             TranspSlider.BackgroundTransparency = 0
             TranspSlider.Size = UDim2.new(1, 0, 1, 0)
-            TranspSlider.Image = "" -- No image, just gradient
+            TranspSlider.Image = "" 
             TranspSlider.AutoButtonColor = false
 
             TranspSliderCorner.CornerRadius = UDim.new(0, 4)
@@ -1654,8 +1695,8 @@ function lib:Window(text, preset, closebind)
                 ColorSequenceKeypoint.new(1, preset)
             }
             TranspGradient.Transparency = NumberSequence.new{
-                NumberSequenceKeypoint.new(0, 0), -- Solid
-                NumberSequenceKeypoint.new(1, 1)  -- Transparent
+                NumberSequenceKeypoint.new(0, 0), 
+                NumberSequenceKeypoint.new(1, 1) 
             }
             TranspGradient.Parent = TranspSlider
 
@@ -1663,34 +1704,28 @@ function lib:Window(text, preset, closebind)
             TranspCursor.Parent = TranspSlider
             TranspCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             TranspCursor.BorderColor3 = Color3.fromRGB(0,0,0)
-            TranspCursor.Size = UDim2.new(0, 4, 1, 0)
+            TranspCursor.Size = UDim2.new(0, 2, 1, 0)
             TranspCursor.AnchorPoint = Vector2.new(0.5, 0)
-            TranspCursor.Position = UDim2.new(0, 0, 0, 0)
+            TranspCursor.Position = UDim2.new(Transparency, 0, 0, 0)
 
-            -- 3. Rainbow Button (Moved down and right as requested)
+            -- 4. Rainbow Text Button
             RainbowToggle.Name = "RainbowToggle"
             RainbowToggle.Parent = ColorPickerFrame
-            -- Align bottom with transparency slider (110 + 20 = 130), move right
-            RainbowToggle.Position = UDim2.new(0, 315, 0, 107) 
-            RainbowToggle.Size = UDim2.new(0, 25, 0, 25)
+            RainbowToggle.Position = UDim2.new(1, -80, 1, -25) 
+            RainbowToggle.Size = UDim2.new(0, 70, 0, 20)
             RainbowToggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-            RainbowToggle.Text = ""
-            
-            RainbowToggleCorner.CornerRadius = UDim.new(0, 4)
-            RainbowToggleCorner.Parent = RainbowToggle
-            
-            RainbowIcon.Parent = RainbowToggle
-            RainbowIcon.BackgroundTransparency = 1
-            RainbowIcon.Size = UDim2.new(1, -4, 1, -4)
-            RainbowIcon.Position = UDim2.new(0, 2, 0, 2)
-            RainbowIcon.Image = "rbxassetid://6026152740" -- Rainbow icon
+            RainbowToggle.BackgroundTransparency = 1
+            RainbowToggle.Text = "Rainbow"
+            RainbowToggle.TextColor3 = Color3.fromRGB(150, 150, 150)
+            RainbowToggle.Font = Enum.Font.GothamBold
+            RainbowToggle.TextSize = 12
             
             -- Logic
             local draggingColor = false
+            local draggingHue = false
             local draggingTransp = false
             local rainbowEnabled = false
             
-            -- Config support for ColorPicker
             ConfigElements[elementId] = {
                 Type = "ColorPicker",
                 Value = {Color = preset, Transparency = 0},
@@ -1701,22 +1736,25 @@ function lib:Window(text, preset, closebind)
                     H, S, V = HSV
                     
                     ColorPickerShow.BackgroundColor3 = color
+                    Palette.BackgroundColor3 = Color3.fromHSV(H, 1, 1)
                     TranspGradient.Color = ColorSequence.new{
                         ColorSequenceKeypoint.new(0, color),
                         ColorSequenceKeypoint.new(1, color)
                     }
                     
-                    -- Update cursors visually (simplified calculation)
                     TranspCursor.Position = UDim2.new(Transparency, 0, 0, 0)
-                    PaletteCursor.Position = UDim2.new(1-H, 0, 1-S, 0)
+                    PaletteCursor.Position = UDim2.new(S, 0, 1-V, 0)
+                    HueCursor.Position = UDim2.new(1-H, 0, 0, 0)
                     
                     pcall(callback, color, Transparency)
                 end
             }
 
             local function UpdateColor()
-                local color = Color3.fromHSV(H, S, 1) -- V locked to 1 for brightness
+                local color = Color3.fromHSV(H, S, V) 
                 ColorPickerShow.BackgroundColor3 = color
+                Palette.BackgroundColor3 = Color3.fromHSV(H, 1, 1) -- Update Hue BG
+                
                 TranspGradient.Color = ColorSequence.new{
                     ColorSequenceKeypoint.new(0, color),
                     ColorSequenceKeypoint.new(1, color)
@@ -1728,17 +1766,24 @@ function lib:Window(text, preset, closebind)
             -- Rainbow Logic
             task.spawn(function()
                 while true do
-                    if rainbowEnabled and ColorPickerToggled then
+                    if rainbowEnabled then
                         H = lib.RainbowColorValue
                         local rainbowColor = Color3.fromHSV(H, 1, 1)
-                        ColorPickerShow.BackgroundColor3 = rainbowColor
-                        -- Update Palette Cursor for rainbow
-                        PaletteCursor.Position = UDim2.new(1 - H, 0, 0, 0) 
                         
-                        TranspGradient.Color = ColorSequence.new{
-                            ColorSequenceKeypoint.new(0, rainbowColor),
-                            ColorSequenceKeypoint.new(1, rainbowColor)
-                        }
+                        -- Update visuals even if closed
+                        ColorPickerShow.BackgroundColor3 = rainbowColor
+                        RainbowToggle.TextColor3 = rainbowColor
+                        
+                        if ColorPickerToggled then
+                           Palette.BackgroundColor3 = Color3.fromHSV(H, 1, 1)
+                           PaletteCursor.Position = UDim2.new(1, 0, 0, 0) -- Sat/Val maxed
+                           HueCursor.Position = UDim2.new(1-H, 0, 0, 0)
+                           
+                           TranspGradient.Color = ColorSequence.new{
+                                ColorSequenceKeypoint.new(0, rainbowColor),
+                                ColorSequenceKeypoint.new(1, rainbowColor)
+                           }
+                        end
                         
                         pcall(callback, rainbowColor, Transparency)
                     end
@@ -1749,9 +1794,11 @@ function lib:Window(text, preset, closebind)
             RainbowToggle.MouseButton1Click:Connect(function()
                 rainbowEnabled = not rainbowEnabled
                 if rainbowEnabled then
-                     TweenService:Create(RainbowToggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60,60,60)}):Play()
+                     TweenService:Create(RainbowToggle, TweenInfo.new(0.2), {TextColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)}):Play()
                 else
-                     TweenService:Create(RainbowToggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,34,34)}):Play()
+                     TweenService:Create(RainbowToggle, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(150,150,150)}):Play()
+                     -- Revert to stored color on disable
+                     UpdateColor()
                 end
             end)
 
@@ -1759,6 +1806,12 @@ function lib:Window(text, preset, closebind)
             Palette.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     draggingColor = true
+                end
+            end)
+            
+            HueSlider.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingHue = true
                 end
             end)
             
@@ -1771,6 +1824,7 @@ function lib:Window(text, preset, closebind)
             UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     draggingColor = false
+                    draggingHue = false
                     draggingTransp = false
                 end
             end)
@@ -1778,19 +1832,26 @@ function lib:Window(text, preset, closebind)
             UserInputService.InputChanged:Connect(function(input)
                 if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                     if draggingColor then
-                        -- Calculate Hue/Sat from palette position
-                        local mousePos = UserInputService:GetMouseLocation() - Vector2.new(0, 36) -- Offset for gui inset
+                        local mousePos = UserInputService:GetMouseLocation() - Vector2.new(0, 36)
                         local relX = math.clamp((mousePos.X - Palette.AbsolutePosition.X) / Palette.AbsoluteSize.X, 0, 1)
                         local relY = math.clamp((mousePos.Y - Palette.AbsolutePosition.Y) / Palette.AbsoluteSize.Y, 0, 1)
                         
                         PaletteCursor.Position = UDim2.new(relX, 0, relY, 0)
+                        S = relX
+                        V = 1 - relY
+                        rainbowEnabled = false 
+                        RainbowToggle.TextColor3 = Color3.fromRGB(150,150,150)
+                        UpdateColor()
+                    elseif draggingHue then
+                        local mousePos = UserInputService:GetMouseLocation() - Vector2.new(0, 36)
+                        local relX = math.clamp((mousePos.X - HueSlider.AbsolutePosition.X) / HueSlider.AbsoluteSize.X, 0, 1)
+                        
+                        HueCursor.Position = UDim2.new(relX, 0, 0, 0)
                         H = 1 - relX
-                        S = 1 - relY
-                        rainbowEnabled = false -- Disable rainbow if manually dragging
-                         TweenService:Create(RainbowToggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34,34,34)}):Play()
+                        rainbowEnabled = false
+                        RainbowToggle.TextColor3 = Color3.fromRGB(150,150,150)
                         UpdateColor()
                     elseif draggingTransp then
-                        -- Calculate Transparency
                         local mousePos = UserInputService:GetMouseLocation() - Vector2.new(0, 36)
                         local relX = math.clamp((mousePos.X - TranspSlider.AbsolutePosition.X) / TranspSlider.AbsoluteSize.X, 0, 1)
                         
@@ -1804,17 +1865,236 @@ function lib:Window(text, preset, closebind)
             ColorPickerBtn.MouseButton1Click:Connect(function()
                 ColorPickerToggled = not ColorPickerToggled
                 if ColorPickerToggled then
-                    ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 185), "Out", "Quart", 0.2, true)
+                    ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 195), "Out", "Quart", 0.2, true)
+                    
+                    -- Tween Preview box to "Cube" in the open space (Right side)
+                    ColorPickerShow:TweenSizeAndPosition(
+                        UDim2.new(0, 50, 0, 50), -- Large Cube
+                        UDim2.new(1, -60, 0, 50), -- Positioned on right
+                        "Out", "Quart", 0.2, true
+                    )
                 else
                     ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quart", 0.2, true)
+                    
+                    -- Revert Preview box to small rect
+                    ColorPickerShow:TweenSizeAndPosition(
+                        UDim2.new(0, 37, 0, 18),
+                        UDim2.new(0.86, 0, 0.286, 0),
+                        "Out", "Quart", 0.2, true
+                    )
                 end
                 Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
             end)
             
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
+        
+        -- NEW MULTI DROPDOWN
+        function tabcontent:MultiDropdown(text, list, default, callback)
+            globalElementIdCounter = globalElementIdCounter + 1
+            local elementId = "MultiDropdown_" .. globalElementIdCounter
+            local droptog = false
+            local framesize = 0
+            local itemcount = 0
+            
+            -- Internal state for selections
+            local selectedItems = {}
+            -- Apply defaults
+            if default then
+                for _, val in pairs(default) do
+                    table.insert(selectedItems, val)
+                end
+            end
 
-        -- UPDATED DROPDOWN (Fixed breaking issue + Text Color logic)
+            local Dropdown = Instance.new("Frame")
+            local DropdownCorner = Instance.new("UICorner")
+            local DropdownBtn = Instance.new("TextButton")
+            local DropdownTitle = Instance.new("TextLabel")
+            local ArrowImg = Instance.new("ImageLabel")
+            local DropItemHolder = Instance.new("ScrollingFrame")
+            local DropLayout = Instance.new("UIListLayout")
+
+            Dropdown.Name = "MultiDropdown"
+            Dropdown.Parent = Tab
+            Dropdown.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+            Dropdown.ClipsDescendants = true
+            Dropdown.Position = UDim2.new(-0.541071415, 0, -0.532915354, 0)
+            Dropdown.Size = UDim2.new(0, 363, 0, 42)
+
+            DropdownCorner.CornerRadius = UDim.new(0, 6)
+            DropdownCorner.Name = "DropdownCorner"
+            DropdownCorner.Parent = Dropdown
+
+            DropdownBtn.Name = "DropdownBtn"
+            DropdownBtn.Parent = Dropdown
+            DropdownBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            DropdownBtn.BackgroundTransparency = 1.000
+            DropdownBtn.Size = UDim2.new(0, 363, 0, 42)
+            DropdownBtn.Font = Enum.Font.SourceSans
+            DropdownBtn.Text = ""
+            DropdownBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+            DropdownBtn.TextSize = 14.000
+
+            DropdownTitle.Name = "DropdownTitle"
+            DropdownTitle.Parent = Dropdown
+            DropdownTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            DropdownTitle.BackgroundTransparency = 1.000
+            DropdownTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
+            DropdownTitle.Size = UDim2.new(0, 187, 0, 42)
+            DropdownTitle.Font = Enum.Font.Gotham
+            DropdownTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+            DropdownTitle.TextSize = 14.000
+            DropdownTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+            local function UpdateHeader()
+                if #selectedItems == 0 then
+                    DropdownTitle.Text = text
+                else
+                    DropdownTitle.Text = text .. " - " .. table.concat(selectedItems, ", ")
+                end
+            end
+            UpdateHeader()
+
+            ArrowImg.Name = "ArrowImg"
+            ArrowImg.Parent = DropdownTitle
+            ArrowImg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            ArrowImg.BackgroundTransparency = 1.000
+            ArrowImg.Position = UDim2.new(1.65240645, 0, 0.190476194, 0)
+            ArrowImg.Size = UDim2.new(0, 26, 0, 26)
+            ArrowImg.Image = "http://www.roblox.com/asset/?id=6034818375"
+
+            DropItemHolder.Name = "DropItemHolder"
+            DropItemHolder.Parent = DropdownTitle
+            DropItemHolder.Active = true
+            DropItemHolder.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            DropItemHolder.BackgroundTransparency = 1.000
+            DropItemHolder.BorderSizePixel = 0
+            DropItemHolder.Position = UDim2.new(-0.00400000019, 0, 1.04999995, 0)
+            DropItemHolder.Size = UDim2.new(0, 342, 0, 0)
+            DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, 0)
+            DropItemHolder.ScrollBarThickness = 3
+
+            DropLayout.Name = "DropLayout"
+            DropLayout.Parent = DropItemHolder
+            DropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+            ConfigElements[elementId] = {
+                Type = "MultiDropdown",
+                Value = selectedItems,
+                LoadValue = function(value)
+                    selectedItems = value or {}
+                    UpdateHeader()
+                    -- Visual update handled in toggle/refresh
+                    for _, btn in pairs(DropItemHolder:GetChildren()) do
+                        if btn:IsA("TextButton") then
+                            if table.find(selectedItems, btn.Text) then
+                                btn.TextColor3 = PresetColor
+                            else
+                                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            end
+                        end
+                    end
+                    pcall(callback, selectedItems)
+                end
+            }
+
+            for i, v in next, list do
+                itemcount = itemcount + 1
+                if itemcount <= 3 then
+                    framesize = framesize + 26
+                    DropItemHolder.Size = UDim2.new(0, 342, 0, framesize)
+                end
+
+                local Item = Instance.new("TextButton")
+                local ItemCorner = Instance.new("UICorner")
+
+                Item.Name = "Item"
+                Item.Parent = DropItemHolder
+                Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                Item.ClipsDescendants = true
+                Item.Size = UDim2.new(0, 335, 0, 25)
+                Item.AutoButtonColor = false
+                Item.Font = Enum.Font.Gotham
+                Item.Text = v
+                Item.TextSize = 15.000
+                
+                if table.find(selectedItems, v) then
+                    Item.TextColor3 = PresetColor
+                else
+                    Item.TextColor3 = Color3.fromRGB(255, 255, 255)
+                end
+
+                ItemCorner.CornerRadius = UDim.new(0, 6)
+                ItemCorner.Name = "ItemCorner"
+                ItemCorner.Parent = Item
+
+                Item.MouseEnter:Connect(function()
+                    TweenService:Create(Item, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
+                end)
+
+                Item.MouseLeave:Connect(function()
+                    TweenService:Create(Item, TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
+                end)
+
+                Item.MouseButton1Click:Connect(function()
+                    local index = table.find(selectedItems, v)
+                    if index then
+                        table.remove(selectedItems, index)
+                        Item.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        table.insert(selectedItems, v)
+                        Item.TextColor3 = PresetColor
+                    end
+                    
+                    UpdateHeader()
+                    ConfigElements[elementId].Value = selectedItems
+                    pcall(callback, selectedItems)
+                end)
+                
+                DropItemHolder.CanvasSize = UDim2.new(0, 0, 0, DropLayout.AbsoluteContentSize.Y)
+            end
+
+            DropdownBtn.MouseButton1Click:Connect(
+                function()
+                    if droptog == false then
+                        Dropdown:TweenSize(
+                            UDim2.new(0, 363, 0, 55 + framesize),
+                            Enum.EasingDirection.Out,
+                            Enum.EasingStyle.Quart,
+                            .2,
+                            true
+                        )
+                        TweenService:Create(
+                            ArrowImg,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Rotation = 270}
+                        ):Play()
+                        wait(.2)
+                        Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+                    else
+                        Dropdown:TweenSize(
+                            UDim2.new(0, 363, 0, 42),
+                            Enum.EasingDirection.Out,
+                            Enum.EasingStyle.Quart,
+                            .2,
+                            true
+                        )
+                        TweenService:Create(
+                            ArrowImg,
+                            TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                            {Rotation = 0}
+                        ):Play()
+                        wait(.2)
+                        Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+                    end
+                    droptog = not droptog
+                end
+            )
+
+            Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+        end
+
+        -- UPDATED STANDARD DROPDOWN (To ensure existing ones don't break and look consistent)
         function tabcontent:Dropdown(text, listOrFunction, callback, default, isConfigurable)
             globalElementIdCounter = globalElementIdCounter + 1
             local elementId = "Dropdown_" .. globalElementIdCounter
@@ -1927,8 +2207,6 @@ function lib:Window(text, preset, closebind)
             end
 
             local function populateItems(list)
-                -- Only clear items if refreshing logic is needed, or if list changed.
-                -- Since this is the initial populate or hard refresh:
                 for _, child in pairs(DropItemHolder:GetChildren()) do
                     if child:IsA("TextButton") then
                         child:Destroy()
@@ -1950,14 +2228,14 @@ function lib:Window(text, preset, closebind)
 
                     Item.Name = "Item"
                     Item.Parent = DropItemHolder
-                    Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34) -- Always dark BG
+                    Item.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
                     Item.ClipsDescendants = true
                     Item.Size = UDim2.new(0, 335, 0, 25)
                     Item.AutoButtonColor = false
                     Item.Font = Enum.Font.Gotham
                     Item.Text = v
                     Item.TextSize = 15.000
-                    Item.TextColor3 = Color3.fromRGB(255, 255, 255) -- Default white
+                    Item.TextColor3 = Color3.fromRGB(255, 255, 255)
 
                     ItemCorner.CornerRadius = UDim.new(0, 6)
                     ItemCorner.Name = "ItemCorner"
@@ -1979,7 +2257,7 @@ function lib:Window(text, preset, closebind)
                             ConfigElements[elementId].Value = currentValue
                         end
                         
-                        UpdateSelectionVisuals() -- JUST update colors, don't destroy buttons!
+                        UpdateSelectionVisuals()
                         
                         pcall(callback, v)
 
@@ -2013,7 +2291,6 @@ function lib:Window(text, preset, closebind)
                     local newList = listOrFunction()
                     populateItems(newList)
                 else
-                    -- Just update colors if static list
                     UpdateSelectionVisuals()
                 end
             end
@@ -2273,7 +2550,6 @@ function lib:Window(text, preset, closebind)
 
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
 
-            -- Create the bind object to return
             local bindObj = {}
             
             function bindObj:GetKey()
@@ -2291,7 +2567,6 @@ function lib:Window(text, preset, closebind)
                     BindText.Text = Key
                     ConfigElements[elementId].Value = Key
                     
-                    -- Update UI toggle key if this is a UI toggle bind
                     if text:lower():find("toggle") or text:lower():find("ui") then
                         lib:SetToggleKey(newKey)
                     end
