@@ -1547,6 +1547,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     local SVFrame = Instance.new("Frame")
     local SVFrameCorner = Instance.new("UICorner")
     local Saturation = Instance.new("Frame")
+    local SatCorner = Instance.new("UICorner")
     local SatGrad = Instance.new("UIGradient")
     local Brightness = Instance.new("Frame")
     local BrightGrad = Instance.new("UIGradient")
@@ -1625,12 +1626,13 @@ function tabcontent:ColorPicker(text, preset, callback)
     ColorPickerFrame.Size = UDim2.new(0, 363, 0, 140)
     ColorPickerFrame.Visible = false
     
-    -- === SV PICKER (MAIN COLOR BOX) ===
+    -- === SV PICKER (MAIN COLOR BOX) - NOW WITH SMOOTH EDGES ===
     SVFrame.Name = "SVFrame"
     SVFrame.Parent = ColorPickerFrame
     SVFrame.BackgroundColor3 = Color3.fromHSV(Hue, 1, 1)
     SVFrame.Position = UDim2.new(0.036, 0, 0, 0)
     SVFrame.Size = UDim2.new(0, 180, 0, 100)
+    SVFrame.ClipsDescendants = true
     
     SVFrameCorner.CornerRadius = UDim.new(0, 4)
     SVFrameCorner.Parent = SVFrame
@@ -1639,6 +1641,9 @@ function tabcontent:ColorPicker(text, preset, callback)
     Saturation.Parent = SVFrame
     Saturation.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Saturation.Size = UDim2.new(1, 0, 1, 0)
+    
+    SatCorner.CornerRadius = UDim.new(0, 4)
+    SatCorner.Parent = Saturation
     
     SatGrad.Transparency = NumberSequence.new{
         NumberSequenceKeypoint.new(0, 0),
@@ -1679,12 +1684,12 @@ function tabcontent:ColorPicker(text, preset, callback)
     }
     HueGradient.Parent = HueFrame
     
-    -- === TRANSPARENCY SLIDER ===
+    -- === TRANSPARENCY SLIDER (SHORTENED TO ALIGN WITH HUE) ===
     TransBG.Name = "TransBG"
     TransBG.Parent = ColorPickerFrame
     TransBG.BackgroundTransparency = 1
     TransBG.Position = UDim2.new(0.036, 0, 0, 110)
-    TransBG.Size = UDim2.new(0, 226, 0, 15)
+    TransBG.Size = UDim2.new(0, 213, 0, 15)
     TransBG.Image = "rbxassetid://3887014957"
     TransBG.ScaleType = Enum.ScaleType.Tile
     TransBG.TileSize = UDim2.new(0, 10, 0, 10)
@@ -1900,7 +1905,7 @@ function tabcontent:ColorPicker(text, preset, callback)
         end
     end)
     
-    -- Toggle color picker with smooth animation
+    -- Toggle color picker with smooth DIAGONAL animation
     ColorPickerHeader.MouseButton1Click:Connect(function()
         ColorPickerToggled = not ColorPickerToggled
         if ColorPickerToggled then
@@ -1912,25 +1917,21 @@ function tabcontent:ColorPicker(text, preset, callback)
             PreviewBG.Visible = true
             RainbowBtn.Visible = true
             
-            -- Animate small square to cube position and size
-            local startPos = ColorPickerShow.Position
-            local startSize = ColorPickerShow.Size
-            
+            -- Animate small square DIAGONALLY to cube position
             TweenService:Create(ColorPickerShow, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Position = UDim2.new(0, 292.5, 0, 52.5),
+                Position = UDim2.new(0, 250, 0, 52),
                 Size = UDim2.new(0, 85, 0, 85)
             }):Play()
             
             task.wait(0.3)
-            -- Hide small square, show cube
             ColorPickerShow.Visible = false
         else
             -- Show small square at cube position
             ColorPickerShow.Visible = true
-            ColorPickerShow.Position = UDim2.new(0, 292.5, 0, 52.5)
+            ColorPickerShow.Position = UDim2.new(0, 250, 0, 52)
             ColorPickerShow.Size = UDim2.new(0, 85, 0, 85)
             
-            -- Animate back to small square
+            -- Animate DIAGONALLY back to small square
             TweenService:Create(ColorPickerShow, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                 Position = UDim2.new(0.86, 0, 0.286, 0),
                 Size = UDim2.new(0, 37, 0, 18)
@@ -1940,7 +1941,6 @@ function tabcontent:ColorPicker(text, preset, callback)
             ColorPickerBtn:TweenSize(UDim2.new(0, 363, 0, 42), "Out", "Quart", 0.2, true)
             
             task.wait(0.25)
-            -- Hide content frame
             ColorPickerFrame.Visible = false
             PreviewBG.Visible = false
             RainbowBtn.Visible = false
