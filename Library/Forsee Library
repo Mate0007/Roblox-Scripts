@@ -666,8 +666,8 @@ function lib:Window(text, preset, closebind)
                     element.BackgroundColor3 = toch
                 elseif element:IsA("Frame") and element.Name == "CurrentValueFrame" then
                     element.BackgroundColor3 = toch
-                elseif element:IsA("ImageLabel") and element.Name == "SlideCircle" then
-                    element.ImageColor3 = toch
+                elseif element:IsA("Frame") and element.Name == "SliderThumb" then
+                    element.BackgroundColor3 = toch
                 elseif element:IsA("Frame") and element.Name == "TabBtnIndicator" then
                     element.BackgroundColor3 = toch
                 elseif element:IsA("Frame") and element.Name == "FrameRainbowToggle3" then
@@ -1373,7 +1373,8 @@ function lib:Window(text, preset, closebind)
             local SliderValue = Instance.new("TextLabel")
             local SlideFrame = Instance.new("Frame")
             local CurrentValueFrame = Instance.new("Frame")
-            local SlideCircle = Instance.new("ImageButton")
+            local SliderThumb = Instance.new("Frame")
+            local SliderThumbCorner = Instance.new("UICorner")
 
             Slider.Name = "Slider"
             Slider.Parent = Tab
@@ -1435,24 +1436,26 @@ function lib:Window(text, preset, closebind)
             CurrentValueCorner.CornerRadius = UDim.new(1, 0)
             CurrentValueCorner.Parent = CurrentValueFrame
 
-            SlideCircle.Name = "SlideCircle"
-            SlideCircle.Parent = SlideFrame
-            SlideCircle.BackgroundColor3 = PresetColor
-            SlideCircle.BackgroundTransparency = 1.000
-            SlideCircle.Position = UDim2.new((start or 0) / max, -6, -1.30499995, 0)
-            SlideCircle.Size = UDim2.new(0, 11, 0, 11)
-            SlideCircle.Image = "rbxassetid://3570695787"
-            SlideCircle.ImageColor3 = PresetColor
+            -- Slider thumb (the draggable circle)
+            SliderThumb.Name = "SliderThumb"
+            SliderThumb.Parent = SlideFrame
+            SliderThumb.BackgroundColor3 = PresetColor
+            SliderThumb.AnchorPoint = Vector2.new(0.5, 0.5)
+            SliderThumb.Position = UDim2.new((start or 0) / max, 0, 0.5, 0)
+            SliderThumb.Size = UDim2.new(0, 12, 0, 12)
+            SliderThumb.ZIndex = 2
+
+            SliderThumbCorner.CornerRadius = UDim.new(1, 0)
+            SliderThumbCorner.Parent = SliderThumb
 
             ConfigElements[elementId] = {
                 Type = "Slider",
                 Value = currentValue,
                 LoadValue = function(value)
                     currentValue = value
-                    local pos = UDim2.new(value / max, -6, -1.30499995, 0)
-                    local pos1 = UDim2.new(value / max, 0, 0, 3)
-                    CurrentValueFrame.Size = pos1
-                    SlideCircle.Position = pos
+                    local scale = (value - min) / (max - min)
+                    CurrentValueFrame.Size = UDim2.new(scale, 0, 0, 3)
+                    SliderThumb.Position = UDim2.new(scale, 0, 0.5, 0)
                     SliderValue.Text = tostring(value)
                     pcall(callback, value)
                 end
@@ -1462,36 +1465,46 @@ function lib:Window(text, preset, closebind)
                 function()
                     while wait() do
                         CurrentValueFrame.BackgroundColor3 = PresetColor
-                        SlideCircle.ImageColor3 = PresetColor
+                        SliderThumb.BackgroundColor3 = PresetColor
                     end
                 end
             )()
 
             local function move(input)
-                local pos =
-                    UDim2.new(
-                        math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1),
-                        -6,
-                        -1.30499995,
-                        0
-                    )
-                local pos1 =
-                    UDim2.new(
-                        math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1),
-                        0,
-                        0,
-                        3
-                    )
+                local scale = math.clamp((input.Position.X - SlideFrame.AbsolutePosition.X) / SlideFrame.AbsoluteSize.X, 0, 1)
+                local pos1 = UDim2.new(scale, 0, 0, 3)
+                local thumbPos = UDim2.new(scale, 0, 0.5, 0)
+                
                 CurrentValueFrame:TweenSize(pos1, "Out", "Sine", 0.1, true)
-                SlideCircle:TweenPosition(pos, "Out", "Sine", 0.1, true)
-                local value = math.floor(((pos.X.Scale * max) / max) * (max - min) + min)
+                SliderThumb:TweenPosition(thumbPos, "Out", "Sine", 0.1, true)
+                
+                local value = math.floor(scale * (max - min) + min)
                 SliderValue.Text = tostring(value)
                 currentValue = value
                 ConfigElements[elementId].Value = currentValue
                 pcall(callback, value)
             end
 
-            SlideCircle.InputBegan:Connect(
+            -- Click anywhere on the slider track to jump to that position
+            SlideFrame.InputBegan:Connect(
+                function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and input.UserInputType == Enum.UserInputType.Touch) then
+                        dragging = true
+                        move(input)
+                    end
+                end
+            )
+
+            SlideFrame.InputEnded:Connect(
+                function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and input.UserInputType == Enum.UserInputType.Touch) then
+                        dragging = false
+                    end
+                end
+            )
+
+            -- Also allow dragging from the thumb
+            SliderThumb.InputBegan:Connect(
                 function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and input.UserInputType == Enum.UserInputType.Touch) then
                         dragging = true
@@ -1499,7 +1512,7 @@ function lib:Window(text, preset, closebind)
                 end
             )
 
-            SlideCircle.InputEnded:Connect(
+            SliderThumb.InputEnded:Connect(
                 function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and input.UserInputType == Enum.UserInputType.Touch) then
                         dragging = false
@@ -1511,6 +1524,14 @@ function lib:Window(text, preset, closebind)
                 function(input)
                     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or (isMobile and input.UserInputType == Enum.UserInputType.Touch)) then
                         move(input)
+                    end
+                end
+            )
+
+            game:GetService("UserInputService").InputEnded:Connect(
+                function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or (isMobile and input.UserInputType == Enum.UserInputType.Touch) then
+                        dragging = false
                     end
                 end
             )
@@ -1541,20 +1562,27 @@ function lib:Window(text, preset, closebind)
             local SVFrame = Instance.new("Frame")
             local SVFrameCorner = Instance.new("UICorner")
             local Saturation = Instance.new("Frame")
+            local SaturationCorner = Instance.new("UICorner")
             local SatGrad = Instance.new("UIGradient")
             local Brightness = Instance.new("Frame")
             local BrightCorner = Instance.new("UICorner")
             local BrightGrad = Instance.new("UIGradient")
+            local SVCursor = Instance.new("Frame")
+            local SVCursorCorner = Instance.new("UICorner")
             
             local HueFrame = Instance.new("Frame")
             local HueFrameCorner = Instance.new("UICorner")
             local HueGradient = Instance.new("UIGradient")
+            local HueCursor = Instance.new("Frame")
+            local HueCursorCorner = Instance.new("UICorner")
             
             local TransBG = Instance.new("ImageLabel")
             local TransBGCorner = Instance.new("UICorner")
             local TransFrame = Instance.new("Frame")
             local TransFrameCorner = Instance.new("UICorner")
             local TransGradient = Instance.new("UIGradient")
+            local TransCursor = Instance.new("Frame")
+            local TransCursorCorner = Instance.new("UICorner")
             
             local PreviewBG = Instance.new("ImageLabel")
             local PreviewBGCorner = Instance.new("UICorner")
@@ -1619,13 +1647,16 @@ function lib:Window(text, preset, closebind)
             SVFrame.Size = UDim2.new(0, 180, 0, 100)
             SVFrame.ClipsDescendants = true
             
-            SVFrameCorner.CornerRadius = UDim.new(0, 4)
+            SVFrameCorner.CornerRadius = UDim.new(0, 6)
             SVFrameCorner.Parent = SVFrame
             
             Saturation.Name = "Saturation"
             Saturation.Parent = SVFrame
             Saturation.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             Saturation.Size = UDim2.new(1, 0, 1, 0)
+            
+            SaturationCorner.CornerRadius = UDim.new(0, 6)
+            SaturationCorner.Parent = Saturation
             
             SatGrad.Transparency = NumberSequence.new{
                 NumberSequenceKeypoint.new(0, 0),
@@ -1638,7 +1669,7 @@ function lib:Window(text, preset, closebind)
             Brightness.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             Brightness.Size = UDim2.new(1, 0, 1, 0)
             
-            BrightCorner.CornerRadius = UDim.new(0, 4)
+            BrightCorner.CornerRadius = UDim.new(0, 6)
             BrightCorner.Parent = Brightness
             
             BrightGrad.Rotation = 90
@@ -1647,6 +1678,23 @@ function lib:Window(text, preset, closebind)
                 NumberSequenceKeypoint.new(1, 1)
             }
             BrightGrad.Parent = Brightness
+            
+            -- SV Cursor (circle indicator)
+            SVCursor.Name = "SVCursor"
+            SVCursor.Parent = SVFrame
+                        SVCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            SVCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+            SVCursor.Position = UDim2.new(Sat, 0, 1 - Val, 0)
+            SVCursor.Size = UDim2.new(0, 10, 0, 10)
+            SVCursor.ZIndex = 5
+            
+            SVCursorCorner.CornerRadius = UDim.new(1, 0)
+            SVCursorCorner.Parent = SVCursor
+            
+            local SVCursorStroke = Instance.new("UIStroke")
+            SVCursorStroke.Color = Color3.fromRGB(0, 0, 0)
+            SVCursorStroke.Thickness = 1
+            SVCursorStroke.Parent = SVCursor
             
             HueFrame.Name = "HueFrame"
             HueFrame.Parent = ColorPickerFrame
@@ -1668,6 +1716,23 @@ function lib:Window(text, preset, closebind)
             }
             HueGradient.Parent = HueFrame
             
+            -- Hue Cursor
+            HueCursor.Name = "HueCursor"
+            HueCursor.Parent = HueFrame
+            HueCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            HueCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+            HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+            HueCursor.Size = UDim2.new(1, 4, 0, 6)
+            HueCursor.ZIndex = 5
+            
+            HueCursorCorner.CornerRadius = UDim.new(0, 2)
+            HueCursorCorner.Parent = HueCursor
+            
+            local HueCursorStroke = Instance.new("UIStroke")
+            HueCursorStroke.Color = Color3.fromRGB(0, 0, 0)
+            HueCursorStroke.Thickness = 1
+            HueCursorStroke.Parent = HueCursor
+            
             TransBG.Name = "TransBG"
             TransBG.Parent = ColorPickerFrame
             TransBG.BackgroundTransparency = 1
@@ -1684,6 +1749,7 @@ function lib:Window(text, preset, closebind)
             TransFrame.Parent = TransBG
             TransFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             TransFrame.Size = UDim2.new(1, 0, 1, 0)
+            TransFrame.ClipsDescendants = true
             
             TransFrameCorner.CornerRadius = UDim.new(0, 4)
             TransFrameCorner.Parent = TransFrame
@@ -1694,6 +1760,23 @@ function lib:Window(text, preset, closebind)
                 NumberSequenceKeypoint.new(1, 1)
             }
             TransGradient.Parent = TransFrame
+            
+            -- Transparency Cursor
+            TransCursor.Name = "TransCursor"
+            TransCursor.Parent = TransFrame
+            TransCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            TransCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+            TransCursor.Position = UDim2.new(Transparency, 0, 0.5, 0)
+            TransCursor.Size = UDim2.new(0, 6, 1, 4)
+            TransCursor.ZIndex = 5
+            
+            TransCursorCorner.CornerRadius = UDim.new(0, 2)
+            TransCursorCorner.Parent = TransCursor
+            
+            local TransCursorStroke = Instance.new("UIStroke")
+            TransCursorStroke.Color = Color3.fromRGB(0, 0, 0)
+            TransCursorStroke.Thickness = 1
+            TransCursorStroke.Parent = TransCursor
             
             PreviewBG.Name = "PreviewBG"
             PreviewBG.Parent = ColorPickerFrame
@@ -1750,6 +1833,11 @@ function lib:Window(text, preset, closebind)
                     SVFrame.BackgroundColor3 = Color3.fromHSV(Hue, 1, 1)
                     TransGradient.Color = ColorSequence.new(color, color)
                     
+                    -- Update cursors
+                    SVCursor.Position = UDim2.new(Sat, 0, 1 - Val, 0)
+                    HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+                    TransCursor.Position = UDim2.new(Transparency, 0, 0.5, 0)
+                    
                     pcall(callback, color, Transparency)
                 end
             }
@@ -1761,6 +1849,12 @@ function lib:Window(text, preset, closebind)
                 PreviewColor.BackgroundTransparency = Transparency
                 SVFrame.BackgroundColor3 = Color3.fromHSV(Hue, 1, 1)
                 TransGradient.Color = ColorSequence.new(color, color)
+                
+                -- Update cursor positions
+                SVCursor.Position = UDim2.new(Sat, 0, 1 - Val, 0)
+                HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+                TransCursor.Position = UDim2.new(Transparency, 0, 0.5, 0)
+                
                 ConfigElements[elementId].Value = {Color = color, Transparency = Transparency}
                 pcall(callback, color, Transparency)
             end
@@ -1831,12 +1925,24 @@ function lib:Window(text, preset, closebind)
                 end
             end)
             
+            TransBG.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    draggingTrans = true
+                    
+                    local mouse = UserInputService:GetMouseLocation()
+                    local percentX = math.clamp((mouse.X - TransBG.AbsolutePosition.X) / TransBG.AbsoluteSize.X, 0, 1)
+                    
+                    Transparency = percentX
+                    UpdateColor()
+                end
+            end)
+            
             TransFrame.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     draggingTrans = true
                     
                     local mouse = UserInputService:GetMouseLocation()
-                    local percentX = math.clamp((mouse.X - TransFrame.AbsolutePosition.X) / TransFrame.AbsoluteSize.X, 0, 1)
+                    local percentX = math.clamp((mouse.X - TransBG.AbsolutePosition.X) / TransBG.AbsoluteSize.X, 0, 1)
                     
                     Transparency = percentX
                     UpdateColor()
@@ -1869,7 +1975,7 @@ function lib:Window(text, preset, closebind)
                         UpdateColor()
                     elseif draggingTrans then
                         local mouse = UserInputService:GetMouseLocation()
-                        local percentX = math.clamp((mouse.X - TransFrame.AbsolutePosition.X) / TransFrame.AbsoluteSize.X, 0, 1)
+                        local percentX = math.clamp((mouse.X - TransBG.AbsolutePosition.X) / TransBG.AbsoluteSize.X, 0, 1)
                         
                         Transparency = percentX
                         UpdateColor()
