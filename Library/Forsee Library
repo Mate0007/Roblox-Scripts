@@ -1505,7 +1505,7 @@ KeybindCube.Name = "KeybindCube"
 KeybindCube.Parent = KeybindToggle
 KeybindCube.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 KeybindCube.Position = UDim2.new(0.75, 0, 0.286, 0) -- ORIGINAL POSITION
-KeybindCube.Size = UDim2.new(0, 45, 0, 18) -- SAME SIZE AS NORMAL KEYBIND
+KeybindCube.Size = UDim2.new(0, 18, 0, 18) -- PERFECT CUBE (width = height)
 KeybindCube.AutoButtonColor = false
 KeybindCube.Font = Enum.Font.SourceSans
 KeybindCube.Text = ""
@@ -1521,7 +1521,7 @@ KeybindText.Size = UDim2.new(1, 0, 1, 0)
 KeybindText.Font = Enum.Font.Gotham
 KeybindText.Text = displayKeyName
 KeybindText.TextColor3 = Color3.fromRGB(200, 200, 200)
-KeybindText.TextSize = 12.000 -- SAME TEXT SIZE AS NORMAL KEYBIND
+KeybindText.TextSize = 10.000 -- Smaller text to fit the cube
 KeybindText.ZIndex = 3
 
     -- Improved Mode Dropdown
