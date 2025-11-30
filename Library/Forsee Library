@@ -1721,7 +1721,7 @@ function tabcontent:ColorPicker(text, preset, callback)
     HueCursor.Parent = HueFrame
     HueCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     HueCursor.AnchorPoint = Vector2.new(0.5, 0.5)
-    HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+    HueCursor.Position = UDim2.new(0.5, 0, Hue, 0)
     HueCursor.Size = UDim2.new(1, 4, 0, 6)
     HueCursor.ZIndex = 5
     
@@ -1835,7 +1835,7 @@ function tabcontent:ColorPicker(text, preset, callback)
             
             -- Update cursors
             SVCursor.Position = UDim2.new(Sat, 0, 1 - Val, 0)
-            HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+            HueCursor.Position = UDim2.new(0.5, 0, Hue, 0)
             TransCursor.Position = UDim2.new(Transparency, 0, 0.5, 0)
             
             pcall(callback, color, Transparency)
@@ -1852,7 +1852,7 @@ function tabcontent:ColorPicker(text, preset, callback)
         
         -- Update cursor positions
         SVCursor.Position = UDim2.new(Sat, 0, 1 - Val, 0)
-        HueCursor.Position = UDim2.new(0.5, 0, 1 - Hue, 0)
+        HueCursor.Position = UDim2.new(0.5, 0, Hue, 0)
         TransCursor.Position = UDim2.new(Transparency, 0, 0.5, 0)
         
         ConfigElements[elementId].Value = {Color = color, Transparency = Transparency}
@@ -1926,7 +1926,7 @@ function tabcontent:ColorPicker(text, preset, callback)
             TweenService:Create(RainbowBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
             
             local _, relY = getRelativePosition(HueFrame, input.Position)
-            Hue = 1 - relY
+            Hue = relY
             UpdateColor()
         end
     end)
@@ -1968,7 +1968,7 @@ function tabcontent:ColorPicker(text, preset, callback)
                 UpdateColor()
             elseif draggingHue then
                 local _, relY = getRelativePosition(HueFrame, input.Position)
-                Hue = 1 - relY
+                Hue = relY
                 UpdateColor()
             elseif draggingTrans then
                 local relX, _ = getRelativePosition(TransBG, input.Position)
