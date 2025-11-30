@@ -1505,7 +1505,7 @@ KeybindCube.Name = "KeybindCube"
 KeybindCube.Parent = KeybindToggle
 KeybindCube.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 KeybindCube.Position = UDim2.new(0.75, 0, 0.286, 0) -- ORIGINAL POSITION
-KeybindCube.Size = UDim2.new(0, 52, 0, 52) -- PERFECT CUBE (width = height)
+KeybindCube.Size = UDim2.new(0, 36, 0, 36) -- PERFECT CUBE (width = height)
 KeybindCube.AutoButtonColor = false
 KeybindCube.Font = Enum.Font.SourceSans
 KeybindCube.Text = ""
