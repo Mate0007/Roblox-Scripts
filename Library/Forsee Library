@@ -1372,394 +1372,513 @@ function lib:Window(text, preset, closebind)
             Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
         end
 
-        -- ========== KEYBIND TOGGLE SECTION START ==========
-        function tabcontent:KeybindToggle(text, keypreset, default, callback)
-            globalElementIdCounter = globalElementIdCounter + 1
-            local elementId = "KeybindToggle_" .. globalElementIdCounter
-            
-            local toggled = default or false
-            local currentKey = keypreset or Enum.KeyCode.F
-            local keyName = currentKey.Name
-            local bindMode = "Toggle" -- Default mode is Toggle
-            local bindActive = false
-            local dropdownOpen = false
-            local binding = false
-            
-            local KeybindToggle = Instance.new("TextButton")
-            local KeybindToggleCorner = Instance.new("UICorner")
-            local KeybindToggleTitle = Instance.new("TextLabel")
-            
-            -- Keybind Button
-            local KeybindBtn = Instance.new("TextButton")
-            local KeybindBtnCorner = Instance.new("UICorner")
-            local KeybindText = Instance.new("TextLabel")
-            
-            -- Mode Dropdown
-            local ModeDropdown = Instance.new("Frame")
-            local ModeDropdownCorner = Instance.new("UICorner")
-            local ModeDropdownLayout = Instance.new("UIListLayout")
-            
-            -- Toggle Components
-            local FrameToggle1 = Instance.new("Frame")
-            local FrameToggle1Corner = Instance.new("UICorner")
-            local FrameToggle2 = Instance.new("Frame")
-            local FrameToggle2Corner = Instance.new("UICorner")
-            local FrameToggle3 = Instance.new("Frame")
-            local FrameToggle3Corner = Instance.new("UICorner")
-            local FrameToggleCircle = Instance.new("Frame")
-            local FrameToggleCircleCorner = Instance.new("UICorner")
-            
-            KeybindToggle.Name = "KeybindToggle"
-            KeybindToggle.Parent = Tab
-            KeybindToggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-            KeybindToggle.Size = UDim2.new(0, 363, 0, 42)
-            KeybindToggle.AutoButtonColor = false
-            KeybindToggle.Font = Enum.Font.SourceSans
-            KeybindToggle.Text = ""
-            KeybindToggle.TextColor3 = Color3.fromRGB(0, 0, 0)
-            KeybindToggle.TextSize = 14.000
-            
-            KeybindToggleCorner.CornerRadius = UDim.new(0, 6)
-            KeybindToggleCorner.Parent = KeybindToggle
-            
-            KeybindToggleTitle.Name = "KeybindToggleTitle"
-            KeybindToggleTitle.Parent = KeybindToggle
-            KeybindToggleTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            KeybindToggleTitle.BackgroundTransparency = 1.000
-            KeybindToggleTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
-            KeybindToggleTitle.Size = UDim2.new(0, 187, 0, 42)
-            KeybindToggleTitle.Font = Enum.Font.Gotham
-            KeybindToggleTitle.Text = text
-            KeybindToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-            KeybindToggleTitle.TextSize = 14.000
-            KeybindToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
-            
-            -- Keybind Button (positioned to the left of the toggle)
-            KeybindBtn.Name = "KeybindBtn"
-            KeybindBtn.Parent = KeybindToggle
-            KeybindBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-            KeybindBtn.Position = UDim2.new(0.75, 0, 0.286, 0)
-            KeybindBtn.Size = UDim2.new(0, 45, 0, 18)
-            KeybindBtn.AutoButtonColor = false
-            KeybindBtn.Font = Enum.Font.SourceSans
-            KeybindBtn.Text = ""
-            KeybindBtn.ZIndex = 2
-            
-            KeybindBtnCorner.CornerRadius = UDim.new(0, 4)
-            KeybindBtnCorner.Parent = KeybindBtn
-            
-            KeybindText.Name = "KeybindText"
-            KeybindText.Parent = KeybindBtn
-            KeybindText.BackgroundTransparency = 1.000
-            KeybindText.Size = UDim2.new(1, 0, 1, 0)
-            KeybindText.Font = Enum.Font.Gotham
-            KeybindText.Text = keyName
-            KeybindText.TextColor3 = Color3.fromRGB(200, 200, 200)
-            KeybindText.TextSize = 12.000
-            KeybindText.ZIndex = 3
-            
-            -- Mode Dropdown (hidden by default)
-            ModeDropdown.Name = "ModeDropdown"
-            ModeDropdown.Parent = KeybindToggle
-            ModeDropdown.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            ModeDropdown.Position = UDim2.new(0.75, 0, 0, 30)
-            ModeDropdown.Size = UDim2.new(0, 60, 0, 0)
-            ModeDropdown.Visible = false
-            ModeDropdown.ClipsDescendants = true
-            ModeDropdown.ZIndex = 10
-            
-            ModeDropdownCorner.CornerRadius = UDim.new(0, 4)
-            ModeDropdownCorner.Parent = ModeDropdown
-            
-            ModeDropdownLayout.Parent = ModeDropdown
-            ModeDropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            ModeDropdownLayout.Padding = UDim.new(0, 2)
-            
-            -- Create mode options
-            local ToggleOption = Instance.new("TextButton")
-            ToggleOption.Name = "ToggleOption"
-            ToggleOption.Parent = ModeDropdown
-            ToggleOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            ToggleOption.BackgroundTransparency = 1
-            ToggleOption.Size = UDim2.new(1, 0, 0, 20)
-            ToggleOption.Font = Enum.Font.Gotham
-            ToggleOption.Text = "Toggle"
-            ToggleOption.TextColor3 = PresetColor
-            ToggleOption.TextSize = 11.000
-            ToggleOption.ZIndex = 11
-            ToggleOption.AutoButtonColor = false
-            
-            local HoldOption = Instance.new("TextButton")
-            HoldOption.Name = "HoldOption"
-            HoldOption.Parent = ModeDropdown
-            HoldOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            HoldOption.BackgroundTransparency = 1
-            HoldOption.Size = UDim2.new(1, 0, 0, 20)
-            HoldOption.Font = Enum.Font.Gotham
-            HoldOption.Text = "Hold"
-            HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
-            HoldOption.TextSize = 11.000
-            HoldOption.ZIndex = 11
-            HoldOption.AutoButtonColor = false
-            
-            -- Toggle switch components
-            FrameToggle1.Name = "FrameToggle1"
-            FrameToggle1.Parent = KeybindToggle
-            FrameToggle1.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            FrameToggle1.Position = UDim2.new(0.859504104, 0, 0.285714298, 0)
-            FrameToggle1.Size = UDim2.new(0, 37, 0, 18)
-            
-            FrameToggle1Corner.CornerRadius = UDim.new(0, 6)
-            FrameToggle1Corner.Parent = FrameToggle1
-            
-            FrameToggle2.Name = "FrameToggle2"
-            FrameToggle2.Parent = FrameToggle1
-            FrameToggle2.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-            FrameToggle2.Position = UDim2.new(0.0489999987, 0, 0.0930000022, 0)
-            FrameToggle2.Size = UDim2.new(0, 33, 0, 14)
-            
-            FrameToggle2Corner.CornerRadius = UDim.new(0, 6)
-            FrameToggle2Corner.Parent = FrameToggle2
-            
-            FrameToggle3.Name = "FrameToggle3"
-            FrameToggle3.Parent = FrameToggle1
-            FrameToggle3.BackgroundColor3 = PresetColor
-            FrameToggle3.BackgroundTransparency = 1.000
-            FrameToggle3.Size = UDim2.new(0, 37, 0, 18)
-            
-            FrameToggle3Corner.CornerRadius = UDim.new(0, 6)
-            FrameToggle3Corner.Parent = FrameToggle3
-            
-            FrameToggleCircle.Name = "FrameToggleCircle"
-            FrameToggleCircle.Parent = FrameToggle1
-            FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
-            FrameToggleCircle.Size = UDim2.new(0, 10, 0, 10)
-            
-            FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5)
-            FrameToggleCircleCorner.Parent = FrameToggleCircle
-            
-            -- Config element
-            ConfigElements[elementId] = {
-                Type = "KeybindToggle",
-                Value = {
-                    Toggled = toggled,
-                    Key = keyName,
-                    Mode = bindMode
-                },
-                LoadValue = function(value)
-                    toggled = value.Toggled
-                    keyName = value.Key
-                    bindMode = value.Mode or "Toggle"
-                    
-                    -- Update key
-                    KeybindText.Text = keyName
-                    for _, keyCode in pairs(Enum.KeyCode:GetEnumItems()) do
-                        if keyCode.Name == keyName then
-                            currentKey = keyCode
-                            break
-                        end
-                    end
-                    
-                    -- Update mode colors
-                    if bindMode == "Toggle" then
-                        ToggleOption.TextColor3 = PresetColor
-                        HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    else
-                        ToggleOption.TextColor3 = Color3.fromRGB(200, 200, 200)
-                        HoldOption.TextColor3 = PresetColor
-                    end
-                    
-                    -- Update toggle visual
-                    if toggled then
-                        KeybindToggle.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
-                        FrameToggle1.BackgroundTransparency = 1
-                        FrameToggle2.BackgroundTransparency = 1
-                        FrameToggle3.BackgroundTransparency = 0
-                        FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                        FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
-                    else
-                        KeybindToggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
-                        FrameToggle1.BackgroundTransparency = 0
-                        FrameToggle2.BackgroundTransparency = 0
-                        FrameToggle3.BackgroundTransparency = 1
-                        FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                        FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
-                    end
-                    
-                    pcall(callback, toggled)
-                end
-            }
-            
-            -- Update preset color
-            coroutine.wrap(function()
-                while wait() do
-                    FrameToggle3.BackgroundColor3 = PresetColor
-                    if bindMode == "Toggle" then
-                        ToggleOption.TextColor3 = PresetColor
-                    elseif bindMode == "Hold" then
-                        HoldOption.TextColor3 = PresetColor
-                    end
-                end
-            end)()
-            
-            -- Toggle function
-            local function SetToggleState(state)
-                toggled = state
-                ConfigElements[elementId].Value.Toggled = toggled
-                
-                if toggled then
-                    TweenService:Create(KeybindToggle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
-                    TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-                    TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-                    TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
-                    TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-                    FrameToggleCircle:TweenPosition(UDim2.new(0.587, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
-                else
-                    TweenService:Create(KeybindToggle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
-                    TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
-                    TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
-                    TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-                    TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
-                    FrameToggleCircle:TweenPosition(UDim2.new(0.127000004, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
-                end
-                
-                pcall(callback, toggled)
+-- ========== KEYBIND TOGGLE SECTION START ==========
+function tabcontent:KeybindToggle(text, keypreset, default, callback)
+    globalElementIdCounter = globalElementIdCounter + 1
+    local elementId = "KeybindToggle_" .. globalElementIdCounter
+    
+    local toggled = default or false
+    local currentKey = keypreset or Enum.KeyCode.F
+    local keyName = currentKey.Name
+    local bindMode = "Toggle" -- Default mode is Toggle
+    local bindActive = false
+    local dropdownOpen = false
+    local binding = false
+    
+    -- Function to shorten key names for display
+    local function shortenKeyName(key)
+        local keyStr = tostring(key)
+        
+        -- Common key abbreviations
+        local abbreviations = {
+            ["LeftControl"] = "LCTRL",
+            ["RightControl"] = "RCTRL",
+            ["LeftShift"] = "LSHIFT",
+            ["RightShift"] = "RSHIFT",
+            ["LeftAlt"] = "LALT",
+            ["RightAlt"] = "RALT",
+            ["Return"] = "ENTER",
+            ["Escape"] = "ESC",
+            ["Backspace"] = "BACK",
+            ["Space"] = "SPACE",
+            ["PageUp"] = "PGUP",
+            ["PageDown"] = "PGDN",
+            ["CapsLock"] = "CAPS",
+            ["NumberPadZero"] = "NUM0",
+            ["NumberPadOne"] = "NUM1",
+            ["NumberPadTwo"] = "NUM2",
+            ["NumberPadThree"] = "NUM3",
+            ["NumberPadFour"] = "NUM4",
+            ["NumberPadFive"] = "NUM5",
+            ["NumberPadSix"] = "NUM6",
+            ["NumberPadSeven"] = "NUM7",
+            ["NumberPadEight"] = "NUM8",
+            ["NumberPadNine"] = "NUM9"
+        }
+        
+        -- Check for number pad keys
+        if keyStr:match("NumberPad") then
+            local num = keyStr:match("NumberPad(%w+)")
+            if num and abbreviations[keyStr] then
+                return abbreviations[keyStr]
             end
-            
-            -- Click toggle (clicking on the main button)
-            KeybindToggle.MouseButton1Click:Connect(function()
-                                SetToggleState(not toggled)
-            end)
-            
-            -- Keybind button click (left click to bind)
-            KeybindBtn.MouseButton1Click:Connect(function()
-                if binding then return end
-                
-                KeybindText.Text = "..."
-                binding = true
-                
-                local inputwait = UserInputService.InputBegan:Wait()
-                if inputwait.KeyCode.Name ~= "Unknown" then
-                    keyName = inputwait.KeyCode.Name
-                    currentKey = inputwait.KeyCode
-                    KeybindText.Text = keyName
-                    ConfigElements[elementId].Value.Key = keyName
-                end
-                binding = false
-            end)
-            
-            -- Right click for mode dropdown
-            KeybindBtn.MouseButton2Click:Connect(function()
-                dropdownOpen = not dropdownOpen
-                if dropdownOpen then
-                    ModeDropdown.Visible = true
-                    ModeDropdown:TweenSize(UDim2.new(0, 60, 0, 44), "Out", "Quart", 0.2, true)
-                else
-                    ModeDropdown:TweenSize(UDim2.new(0, 60, 0, 0), "Out", "Quart", 0.2, true)
-                    task.wait(0.2)
-                    ModeDropdown.Visible = false
-                end
-            end)
-            
-            -- Mode selection
-            ToggleOption.MouseButton1Click:Connect(function()
-                bindMode = "Toggle"
-                ConfigElements[elementId].Value.Mode = bindMode
-                ToggleOption.TextColor3 = PresetColor
-                HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
-                
-                dropdownOpen = false
-                ModeDropdown:TweenSize(UDim2.new(0, 60, 0, 0), "Out", "Quart", 0.2, true)
-                task.wait(0.2)
-                ModeDropdown.Visible = false
-            end)
-            
-            HoldOption.MouseButton1Click:Connect(function()
-                bindMode = "Hold"
-                ConfigElements[elementId].Value.Mode = bindMode
-                ToggleOption.TextColor3 = Color3.fromRGB(200, 200, 200)
-                HoldOption.TextColor3 = PresetColor
-                
-                dropdownOpen = false
-                ModeDropdown:TweenSize(UDim2.new(0, 60, 0, 0), "Out", "Quart", 0.2, true)
-                task.wait(0.2)
-                ModeDropdown.Visible = false
-            end)
-            
-            -- Hover effects for mode options
-            ToggleOption.MouseEnter:Connect(function()
-                if bindMode ~= "Toggle" then
-                    TweenService:Create(ToggleOption, TweenInfo.new(0.2), {BackgroundTransparency = 0.8}):Play()
-                end
-            end)
-            
-            ToggleOption.MouseLeave:Connect(function()
-                TweenService:Create(ToggleOption, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-            end)
-            
-            HoldOption.MouseEnter:Connect(function()
-                if bindMode ~= "Hold" then
-                    TweenService:Create(HoldOption, TweenInfo.new(0.2), {BackgroundTransparency = 0.8}):Play()
-                end
-            end)
-            
-            HoldOption.MouseLeave:Connect(function()
-                TweenService:Create(HoldOption, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
-            end)
-            
-            -- Keybind functionality
-            UserInputService.InputBegan:Connect(function(input, processed)
-                if processed or binding then return end
-                if input.KeyCode == currentKey then
-                    if bindMode == "Toggle" then
-                        SetToggleState(not toggled)
-                    elseif bindMode == "Hold" then
-                        SetToggleState(true)
-                        bindActive = true
-                    end
-                end
-            end)
-            
-            UserInputService.InputEnded:Connect(function(input, processed)
-                if processed or binding then return end
-                if input.KeyCode == currentKey and bindMode == "Hold" and bindActive then
-                    SetToggleState(false)
-                    bindActive = false
-                end
-            end)
-            
-            -- Set default state if specified
-            if default then
-                SetToggleState(true)
-            end
-            
-            -- Close dropdown when clicking elsewhere
-            UserInputService.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    local mousePos = input.Position
-                    local dropdownPos = ModeDropdown.AbsolutePosition
-                    local dropdownSize = ModeDropdown.AbsoluteSize
-                    local keybindPos = KeybindBtn.AbsolutePosition
-                    local keybindSize = KeybindBtn.AbsoluteSize
-                    
-                    local inDropdown = mousePos.X >= dropdownPos.X and mousePos.X <= dropdownPos.X + dropdownSize.X
-                        and mousePos.Y >= dropdownPos.Y and mousePos.Y <= dropdownPos.Y + dropdownSize.Y
-                    local inKeybind = mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X
-                        and mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y
-                    
-                    if dropdownOpen and not inDropdown and not inKeybind then
-                        dropdownOpen = false
-                        ModeDropdown:TweenSize(UDim2.new(0, 60, 0, 0), "Out", "Quart", 0.2, true)
-                        task.wait(0.2)
-                        ModeDropdown.Visible = false
-                    end
-                end
-            end)
-            
-            Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+            return "NUM" .. (num or "")
         end
-        -- ========== KEYBIND TOGGLE SECTION END ==========
+        
+        -- Check for function keys
+        if keyStr:match("F%d+") then
+            return keyStr
+        end
+        
+        -- Check for other abbreviations
+        if abbreviations[keyStr] then
+            return abbreviations[keyStr]
+        end
+        
+        -- For single character keys, just return the character
+        if #keyStr == 1 then
+            return keyStr:upper()
+        end
+        
+        -- For longer keys, take first 4-5 characters
+        if #keyStr > 4 then
+            return keyStr:sub(1, 4):upper()
+        end
+        
+        return keyStr:upper()
+    end
+    
+    local displayKeyName = shortenKeyName(keyName)
+    
+    local KeybindToggle = Instance.new("TextButton")
+    local KeybindToggleCorner = Instance.new("UICorner")
+    local KeybindToggleTitle = Instance.new("TextLabel")
+    
+    -- Keybind Cube Button
+    local KeybindCube = Instance.new("TextButton")
+    local KeybindCubeCorner = Instance.new("UICorner")
+    local KeybindText = Instance.new("TextLabel")
+    
+    -- Improved Mode Dropdown
+    local ModeDropdown = Instance.new("Frame")
+    local ModeDropdownCorner = Instance.new("UICorner")
+    local ModeDropdownLayout = Instance.new("UIListLayout")
+    local ModeDropdownPadding = Instance.new("UIPadding")
+    
+    -- Toggle Components
+    local FrameToggle1 = Instance.new("Frame")
+    local FrameToggle1Corner = Instance.new("UICorner")
+    local FrameToggle2 = Instance.new("Frame")
+    local FrameToggle2Corner = Instance.new("UICorner")
+    local FrameToggle3 = Instance.new("Frame")
+    local FrameToggle3Corner = Instance.new("UICorner")
+    local FrameToggleCircle = Instance.new("Frame")
+    local FrameToggleCircleCorner = Instance.new("UICorner")
+    
+    KeybindToggle.Name = "KeybindToggle"
+    KeybindToggle.Parent = Tab
+    KeybindToggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+    KeybindToggle.Size = UDim2.new(0, 363, 0, 42)
+    KeybindToggle.AutoButtonColor = false
+    KeybindToggle.Font = Enum.Font.SourceSans
+    KeybindToggle.Text = ""
+    KeybindToggle.TextColor3 = Color3.fromRGB(0, 0, 0)
+    KeybindToggle.TextSize = 14.000
+    
+    KeybindToggleCorner.CornerRadius = UDim.new(0, 6)
+    KeybindToggleCorner.Parent = KeybindToggle
+    
+    KeybindToggleTitle.Name = "KeybindToggleTitle"
+    KeybindToggleTitle.Parent = KeybindToggle
+    KeybindToggleTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    KeybindToggleTitle.BackgroundTransparency = 1.000
+    KeybindToggleTitle.Position = UDim2.new(0.0358126722, 0, 0, 0)
+    KeybindToggleTitle.Size = UDim2.new(0, 187, 0, 42)
+    KeybindToggleTitle.Font = Enum.Font.Gotham
+    KeybindToggleTitle.Text = text
+    KeybindToggleTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeybindToggleTitle.TextSize = 14.000
+    KeybindToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
+    
+    -- Keybind Cube (positioned with space from toggle)
+    KeybindCube.Name = "KeybindCube"
+    KeybindCube.Parent = KeybindToggle
+    KeybindCube.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    KeybindCube.Position = UDim2.new(0.68, 0, 0.286, 0) -- Moved left to create space
+    KeybindCube.Size = UDim2.new(0, 24, 0, 18) -- Cube dimensions
+    KeybindCube.AutoButtonColor = false
+    KeybindCube.Font = Enum.Font.SourceSans
+    KeybindCube.Text = ""
+    KeybindCube.ZIndex = 2
+    
+    KeybindCubeCorner.CornerRadius = UDim.new(0, 4)
+    KeybindCubeCorner.Parent = KeybindCube
+    
+    KeybindText.Name = "KeybindText"
+    KeybindText.Parent = KeybindCube
+    KeybindText.BackgroundTransparency = 1.000
+    KeybindText.Size = UDim2.new(1, 0, 1, 0)
+    KeybindText.Font = Enum.Font.GothamBold
+    KeybindText.Text = displayKeyName
+    KeybindText.TextColor3 = Color3.fromRGB(220, 220, 220)
+    KeybindText.TextSize = 10.000
+    KeybindText.ZIndex = 3
+    
+    -- Improved Mode Dropdown
+    ModeDropdown.Name = "ModeDropdown"
+    ModeDropdown.Parent = KeybindToggle
+    ModeDropdown.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    ModeDropdown.BorderColor3 = Color3.fromRGB(60, 60, 60)
+    ModeDropdown.BorderSizePixel = 1
+    ModeDropdown.Position = UDim2.new(0.68, 0, 0, 42)
+    ModeDropdown.Size = UDim2.new(0, 70, 0, 0)
+    ModeDropdown.Visible = false
+    ModeDropdown.ClipsDescendants = true
+    ModeDropdown.ZIndex = 20
+    
+    ModeDropdownCorner.CornerRadius = UDim.new(0, 6)
+    ModeDropdownCorner.Parent = ModeDropdown
+    
+    ModeDropdownLayout.Parent = ModeDropdown
+    ModeDropdownLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ModeDropdownLayout.Padding = UDim.new(0, 1)
+    
+    ModeDropdownPadding.Parent = ModeDropdown
+    ModeDropdownPadding.PaddingTop = UDim.new(0, 3)
+    ModeDropdownPadding.PaddingBottom = UDim.new(0, 3)
+    ModeDropdownPadding.PaddingLeft = UDim.new(0, 3)
+    ModeDropdownPadding.PaddingRight = UDim.new(0, 3)
+    
+    -- Create mode options with improved styling
+    local ToggleOption = Instance.new("TextButton")
+    ToggleOption.Name = "ToggleOption"
+    ToggleOption.Parent = ModeDropdown
+    ToggleOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    ToggleOption.BackgroundTransparency = 0
+    ToggleOption.Size = UDim2.new(1, -6, 0, 18)
+    ToggleOption.Font = Enum.Font.Gotham
+    ToggleOption.Text = "Toggle"
+    ToggleOption.TextColor3 = PresetColor
+    ToggleOption.TextSize = 11.000
+    ToggleOption.ZIndex = 21
+    ToggleOption.AutoButtonColor = false
+    
+    local ToggleOptionCorner = Instance.new("UICorner")
+    ToggleOptionCorner.CornerRadius = UDim.new(0, 3)
+    ToggleOptionCorner.Parent = ToggleOption
+    
+    local HoldOption = Instance.new("TextButton")
+    HoldOption.Name = "HoldOption"
+    HoldOption.Parent = ModeDropdown
+    HoldOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    HoldOption.BackgroundTransparency = 0
+    HoldOption.Size = UDim2.new(1, -6, 0, 18)
+    HoldOption.Font = Enum.Font.Gotham
+    HoldOption.Text = "Hold"
+    HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
+    HoldOption.TextSize = 11.000
+    HoldOption.ZIndex = 21
+    HoldOption.AutoButtonColor = false
+    
+    local HoldOptionCorner = Instance.new("UICorner")
+    HoldOptionCorner.CornerRadius = UDim.new(0, 3)
+    HoldOptionCorner.Parent = HoldOption
+    
+    -- Toggle switch components (moved slightly right to create space)
+    FrameToggle1.Name = "FrameToggle1"
+    FrameToggle1.Parent = KeybindToggle
+    FrameToggle1.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    FrameToggle1.Position = UDim2.new(0.82, 0, 0.285714298, 0) -- Moved right
+    FrameToggle1.Size = UDim2.new(0, 37, 0, 18)
+    
+    FrameToggle1Corner.CornerRadius = UDim.new(0, 6)
+    FrameToggle1Corner.Parent = FrameToggle1
+    
+    FrameToggle2.Name = "FrameToggle2"
+    FrameToggle2.Parent = FrameToggle1
+    FrameToggle2.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+    FrameToggle2.Position = UDim2.new(0.0489999987, 0, 0.0930000022, 0)
+    FrameToggle2.Size = UDim2.new(0, 33, 0, 14)
+    
+    FrameToggle2Corner.CornerRadius = UDim.new(0, 6)
+    FrameToggle2Corner.Parent = FrameToggle2
+    
+    FrameToggle3.Name = "FrameToggle3"
+    FrameToggle3.Parent = FrameToggle1
+    FrameToggle3.BackgroundColor3 = PresetColor
+    FrameToggle3.BackgroundTransparency = 1.000
+    FrameToggle3.Size = UDim2.new(0, 37, 0, 18)
+    
+    FrameToggle3Corner.CornerRadius = UDim.new(0, 6)
+    FrameToggle3Corner.Parent = FrameToggle3
+    
+    FrameToggleCircle.Name = "FrameToggleCircle"
+    FrameToggleCircle.Parent = FrameToggle1
+    FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
+    FrameToggleCircle.Size = UDim2.new(0, 10, 0, 10)
+    
+    FrameToggleCircleCorner.CornerRadius = UDim.new(0, 5)
+    FrameToggleCircleCorner.Parent = FrameToggleCircle
+    
+    -- Config element
+    ConfigElements[elementId] = {
+        Type = "KeybindToggle",
+        Value = {
+            Toggled = toggled,
+            Key = keyName,
+            Mode = bindMode
+        },
+        LoadValue = function(value)
+            toggled = value.Toggled
+            keyName = value.Key
+            bindMode = value.Mode or "Toggle"
+            
+            -- Update key display
+            displayKeyName = shortenKeyName(keyName)
+            KeybindText.Text = displayKeyName
+            for _, keyCode in pairs(Enum.KeyCode:GetEnumItems()) do
+                if keyCode.Name == keyName then
+                    currentKey = keyCode
+                    break
+                end
+            end
+            
+            -- Update mode colors
+            if bindMode == "Toggle" then
+                ToggleOption.TextColor3 = PresetColor
+                ToggleOption.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+                HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
+                HoldOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            else
+                ToggleOption.TextColor3 = Color3.fromRGB(200, 200, 200)
+                ToggleOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+                HoldOption.TextColor3 = PresetColor
+                HoldOption.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            end
+            
+            -- Update toggle visual
+            if toggled then
+                KeybindToggle.BackgroundColor3 = Color3.fromRGB(37, 37, 37)
+                FrameToggle1.BackgroundTransparency = 1
+                FrameToggle2.BackgroundTransparency = 1
+                FrameToggle3.BackgroundTransparency = 0
+                FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                FrameToggleCircle.Position = UDim2.new(0.587, 0, 0.222000003, 0)
+            else
+                KeybindToggle.BackgroundColor3 = Color3.fromRGB(34, 34, 34)
+                FrameToggle1.BackgroundTransparency = 0
+                FrameToggle2.BackgroundTransparency = 0
+                FrameToggle3.BackgroundTransparency = 1
+                FrameToggleCircle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                FrameToggleCircle.Position = UDim2.new(0.127000004, 0, 0.222000003, 0)
+            end
+            
+            pcall(callback, toggled)
+        end
+    }
+    
+    -- Update preset color
+    coroutine.wrap(function()
+        while wait() do
+            FrameToggle3.BackgroundColor3 = PresetColor
+            if bindMode == "Toggle" then
+                ToggleOption.TextColor3 = PresetColor
+            elseif bindMode == "Hold" then
+                HoldOption.TextColor3 = PresetColor
+            end
+        end
+    end)()
+    
+    -- Toggle function
+    local function SetToggleState(state)
+        toggled = state
+        ConfigElements[elementId].Value.Toggled = toggled
+        
+        if toggled then
+            TweenService:Create(KeybindToggle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(37, 37, 37)}):Play()
+            TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+            TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            FrameToggleCircle:TweenPosition(UDim2.new(0.587, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
+        else
+            TweenService:Create(KeybindToggle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(34, 34, 34)}):Play()
+            TweenService:Create(FrameToggle1, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+            TweenService:Create(FrameToggle2, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+            TweenService:Create(FrameToggle3, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            TweenService:Create(FrameToggleCircle, TweenInfo.new(.3, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+            FrameToggleCircle:TweenPosition(UDim2.new(0.127000004, 0, 0.222000003, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, .2, true)
+        end
+        
+        pcall(callback, toggled)
+    end
+    
+    -- Click toggle (clicking on the main button)
+    KeybindToggle.MouseButton1Click:Connect(function()
+        SetToggleState(not toggled)
+    end)
+    
+    -- Keybind cube interactions
+    KeybindCube.MouseEnter:Connect(function()
+        TweenService:Create(KeybindCube, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+    end)
+    
+    KeybindCube.MouseLeave:Connect(function()
+        if not binding then
+            TweenService:Create(KeybindCube, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end
+    end)
+    
+    -- Keybind cube click (left click to bind)
+    KeybindCube.MouseButton1Click:Connect(function()
+        if binding then return end
+        
+        KeybindText.Text = "..."
+        KeybindText.TextColor3 = PresetColor
+        TweenService:Create(KeybindCube, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+        binding = true
+        
+        local inputwait = UserInputService.InputBegan:Wait()
+        if inputwait.KeyCode.Name ~= "Unknown" then
+            keyName = inputwait.KeyCode.Name
+            displayKeyName = shortenKeyName(keyName)
+            currentKey = inputwait.KeyCode
+            KeybindText.Text = displayKeyName
+            KeybindText.TextColor3 = Color3.fromRGB(220, 220, 220)
+            ConfigElements[elementId].Value.Key = keyName
+            
+            TweenService:Create(KeybindCube, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        else
+            KeybindText.Text = displayKeyName
+            KeybindText.TextColor3 = Color3.fromRGB(220, 220, 220)
+            TweenService:Create(KeybindCube, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end
+        binding = false
+    end)
+    
+    -- Right click for mode dropdown
+    KeybindCube.MouseButton2Click:Connect(function()
+        dropdownOpen = not dropdownOpen
+        if dropdownOpen then
+            ModeDropdown.Visible = true
+            ModeDropdown:TweenSize(UDim2.new(0, 70, 0, 42), "Out", "Quart", 0.2, true)
+        else
+            ModeDropdown:TweenSize(UDim2.new(0, 70, 0, 0), "Out", "Quart", 0.2, true)
+            task.wait(0.2)
+            ModeDropdown.Visible = false
+        end
+    end)
+    
+    -- Mode selection with improved visuals
+    ToggleOption.MouseButton1Click:Connect(function()
+        bindMode = "Toggle"
+        ConfigElements[elementId].Value.Mode = bindMode
+        ToggleOption.TextColor3 = PresetColor
+        ToggleOption.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        HoldOption.TextColor3 = Color3.fromRGB(200, 200, 200)
+        HoldOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        
+        dropdownOpen = false
+        ModeDropdown:TweenSize(UDim2.new(0, 70, 0, 0), "Out", "Quart", 0.2, true)
+        task.wait(0.2)
+        ModeDropdown.Visible = false
+    end)
+    
+    HoldOption.MouseButton1Click:Connect(function()
+        bindMode = "Hold"
+        ConfigElements[elementId].Value.Mode = bindMode
+        ToggleOption.TextColor3 = Color3.fromRGB(200, 200, 200)
+        ToggleOption.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        HoldOption.TextColor3 = PresetColor
+        HoldOption.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        
+        dropdownOpen = false
+        ModeDropdown:TweenSize(UDim2.new(0, 70, 0, 0), "Out", "Quart", 0.2, true)
+        task.wait(0.2)
+        ModeDropdown.Visible = false
+    end)
+    
+    -- Hover effects for mode options
+    ToggleOption.MouseEnter:Connect(function()
+        if bindMode ~= "Toggle" then
+            TweenService:Create(ToggleOption, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+        end
+    end)
+    
+    ToggleOption.MouseLeave:Connect(function()
+        if bindMode ~= "Toggle" then
+            TweenService:Create(ToggleOption, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+        end
+    end)
+    
+    HoldOption.MouseEnter:Connect(function()
+        if bindMode ~= "Hold" then
+            TweenService:Create(HoldOption, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 45)}):Play()
+        end
+    end)
+    
+    HoldOption.MouseLeave:Connect(function()
+        if bindMode ~= "Hold" then
+            TweenService:Create(HoldOption, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+        end
+    end)
+    
+    -- Keybind functionality
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed or binding then return end
+        if input.KeyCode == currentKey then
+            if bindMode == "Toggle" then
+                SetToggleState(not toggled)
+            elseif bindMode == "Hold" then
+                SetToggleState(true)
+                bindActive = true
+            end
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input, processed)
+        if processed or binding then return end
+        if input.KeyCode == currentKey and bindMode == "Hold" and bindActive then
+            SetToggleState(false)
+            bindActive = false
+        end
+    end)
+    
+    -- Set default state if specified
+    if default then
+        SetToggleState(true)
+    end
+    
+    -- Close dropdown when clicking elsewhere
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local mousePos = input.Position
+            local dropdownPos = ModeDropdown.AbsolutePosition
+            local dropdownSize = ModeDropdown.AbsoluteSize
+            local keybindPos = KeybindCube.AbsolutePosition
+            local keybindSize = KeybindCube.AbsoluteSize
+            
+            local inDropdown = mousePos.X >= dropdownPos.X and mousePos.X <= dropdownPos.X + dropdownSize.X
+                and mousePos.Y >= dropdownPos.Y and mousePos.Y <= dropdownPos.Y + dropdownSize.Y
+            local inKeybind = mousePos.X >= keybindPos.X and mousePos.X <= keybindPos.X + keybindSize.X
+                and mousePos.Y >= keybindPos.Y and mousePos.Y <= keybindPos.Y + keybindSize.Y
+            
+            if dropdownOpen and not inDropdown and not inKeybind then
+                dropdownOpen = false
+                ModeDropdown:TweenSize(UDim2.new(0, 70, 0, 0), "Out", "Quart", 0.2, true)
+                task.wait(0.2)
+                ModeDropdown.Visible = false
+            end
+        end
+    end)
+    
+    Tab.CanvasSize = UDim2.new(0, 0, 0, TabLayout.AbsoluteContentSize.Y)
+end
+-- ========== KEYBIND TOGGLE SECTION END ==========
+
+
+
 
         function tabcontent:Slider(text, min, max, start, callback)
             globalElementIdCounter = globalElementIdCounter + 1
