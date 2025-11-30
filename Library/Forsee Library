@@ -1500,30 +1500,31 @@ function tabcontent:KeybindToggle(text, keypreset, default, callback)
     KeybindToggleTitle.TextSize = 14.000
     KeybindToggleTitle.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Keybind Cube (positioned to the left of the toggle)
-    KeybindCube.Name = "KeybindCube"
-    KeybindCube.Parent = KeybindToggle
-    KeybindCube.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    KeybindCube.Position = UDim2.new(0.75, 0, 0.286, 0) -- ORIGINAL POSITION
-    KeybindCube.Size = UDim2.new(0, 45, 0, 18) -- ORIGINAL SIZE
-    KeybindCube.AutoButtonColor = false
-    KeybindCube.Font = Enum.Font.SourceSans
-    KeybindCube.Text = ""
-    KeybindCube.ZIndex = 2
-    
-    KeybindCubeCorner.CornerRadius = UDim.new(0, 4)
-    KeybindCubeCorner.Parent = KeybindCube
-    
-    KeybindText.Name = "KeybindText"
-    KeybindText.Parent = KeybindCube
-    KeybindText.BackgroundTransparency = 1.000
-    KeybindText.Size = UDim2.new(1, 0, 1, 0)
-    KeybindText.Font = Enum.Font.Gotham
-    KeybindText.Text = displayKeyName
-    KeybindText.TextColor3 = Color3.fromRGB(200, 200, 200)
-    KeybindText.TextSize = 12.000
-    KeybindText.ZIndex = 3
-    
+-- Keybind Cube (positioned to the left of the toggle)
+KeybindCube.Name = "KeybindCube"
+KeybindCube.Parent = KeybindToggle
+KeybindCube.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+KeybindCube.Position = UDim2.new(0.75, 0, 0.286, 0) -- ORIGINAL POSITION
+KeybindCube.Size = UDim2.new(0, 24, 0, 18) -- CUBE DIMENSIONS (more square)
+KeybindCube.AutoButtonColor = false
+KeybindCube.Font = Enum.Font.SourceSans
+KeybindCube.Text = ""
+KeybindCube.ZIndex = 2
+
+KeybindCubeCorner.CornerRadius = UDim.new(0, 4)
+KeybindCubeCorner.Parent = KeybindCube
+
+KeybindText.Name = "KeybindText"
+KeybindText.Parent = KeybindCube
+KeybindText.BackgroundTransparency = 1.000
+KeybindText.Size = UDim2.new(1, 0, 1, 0)
+KeybindText.Font = Enum.Font.GothamBold
+KeybindText.Text = displayKeyName
+KeybindText.TextColor3 = Color3.fromRGB(220, 220, 220)
+KeybindText.TextSize = 10.000 -- Smaller text to fit the cube
+KeybindText.ZIndex = 3
+
+
     -- Improved Mode Dropdown
     ModeDropdown.Name = "ModeDropdown"
     ModeDropdown.Parent = KeybindToggle
